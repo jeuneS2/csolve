@@ -1,3 +1,4 @@
+# N-queens problem for N=8
 ANY;
 
 1 <= X1; X1 <= 8;

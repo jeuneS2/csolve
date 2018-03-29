@@ -1,0 +1,35 @@
+# finish as early as possible
+MIN end;
+
+# task t1: release: 0, WCET 3, deadline 16
+t1_release = 0;
+t1_release <= t1_start;
+t1_end = t1_start + 3;
+t1_end <= t1_release + 16;
+
+# task t1: release: 1, WCET 2, deadline 16
+t2_release = 1;
+t2_release <= t2_start;
+t2_end = t2_start + 2;
+t2_end <= t2_release + 16;
+
+# task t1: release: 2, WCET 4, deadline 7
+t3_release = 2;
+t3_release <= t3_start;
+t3_end = t3_start + 4;
+t3_end <= t3_release + 7;
+
+# precedences: t1->t2, t1->t3
+t1_end <= t2_start;
+t1_end <= t3_start;
+
+# tasks must not be scheduled at the same time
+t1_start > t2_end | t2_start > t1_end;
+t1_start > t3_end | t3_start > t1_end;
+t2_start > t3_end | t3_start > t2_end;
+
+# end of schedule
+end >= t1_end;
+end >= t2_end;
+end >= t3_end;
+

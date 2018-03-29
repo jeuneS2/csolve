@@ -1,3 +1,4 @@
+# Modeling WCET calculation including branch prediction
 MAX 4*e1T + -4*m1T + 6*m1T + 4*e1F + -4*m1F + 6*m1F + 8*e2 + 2*e3 + 3*e4T + -3*m4T + 5*m4T + 3*e4F + -3*m4F + 5*m4F;
 
 e0 = 1;
