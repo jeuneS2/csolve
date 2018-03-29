@@ -43,7 +43,7 @@ fuzz/csolve: src/csolve.c src/arith.c src/eval.c src/propagate.c src/normalize.c
 	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ $^
 
 fuzz: fuzz/csolve
-	afl-fuzz -m 128 -i fuzz/test -o fuzz/findings -- $<
+	afl-fuzz -m 128 -i fuzz/inputs -o fuzz/findings -- $<
 
 sonar_start:
 	${SONAR} start
