@@ -1,0 +1,31 @@
+MAX 4*e1T + -4*m1T + 6*m1T + 4*e1F + -4*m1F + 6*m1F + 8*e2 + 2*e3 + 3*e4T + -3*m4T + 5*m4T + 3*e4F + -3*m4F + 5*m4F;
+
+e0 = 1;
+e1T = e2;
+e1F = e3;
+e4T <= 99;
+e0 + e4T = e1T + e1F;
+e2 + e3 = e4T + e4F;
+
+m1T <= e1T;
+m1F <= e1F;
+m4T <= e4T;
+m4F <= e4F;
+m1T <= 14 * e0 + e1F + e4F;
+m1F <= 14 * e0 + e1T + e4T;
+m4T <= 20 * e0 + e1F + e4F;
+m1F <= 20 * e0 + e1T + e4T;
+m1T + m4T <= 28 * e0 + e1F + e4F;
+m1F + m4F <= 28 * e0 + e1T + e4T;
+
+0 <= e0;
+0 <= e1T;
+0 <= e1F;
+0 <= e2;
+0 <= e3;
+0 <= e4T;
+0 <= e4F;
+0 <= m1T;
+0 <= m1F;
+0 <= m4T;
+0 <= m4F;

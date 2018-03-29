@@ -1,0 +1,60 @@
+#include <gtest/gtest.h>
+
+namespace arith {
+#include "../src/arith.c"
+
+TEST(Neg, Basic) {
+  EXPECT_EQ(DOMAIN_MIN, neg(DOMAIN_MAX));
+  EXPECT_EQ(DOMAIN_MAX, neg(DOMAIN_MIN));
+  EXPECT_EQ(-1, neg(1));
+  EXPECT_EQ(1, neg(-1));
+}
+
+TEST(Add, Basic) {
+  EXPECT_EQ(DOMAIN_MIN, add(DOMAIN_MIN, 1));
+  EXPECT_EQ(DOMAIN_MIN, add(1, DOMAIN_MIN));
+  EXPECT_EQ(DOMAIN_MAX, add(DOMAIN_MAX, 1));
+  EXPECT_EQ(DOMAIN_MAX, add(1, DOMAIN_MAX));
+  EXPECT_EQ(4, add(1, 3));
+  EXPECT_EQ(-2, add(-3, 1));
+  EXPECT_EQ(DOMAIN_MAX, add(DOMAIN_MAX-1, DOMAIN_MAX-1));
+  EXPECT_EQ(DOMAIN_MIN, add(DOMAIN_MIN+1, DOMAIN_MIN+1));
+}
+
+TEST(Mul, Basic) {
+  EXPECT_EQ(DOMAIN_MIN, mul(DOMAIN_MIN, 1));
+  EXPECT_EQ(DOMAIN_MAX, mul(DOMAIN_MIN, -1));
+  EXPECT_EQ(DOMAIN_MIN, mul(1, DOMAIN_MIN));
+  EXPECT_EQ(DOMAIN_MAX, mul(-1, DOMAIN_MIN));
+  EXPECT_EQ(DOMAIN_MAX, mul(DOMAIN_MAX, 1));
+  EXPECT_EQ(DOMAIN_MIN, mul(DOMAIN_MAX, -1));
+  EXPECT_EQ(DOMAIN_MAX, mul(1, DOMAIN_MAX));
+  EXPECT_EQ(DOMAIN_MIN, mul(-1, DOMAIN_MAX));
+
+  EXPECT_EQ(6, mul(2, 3));
+  EXPECT_EQ(-6, mul(3, -2));
+  EXPECT_EQ(DOMAIN_MAX, mul(DOMAIN_MAX-1, DOMAIN_MAX-1));
+  EXPECT_EQ(DOMAIN_MAX, mul(DOMAIN_MIN+1, DOMAIN_MIN+1));
+  EXPECT_EQ(DOMAIN_MIN, mul(DOMAIN_MAX-1, DOMAIN_MIN+1));
+  EXPECT_EQ(DOMAIN_MIN, mul(DOMAIN_MIN+1, DOMAIN_MAX-1));
+}
+
+TEST(Min, Basic) {
+  EXPECT_EQ(-3, min(2, -3));
+  EXPECT_EQ(-3, min(-3, 2));
+  EXPECT_EQ(DOMAIN_MIN, min(0, DOMAIN_MIN));
+  EXPECT_EQ(DOMAIN_MIN, min(DOMAIN_MIN, 0));
+  EXPECT_EQ(0, min(DOMAIN_MAX, 0));
+  EXPECT_EQ(0, min(0, DOMAIN_MAX));
+}
+
+TEST(Max, Basic) {
+  EXPECT_EQ(2, max(2, -3));
+  EXPECT_EQ(2, max(-3, 2));
+  EXPECT_EQ(0, max(0, DOMAIN_MIN));
+  EXPECT_EQ(0, max(DOMAIN_MIN, 0));
+  EXPECT_EQ(DOMAIN_MAX, max(DOMAIN_MAX, 0));
+  EXPECT_EQ(DOMAIN_MAX, max(DOMAIN_MAX, 0));
+}
+
+} // end namespace
