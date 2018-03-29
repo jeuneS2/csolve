@@ -214,11 +214,11 @@ struct constr_t *prop(struct env_t *env, struct constr_t *constr, struct val_t v
     case OP_AND: return propagate_and(env, constr, val);
     case OP_OR:  return propagate_or(env, constr, val);
     default:
-      fprintf(stderr, "ERROR: invalid operation: %02x\n", constr->constr.expr.op);
+      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
   default:
-    fprintf(stderr, "ERROR: invalid constraint type: %02x\n", constr->type);
+    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return constr;
 }

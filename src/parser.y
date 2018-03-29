@@ -310,11 +310,11 @@ int32_t count_vars(struct constr_t *constr) {
     case OP_NOT:
       return count_vars(constr->constr.expr.l);
     default:
-      fprintf(stderr, "ERROR: invalid operation: %02x\n", constr->constr.expr.op);
+      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
   default:
-    fprintf(stderr, "ERROR: invalid constraint type: %02x\n", constr->type);
+    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return 0;
 }
@@ -342,11 +342,11 @@ void weighten(struct constr_t *constr, int32_t weight) {
       weighten(constr->constr.expr.l, weight);
       break;
     default:
-      fprintf(stderr, "ERROR: invalid operation: %02x\n", constr->constr.expr.op);
+      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
   default:
-    fprintf(stderr, "ERROR: invalid constraint type: %02x\n", constr->type);
+    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
 
@@ -375,7 +375,7 @@ void print_vars(FILE *file) {
 }
 
 void yyerror(const char *message) {
-  fprintf(stderr, "ERROR: %s in line %u\n", message, yylloc.first_line);
+  fprintf(stderr, ERROR_MSG_PARSER_ERROR, message, yylloc.first_line);
 }
 
 int main(int argc, char **argv) {

@@ -225,4 +225,27 @@ void print_stats(FILE *file);
 /** Print a solution */
 void print_solution(FILE *file, struct env_t *env);
 
+/** Error message for errors in the lexer */
+#define ERROR_MSG_LEXER_ERROR               "ERROR: invalid input `%c' in line %u\n"
+/** Error message for errors in the parser */
+#define ERROR_MSG_PARSER_ERROR              "ERROR: %s in line %u\n"
+/** Error message when running out of memory */
+#define ERROR_MSG_OUT_OF_MEMORY             "ERROR: out of memory\n"
+/** Error message when errors when deallocating memory */
+#define ERROR_MSG_WRONG_DEALLOC             "ERROR: wrong deallocation\n"
+/** Error message when exceeding the maximum number of binds */
+#define ERROR_MSG_TOO_MANY_BINDS            "ERROR: exceeded maximum number of binds\n"
+/** Error message when trying to bind NULL */
+#define ERROR_MSG_NULL_BIND                 "ERROR: cannot bind NULL\n"
+/** Error message when encountering an invalid constraint type */
+#define ERROR_MSG_INVALID_CONSTRAINT_TYPE   "ERROR: invalid constraint type: %02x\n"
+/** Error message when encountering an invalid operation */
+#define ERROR_MSG_INVALID_OPERATION         "ERROR: invalid operation: %02x\n"
+/** Error message when encountering an invalid variable type */
+#define ERROR_MSG_INVALID_VARIABLE_TYPE     "ERROR: invalid variable type: %02x\n"
+/** Error message when encountering an invalid objective function type */
+#define ERROR_MSG_INVALID_OBJ_FUNC_TYPE     "ERROR: invalid objective function type: %02x\n"
+/** Error message when trying to update the best value with an interval */
+#define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "ERROR: trying to update best value with interval\n"
+
 #endif

@@ -40,7 +40,7 @@ void objective_init(enum objective_t o) {
     _objective_best = DOMAIN_MIN;
     break;
   default:
-    fprintf(stderr, "ERROR: invalid objective function type: %02x\n", _objective);
+    fprintf(stderr, ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
 }
 
@@ -67,7 +67,7 @@ bool objective_better(struct env_t *env, struct constr_t *obj) {
     }
     break;
   default:
-    fprintf(stderr, "ERROR: invalid objective function type: %02x\n", _objective);
+    fprintf(stderr, ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
   return true;
 }
@@ -76,7 +76,7 @@ void objective_update(struct val_t obj) {
   if (is_value(obj)) {
     _objective_best = obj.value.val;
   } else {
-    fprintf(stderr, "ERROR: Trying to update best value with interval\n");
+    fprintf(stderr, ERROR_MSG_UPDATE_BEST_WITH_INTERVAL);
   }
 }
 
@@ -99,7 +99,7 @@ struct constr_t *objective_optimize(struct env_t *env, struct constr_t *obj) {
     retval = propagate(env, retval, INTERVAL(add(_objective_best, 1), DOMAIN_MAX));
     break;
   default:
-    fprintf(stderr, "ERROR: invalid objective function type: %02x\n", _objective);
+    fprintf(stderr, ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
   return retval;
 }

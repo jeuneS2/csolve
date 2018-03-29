@@ -200,7 +200,7 @@ struct constr_t *normal(struct env_t *env, struct constr_t *constr) {
     case OP_AND: return normal_and(env, constr);
     case OP_OR : return normal_or(env, constr);
     default:
-      fprintf(stderr, "ERROR: invalid operation: %02x\n", constr->constr.expr.op);
+      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
   }
 

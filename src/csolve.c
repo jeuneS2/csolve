@@ -59,7 +59,7 @@ void *alloc(size_t size) {
     }
     return retval;
   } else {
-    fprintf(stderr, "ERROR: out of memory\n");
+    fprintf(stderr, ERROR_MSG_OUT_OF_MEMORY);
     return NULL;
   }
 }
@@ -70,7 +70,7 @@ void dealloc(void *elem) {
       pointer >= 0 && pointer <= alloc_stack_pointer) {
     alloc_stack_pointer = pointer;
   } else {
-    fprintf(stderr, "ERROR: wrong deallocation\n");
+    fprintf(stderr, ERROR_MSG_WRONG_DEALLOC);
   }
 }
 
@@ -88,11 +88,11 @@ size_t bind(struct val_t *loc, const struct val_t val) {
       eval_cache_invalidate();
       return bind_depth++;
     } else {
-      fprintf(stderr, "ERROR: exceeded maximum number of binds\n");
+      fprintf(stderr, ERROR_MSG_TOO_MANY_BINDS);
       return MAX_BINDS;
     }
   } else {
-    fprintf(stderr, "ERROR: cannot bind NULL\n");
+    fprintf(stderr, ERROR_MSG_NULL_BIND);
     return MAX_BINDS;
   }
 }
@@ -209,7 +209,7 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
       solve(env, obj, constr, depth+1);
       break;
     default:
-      fprintf(stderr, "ERROR: invalid variable type: %02x\n", var->type);
+      fprintf(stderr, ERROR_MSG_INVALID_VARIABLE_TYPE, var->type);
     }
   } else {
     struct val_t feasible = eval(env, constr);

@@ -94,7 +94,7 @@ SYM  ([_a-zA-Z@][_a-zA-Z0-9@]*)
 \n         { /* ignore lin-breaks */ }
 
 . {
-    fprintf(stderr, "ERROR: invalid input `%c' in line %u\n", yytext[0], yylineno);
+    fprintf(stderr, ERROR_MSG_LEXER_ERROR, yytext[0], yylineno);
     exit(EXIT_FAILURE);
   }
 

@@ -148,7 +148,7 @@ const struct val_t eval_expr(const struct env_t *env, const struct constr_t *con
   case OP_AND: return eval_and(env, constr);
   case OP_OR : return eval_or(env, constr);
   default:
-    fprintf(stderr, "ERROR: invalid operation: %02x\n", constr->constr.expr.op);
+    fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
   }
   return VALUE(0);
 }
@@ -167,7 +167,7 @@ const struct val_t eval(const struct env_t *env, const struct constr_t *constr) 
     return retval;
   }
   default:
-    fprintf(stderr, "ERROR: invalid constraint type: %02x\n", constr->type);
+    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return VALUE(0);
 }

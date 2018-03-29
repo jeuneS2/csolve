@@ -45,7 +45,7 @@ void print_constr(FILE *file, const struct constr_t *constr) {
     fprintf(file, ")");
     break;
   default:
-    fprintf(stderr, "ERROR: invalid constraint type: %02x\n", constr->type);
+    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
 

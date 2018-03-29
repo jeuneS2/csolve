@@ -222,7 +222,7 @@ TEST(ObjectiveUpdate, Errors) {
   testing::internal::CaptureStderr();
   objective_update(INTERVAL(0, 1));
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: Trying to update best value with interval\n");
+  EXPECT_EQ(output, "ERROR: trying to update best value with interval\n");
 }
 
 TEST(ObjectiveBest, Basic) {
