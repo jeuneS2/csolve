@@ -221,6 +221,21 @@ TEST(Eval, Basic) {
   EXPECT_EQ(VALUE(1), eval(env, &X));
 }
 
+TEST(Eval, Cache) {
+  struct val_t a = VALUE(23);
+
+  const struct env_t env [2] = { { "a", &a },
+                                 { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t X;
+
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &A);
+  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(env, &X));
+}
+
 TEST(Eval, Errors) {
   struct val_t a = VALUE(0);
   struct val_t b = VALUE(1);
@@ -243,6 +258,12 @@ TEST(Eval, Errors) {
   EXPECT_EQ(VALUE(0), eval(env, &X));
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
+}
+
+TEST(EvalCacheInval, Basic) {
+  _eval_cache_tag = 77;
+  eval_cache_invalidate();
+  EXPECT_EQ(78, _eval_cache_tag);
 }
 
 } // end namespace

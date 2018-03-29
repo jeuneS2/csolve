@@ -620,6 +620,14 @@ TEST(PropagateAnd, Value) {
   delete(MockProxy);
 
   MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &B, &A);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &A))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, propagate_and(env, &X, VALUE(0)));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
   EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
     .Times(1)
@@ -696,6 +704,14 @@ TEST(PropagateOr, Value) {
   delete(MockProxy);
 
   MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &B, &A);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &A))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, propagate_or(env, &X, VALUE(1)));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
   EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
     .Times(1)
@@ -749,6 +765,109 @@ TEST(PropagateOr, Interval) {
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_or(env, &X, VALUE(0)));
   delete(MockProxy);
+}
+
+TEST(Propagate, Basic) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+  struct val_t c = INTERVAL(0, 1);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_LT, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, prop(env, &X, c));
+  delete(MockProxy);
+}
+
+TEST(Propagate, Errors) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+  struct val_t c = INTERVAL(0, 1);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { NULL, NULL } };
+
+  struct constr_t X;
+  std::string output;
+
+  X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
+  testing::internal::CaptureStderr();
+  EXPECT_EQ(&X, prop(env, &X, c));
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(output, "ERROR: invalid operation: ffffffff\n");
+
+  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
+  testing::internal::CaptureStderr();
+  EXPECT_EQ(&X, prop(env, &X, c));
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
 }
 
 } // end namespace

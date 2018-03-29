@@ -35,14 +35,35 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
   return MockProxy->update_unary_expr(constr, l);
 }
 
+TEST(NormalizeEq, Basic) {
+  struct val_t a = VALUE(1);
+  struct val_t b = VALUE(2);
+
+  struct env_t env [3] = { { "a", &a },
+                           { "b", &b },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_eq(env, &X));
+  delete(MockProxy);
+}
+
 TEST(NormalizeNeg, Basic) {
-  struct val_t a = VALUE(17);
+  struct val_t a = INTERVAL(17, 18);
 
   struct env_t env [2] = { { "a", &a },
                            { NULL, NULL } };
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t X;
+  struct constr_t X, Y;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
@@ -50,6 +71,92 @@ TEST(NormalizeNeg, Basic) {
     .Times(1)
     .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_neg(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
+  Y = CONSTRAINT_EXPR(OP_NEG, &X, NULL);
+  EXPECT_CALL(*MockProxy, eval(env, &X))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(INTERVAL(-18,-17)));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&A, normal_neg(env, &Y));
+  delete(MockProxy);
+}
+
+TEST(NormalizeAdd, Basic) {
+  struct val_t a = INTERVAL(0, 17);
+  struct val_t b = VALUE(23);
+  struct val_t c = VALUE(0);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { "c", &c },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_add(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &B, &A);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_add(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &C);
+  EXPECT_EQ(&A, normal_add(env, &X));
+  delete(MockProxy);
+}
+
+TEST(NormalizeMul, Basic) {
+  struct val_t a = INTERVAL(0, 17);
+  struct val_t b = VALUE(23);
+  struct val_t c = VALUE(1);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { "c", &c },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_mul(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &B, &A);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_mul(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &C);
+  EXPECT_EQ(&A, normal_mul(env, &X));
   delete(MockProxy);
 }
 
@@ -68,6 +175,120 @@ TEST(NormalizeNot, Basic) {
     .Times(1)
     .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_not(env, &X));
+  delete(MockProxy);
+}
+
+TEST(NormalizeAnd, Basic) {
+  struct val_t a = VALUE(1);
+  struct val_t b = VALUE(0);
+  struct val_t c = INTERVAL(0, 1);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { "c", &c },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &A, &A);
+  EXPECT_EQ(&A, normal_and(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &A, &B);
+  EXPECT_EQ(&B, normal_and(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &B, &A);
+  EXPECT_EQ(&B, normal_and(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &A, &C);
+  EXPECT_EQ(&C, normal_and(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &C, &A);
+  EXPECT_EQ(&C, normal_and(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &B, &C);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &C))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_and(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_AND, &C, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &C, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_and(env, &X));
+  delete(MockProxy);
+}
+
+TEST(NormalizeOr, Basic) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+  struct val_t c = INTERVAL(0, 1);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { "c", &c },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &A, &A);
+  EXPECT_EQ(&A, normal_or(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &A, &B);
+  EXPECT_EQ(&B, normal_or(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &B, &A);
+  EXPECT_EQ(&B, normal_or(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &A, &C);
+  EXPECT_EQ(&C, normal_or(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &C, &A);
+  EXPECT_EQ(&C, normal_or(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &B, &C);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &C))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_or(env, &X));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_OR, &C, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &C, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_or(env, &X));
   delete(MockProxy);
 }
 
