@@ -11,6 +11,9 @@ TEST_CXXFLAGS=-std=c++11 -Wall -O2 --coverage
 FUZZ_CC=afl-gcc
 FUZZ_CFLAGS=-std=c99 -pedantic -Wall -O2
 
+SONAR=/mnt/work/sonar/sonarqube-6.7.2/bin/linux-x86-64/sonar.sh
+SONAR_RUNNER=/mnt/work/sonar/sonar-runner-2.4/bin/sonar-runner
+
 all: csolve test coverage
 
 src/lexer.c: src/lexer.l src/parser.h
@@ -42,9 +45,9 @@ fuzz/csolve: src/csolve.c src/arith.c src/eval.c src/propagate.c src/normalize.c
 fuzz: fuzz/csolve
 	afl-fuzz -m 128 -i fuzz/test -o fuzz/findings -- $<
 
-start_sonar:
-	/mnt/work/sonar/sonarqube-6.7.2/bin/linux-x86-64/sonar.sh start
-stop_sonar:
-	/mnt/work/sonar/sonarqube-6.7.2/bin/linux-x86-64/sonar.sh stop
-run_sonar:
-	/mnt/work/sonar/sonar-runner-2.4/bin/sonar-runner
+sonar_start:
+	${SONAR} start
+sonar_stop:
+	${SONAR} stop
+sonar_run:
+	${SONAR_RUNNER}
