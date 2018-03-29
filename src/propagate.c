@@ -162,6 +162,17 @@ struct constr_t *propagate_and(struct env_t *env, struct constr_t *constr, struc
     r = prop(env, constr->constr.expr.r, val);
   }
 
+  if (is_false(val)) {
+    struct val_t lval = eval(env, constr->constr.expr.l);
+    if (is_true(lval)) {
+      r = prop(env, constr->constr.expr.r, val);
+    }
+    struct val_t rval = eval(env, constr->constr.expr.r);
+    if (is_true(rval)) {
+      l = prop(env, constr->constr.expr.l, val);
+    }
+  }
+
   return update_expr(constr, l, r);
 }
 
@@ -172,6 +183,17 @@ struct constr_t *propagate_or(struct env_t *env, struct constr_t *constr, struct
   if (is_false(val)) {
     l = prop(env, constr->constr.expr.l, val);
     r = prop(env, constr->constr.expr.r, val);
+  }
+
+  if (is_true(val)) {
+    struct val_t lval = eval(env, constr->constr.expr.l);
+    if (is_false(lval)) {
+      r = prop(env, constr->constr.expr.r, val);
+    }
+    struct val_t rval = eval(env, constr->constr.expr.r);
+    if (is_false(rval)) {
+      l = prop(env, constr->constr.expr.l, val);
+    }
   }
 
   return update_expr(constr, l, r);
