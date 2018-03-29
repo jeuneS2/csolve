@@ -120,7 +120,7 @@ struct constr_t *propagate_mul_lr(struct env_t *env, struct constr_t *p, struct 
     struct val_t cval = eval(env, c);
     if (is_value(cval)) {
       if (((get_lo(val) > 0 || get_hi(val) < 0) && cval.value.val == 0) ||
-          (is_value(val) && (val.value.val % cval.value.val) != 0)) {
+          (is_value(val) && cval.value.val != 0 && (val.value.val % cval.value.val) != 0)) {
         return NULL;
       } else if (cval.value.val != 0) {
         domain_t lo = val.value.ivl.lo / cval.value.val;
