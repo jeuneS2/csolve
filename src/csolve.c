@@ -136,6 +136,99 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
   return constr;
 }
 
+void solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth, struct val_t val) {
+  // mark how much memory is allocated
+  void *alloc_marker = alloc(0);
+
+  // bind variable
+  size_t bind_depth = bind(env[depth].val, val);
+
+  bool better = objective_better(env, obj);
+
+  // continue if better objective value is possible
+  if (better) {
+
+    // optimize objective function
+    struct constr_t *new_obj = objective_optimize(env, obj);
+
+    // continue if objective function is feasible
+    if (new_obj != NULL) {
+
+      // optimize constraints
+      struct constr_t *norm = normalize(env, constr);
+      struct constr_t *prop = propagate(env, norm, VALUE(1));
+
+      // continue if still feasible
+      if (prop != NULL) {
+
+        // solve recursively
+        solve(env, new_obj, prop, depth+1);
+
+      } else {
+        cuts_prop++;
+        cut_depth += depth;
+      }
+    } else {
+      cuts_obj++;
+      cut_depth += depth;
+    }
+  } else {
+    cuts_bound++;
+    cut_depth += depth;
+  }
+
+  // unbind variable again
+  unbind(bind_depth);
+
+  // free up memory
+  dealloc(alloc_marker);
+}
+
+void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth) {
+  struct val_t *var = env[depth].val;
+  switch (var->type) {
+  case VAL_INTERVAL: {
+    restart:;
+    domain_t lo = get_lo(*var);
+    domain_t hi = get_hi(*var);
+    uint64_t s = solutions;
+
+    for (domain_t i = 0; i <= hi - lo; i++) {
+      // search from the edges of the interval
+      domain_t v = (i & 1) ? hi - (i >> 1) : lo + (i >> 1);
+
+      // solve for particular value of variable
+      solve_value(env, obj, constr, depth, VALUE(v));
+
+      // stop searching if looking just for any solution
+      if (objective() == OBJ_ANY && solutions > 0) {
+        break;
+      }
+
+      // some new solutions were found
+      if (s != solutions) {
+        // optimize objective function
+        obj = objective_optimize(env, obj);
+        // abort if objective function has become infeasible
+        if (obj == NULL) {
+          break;
+        }
+        // restart if bounds for current variable have changed
+        if (lo != get_lo(*var) || hi != get_hi(*var)) {
+          goto restart;
+        }
+      }
+    }
+    break;
+  }
+  case VAL_VALUE:
+    solve(env, obj, constr, depth+1);
+    break;
+  default:
+    fprintf(stderr, ERROR_MSG_INVALID_VARIABLE_TYPE, var->type);
+  }
+}
+
 void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth) {
   calls++;
   if (calls % STATS_FREQUENCY == 0) {
@@ -143,84 +236,14 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
   }
 
   if (env[depth].key != NULL) {
-    struct val_t *var = env[depth].val;
-    switch (var->type) {
-    case VAL_INTERVAL: {
-      domain_t lo = var->value.ivl.lo;
-      domain_t hi = var->value.ivl.hi;
-
-      for (domain_t i = 0; i <= hi - lo; i++) {
-        domain_t v = (i & 1) ? hi - (i >> 1) : lo + (i >> 1);
-
-        // mark how much memory is allocated
-        void *alloc_marker = alloc(0);
-
-        // bind variable
-        size_t bind_depth = bind(env[depth].val, VALUE(v));
-
-        bool better = objective_better(env, obj);
-
-        // continue if better objective value is possible
-        if (better) {
-
-          // optimize objective function
-          struct constr_t *new_obj = objective_optimize(env, obj);
-
-          // continue if objective function is feasible
-          if (new_obj != NULL) {
-
-            // optimize constraints
-            struct constr_t *norm = normalize(env, constr);
-            struct constr_t *prop = propagate(env, norm, VALUE(1));
-
-            // continue if still feasible
-            if (prop != NULL) {
-
-              // solve recursively
-              solve(env, new_obj, prop, depth+1);
-
-            } else {
-              cuts_prop++;
-              cut_depth += depth;
-            }
-          } else {
-            cuts_obj++;
-            cut_depth += depth;
-          }
-        } else {
-          cuts_bound++;
-          cut_depth += depth;
-        }
-
-        // unbind variable again
-        unbind(bind_depth);
-
-        // free up memory
-        dealloc(alloc_marker);
-
-        // stop searching if looking just for any solution
-        if (objective() == OBJ_ANY && solutions > 0) {
-          break;
-        }
-      }
-      break;
-    }
-    case VAL_VALUE:
-      solve(env, obj, constr, depth+1);
-      break;
-    default:
-      fprintf(stderr, ERROR_MSG_INVALID_VARIABLE_TYPE, var->type);
-    }
+    solve_variable(env, obj, constr, depth);
   } else {
     struct val_t feasible = eval(env, constr);
-    if (is_true(feasible)) {
-      if (objective_better(env, obj)) {
-        objective_update(eval(env, obj));
-        print_solution(stdout, env);
-        solutions++;
-      }
+    if (is_true(feasible) && objective_better(env, obj)) {
+      objective_update(eval(env, obj));
+      print_solution(stdout, env);
+      solutions++;
     }
   }
 }
-
 
