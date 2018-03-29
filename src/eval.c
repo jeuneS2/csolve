@@ -29,14 +29,17 @@ void eval_cache_invalidate(void) {
 }
 
 const struct val_t eval_eq(const struct val_t a, const struct val_t b) {
-  if (is_value(a) && is_value(b)) {
-    return VALUE(a.value.val == b.value.val);
-  }
-
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
   domain_t b_lo = get_lo(b);
   domain_t b_hi = get_hi(b);
+  if (a_lo == DOMAIN_MIN || a_hi == DOMAIN_MAX ||
+      b_lo == DOMAIN_MIN || b_hi == DOMAIN_MAX) {
+    return INTERVAL(0, 1);
+  }
+  if (a_hi == b_hi && a_lo == b_lo && a_hi == a_lo) {
+    return VALUE(1);
+  }
   if (a_hi < b_lo || a_lo > b_hi) {
     return VALUE(0);
   }
@@ -49,6 +52,10 @@ const struct val_t eval_lt(const struct val_t a, const struct val_t b) {
   domain_t a_hi = get_hi(a);
   domain_t b_lo = get_lo(b);
   domain_t b_hi = get_hi(b);
+  if (a_lo == DOMAIN_MIN || a_hi == DOMAIN_MAX ||
+      b_lo == DOMAIN_MIN || b_hi == DOMAIN_MAX) {
+    return INTERVAL(0, 1);
+  }
   if (a_hi < b_lo) {
     return VALUE(1);
   }
