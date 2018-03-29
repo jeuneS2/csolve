@@ -1,0 +1,7 @@
+*~
+src/parser.c
+src/parser.h
+src/lexer.c
+test/*.xml
+*.gcda
+*.gcno
