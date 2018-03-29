@@ -35,9 +35,9 @@ uint32_t line_count = 1;
 
 BNUM (0b[0-1]+)
 ONUM (0[0-7]*)
-DNUM ([1-9][0-9]*)
-XNUM (0x[0-9a-fA-F]+)
-SYM  ([_a-zA-Z@][_a-zA-Z0-9@]*)
+DNUM (([[:digit:]]{-}[0])[[:digit:]]*)
+XNUM (0[xX][[:xdigit:]]+)
+SYM  ([_@\$[:alpha:]][_@\$[:alnum:]]*)
 
 %%
 
