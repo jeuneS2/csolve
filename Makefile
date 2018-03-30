@@ -38,6 +38,7 @@ TESTS= \
 	test/test_main.c \
 	test/test_normalize.c \
 	test/test_objective.c \
+	test/test_parser_support.c \
 	test/test_print.c \
 	test/test_propagate.c \
 	test/test_update_expr.c

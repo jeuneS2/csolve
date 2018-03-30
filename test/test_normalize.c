@@ -35,6 +35,46 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
   return MockProxy->update_unary_expr(constr, l);
 }
 
+TEST(NormalizeEval, Basic) {
+  struct val_t a = VALUE(1);
+  struct val_t b = VALUE(2);
+  struct val_t c;
+
+  struct env_t env [3] = { { "a", &a },
+                           { "b", &b },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+  struct constr_t Y;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, eval(env, &X))
+    .Times(1)
+    .WillOnce(::testing::Return(VALUE(27)));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&Y));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct val_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&c));
+  EXPECT_EQ(&Y, normal_eval(env, &X));
+  EXPECT_EQ(true, is_const(&Y));
+  EXPECT_EQ(&c, Y.constr.term);
+  EXPECT_EQ(27, get_lo(*Y.constr.term));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, eval(env, &X))
+    .Times(1)
+    .WillOnce(::testing::Return(INTERVAL(23, 42)));
+  EXPECT_EQ(&X, normal_eval(env, &X));
+  delete(MockProxy);
+}
+
 TEST(NormalizeEq, Basic) {
   struct val_t a = VALUE(1);
   struct val_t b = VALUE(2);
@@ -53,6 +93,27 @@ TEST(NormalizeEq, Basic) {
     .Times(1)
     .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_eq(env, &X));
+  delete(MockProxy);
+}
+
+TEST(NormalizeLt, Basic) {
+  struct val_t a = VALUE(1);
+  struct val_t b = VALUE(2);
+
+  struct env_t env [3] = { { "a", &a },
+                           { "b", &b },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, normal_lt(env, &X));
   delete(MockProxy);
 }
 

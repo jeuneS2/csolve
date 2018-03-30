@@ -44,8 +44,8 @@ struct var_t *vars_find_val(const struct val_t *val) {
 
 void vars_add(const char *key, struct val_t *val) {
   var_count++;
-  vars = realloc(vars, sizeof(struct var_t) * var_count);
-  vars[var_count-1].var.key = malloc(strlen(key)+1);
+  vars = (struct var_t *)realloc(vars, sizeof(struct var_t) * var_count);
+  vars[var_count-1].var.key = (const char *)malloc(strlen(key)+1);
   strcpy((char *)vars[var_count-1].var.key, key);
   vars[var_count-1].var.val = val;
   vars[var_count-1].weight = 0;
@@ -131,7 +131,7 @@ void vars_print(FILE *file) {
 }
 
 struct env_t *generate_env() {
-  struct env_t *env = malloc(sizeof(struct env_t) * (var_count+1));
+  struct env_t *env = (struct env_t *)malloc(sizeof(struct env_t) * (var_count+1));
   for (size_t i = 0; i < var_count; i++) {
     env[i] = vars[i].var;
   }

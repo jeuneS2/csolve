@@ -89,6 +89,15 @@ TEST(EvalLt, Basic) {
   EXPECT_EQ(INTERVAL(0, 1), eval_lt(INTERVAL(-3, 4), INTERVAL(1, 2)));
 }
 
+TEST(EvalLt, MinMax) {
+  EXPECT_EQ(INTERVAL(0, 1), eval_lt(VALUE(DOMAIN_MIN), VALUE(0)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_lt(VALUE(DOMAIN_MAX), VALUE(0)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_lt(VALUE(0), VALUE(DOMAIN_MAX)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_lt(VALUE(0), VALUE(DOMAIN_MAX)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_lt(INTERVAL(1, DOMAIN_MAX), INTERVAL(DOMAIN_MIN, -1)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_lt(INTERVAL(DOMAIN_MIN, DOMAIN_MAX), VALUE(0)));
+}
+
 TEST(EvalEq, Basic) {
   EXPECT_EQ(VALUE(1), eval_eq(VALUE(2), VALUE(2)));
   EXPECT_EQ(VALUE(0), eval_eq(VALUE(2), VALUE(-3)));
@@ -97,6 +106,15 @@ TEST(EvalEq, Basic) {
   EXPECT_EQ(VALUE(0), eval_eq(INTERVAL(-3, 1), INTERVAL(2, 4)));
   EXPECT_EQ(INTERVAL(0, 1), eval_eq(VALUE(2), INTERVAL(-3, 4)));
   EXPECT_EQ(INTERVAL(0, 1), eval_eq(INTERVAL(1, 4), INTERVAL(-3, 2)));
+}
+
+TEST(EvalEq, MinMax) {
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(VALUE(DOMAIN_MIN), VALUE(0)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(VALUE(DOMAIN_MAX), VALUE(0)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(VALUE(0), VALUE(DOMAIN_MIN)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(VALUE(0), VALUE(DOMAIN_MAX)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(INTERVAL(1, DOMAIN_MAX), INTERVAL(DOMAIN_MIN, -1)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(INTERVAL(DOMAIN_MIN, DOMAIN_MAX), VALUE(0)));
 }
 
 TEST(EvalNot, Basic) {
@@ -179,7 +197,7 @@ TEST(Eval, Basic) {
   struct val_t a = VALUE(0);
   struct val_t b = VALUE(1);
 
-  const struct env_t env [4] = { { "a", &a },
+  const struct env_t env [3] = { { "a", &a },
                                  { "b", &b },
                                  { NULL, NULL } };
 

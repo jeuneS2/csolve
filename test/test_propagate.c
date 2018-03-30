@@ -870,4 +870,35 @@ TEST(Propagate, Errors) {
   EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
 }
 
+TEST(Propagate, Loop) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+  struct val_t c = INTERVAL(0, 1);
+
+  struct env_t env [4] = { { "a", &a },
+                           { "b", &b },
+                           { "c", &c },
+                           { NULL, NULL } };
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return(&X));
+  EXPECT_EQ(&X, propagate(env, &X, c));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+    .Times(1)
+    .WillOnce(::testing::Return((struct constr_t *)NULL));
+  EXPECT_EQ(NULL, propagate(env, &X, c));
+  delete(MockProxy);
+}
+
 } // end namespace
