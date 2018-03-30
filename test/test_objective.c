@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace objective {
 #include "../src/arith.c"
@@ -14,6 +15,7 @@ class Mock {
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *constr));
   MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *constr, struct val_t val));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -28,6 +30,13 @@ struct constr_t *normalize(struct constr_t *constr) {
 
 struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
   return MockProxy->propagate(constr, val);
+}
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
 }
 
 TEST(ObjectiveInit, Basic) {
@@ -49,12 +58,10 @@ TEST(ObjectiveInit, Basic) {
 }
 
 TEST(ObjectiveInit, Errors) {
-  std::string output;
-
-  testing::internal::CaptureStderr();
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
   objective_init((objective_t)-1);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid objective function type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(Objective, Basic) {
@@ -185,13 +192,11 @@ TEST(ObjectiveBetter, Max) {
 }
 
 TEST(ObjectiveBetter, Errors) {
-  std::string output;
-
-  testing::internal::CaptureStderr();
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
   _objective = (objective_t)-1;
   objective_better(NULL);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid objective function type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(ObjectiveUpdate, Basic) {
@@ -201,12 +206,10 @@ TEST(ObjectiveUpdate, Basic) {
 }
 
 TEST(ObjectiveUpdate, Errors) {
-  std::string output;
-
-  testing::internal::CaptureStderr();
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL, testing::_)).Times(1);
   objective_update(INTERVAL(0, 1));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: trying to update best value with interval\n");
+  delete(MockProxy);
 }
 
 TEST(ObjectiveBest, Basic) {
@@ -289,16 +292,12 @@ TEST(ObjectiveOptimize, Error) {
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t X;
 
-  std::string output;
-
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
   _objective = (enum objective_t)-1;
   objective_update(VALUE(17));
-  testing::internal::CaptureStderr();
   EXPECT_EQ(&X, objective_optimize(&X));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid objective function type: ffffffff\n");
   delete(MockProxy);
 }
 

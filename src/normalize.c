@@ -208,7 +208,7 @@ struct constr_t *normal(struct constr_t *constr) {
     case OP_AND: return normal_and(constr);
     case OP_OR : return normal_or(constr);
     default:
-      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_error(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
   }
 

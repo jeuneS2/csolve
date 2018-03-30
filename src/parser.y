@@ -23,7 +23,6 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 #include "parser_support.h"
 
-extern FILE *yyin;
 int yylex(void);
 void yyerror(const char *);
 
@@ -246,10 +245,5 @@ Expr : OrExpr
 %%
 
 void yyerror(const char *message) {
-  fprintf(stderr, ERROR_MSG_PARSER_ERROR, message, yylloc.first_line);
-}
-
-int main(int argc, char **argv) {
-  yyin = stdin;
-  return yyparse();
+  print_error(ERROR_MSG_PARSER_ERROR, message, yylloc.first_line);
 }

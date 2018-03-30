@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace eval {
 #include "../src/arith.c"
@@ -6,6 +8,20 @@ namespace eval {
 
 bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
   return lhs.type == rhs.type && memcmp(&lhs.value, &rhs.value, sizeof(lhs.value)) == 0;
+}
+
+class Mock {
+ public:
+  MOCK_METHOD2(print_error, void (const char *, va_list));
+};
+
+Mock *MockProxy;
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
 }
 
 TEST(EvalNeg, Basic) {
@@ -238,23 +254,19 @@ TEST(Eval, Cache) {
 }
 
 TEST(Eval, Errors) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-
   struct constr_t X;
-  std::string output;
 
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   EXPECT_EQ(VALUE(0), eval(&X));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid operation: ffffffff\n");
+  delete(MockProxy);
 
+  MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
   EXPECT_EQ(VALUE(0), eval(&X));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(EvalCacheInval, Basic) {

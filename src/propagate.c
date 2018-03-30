@@ -214,11 +214,11 @@ struct constr_t *prop(struct constr_t *constr, struct val_t val) {
     case OP_AND: return propagate_and(constr, val);
     case OP_OR:  return propagate_or(constr, val);
     default:
-      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_error(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+    print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return constr;
 }

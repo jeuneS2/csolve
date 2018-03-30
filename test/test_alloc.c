@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace alloc {
 #include "../src/util.c"
@@ -7,12 +8,20 @@ namespace alloc {
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
 Mock *MockProxy;
 
 void eval_cache_invalidate(void) {
   MockProxy->eval_cache_invalidate();
+}
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
 }
 
 TEST(Alloc, Success) {
@@ -32,13 +41,11 @@ TEST(Alloc, Success) {
 }
 
 TEST(Alloc, Fail) {
-  std::string output;
-
+  MockProxy = new Mock();
   alloc_stack_pointer = 32;
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_OUT_OF_MEMORY, testing::_)).Times(1);
   EXPECT_EQ(NULL, alloc(ALLOC_STACK_SIZE));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: out of memory\n");
+  delete(MockProxy);
 }
 
 TEST(Dealloc, Success) {
@@ -48,27 +55,25 @@ TEST(Dealloc, Success) {
 }
 
 TEST(Dealloc, Fail) {
-  std::string output;
-
   alloc_stack_pointer = 64;
 
-  testing::internal::CaptureStderr();
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_WRONG_DEALLOC, testing::_)).Times(1);
   dealloc(&alloc_stack[ALLOC_ALIGNMENT-1]);
   EXPECT_EQ(64, alloc_stack_pointer);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: wrong deallocation\n");
+  delete(MockProxy);
 
-  testing::internal::CaptureStderr();
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_WRONG_DEALLOC, testing::_)).Times(1);
   dealloc(&alloc_stack[128]);
   EXPECT_EQ(64, alloc_stack_pointer);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: wrong deallocation\n");
+  delete(MockProxy);
 
-  testing::internal::CaptureStderr();
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_WRONG_DEALLOC, testing::_)).Times(1);
   dealloc(NULL);
   EXPECT_EQ(64, alloc_stack_pointer);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: wrong deallocation\n");
+  delete(MockProxy);
 }
 
 } // end namespace

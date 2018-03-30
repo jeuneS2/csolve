@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -45,7 +46,7 @@ void print_constr(FILE *file, const struct constr_t *constr) {
     fprintf(file, ")");
     break;
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+    print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
 
@@ -61,4 +62,15 @@ void print_solution(FILE *file, struct env_t *env) {
   fprintf(file, "SOLUTION: ");
   print_env(file, env);
   fprintf(file, "BEST: %d\n", objective_best());
+}
+
+void print_error(const char *fmt, ...) {
+    fprintf(stderr, "%s: error: ", main_name());
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+
+    fprintf(stderr, "\n");
 }

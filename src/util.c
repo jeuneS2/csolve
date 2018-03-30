@@ -42,7 +42,7 @@ void *alloc(size_t size) {
     }
     return retval;
   } else {
-    fprintf(stderr, ERROR_MSG_OUT_OF_MEMORY);
+    print_error(ERROR_MSG_OUT_OF_MEMORY);
     return NULL;
   }
 }
@@ -53,7 +53,7 @@ void dealloc(void *elem) {
       pointer >= 0 && pointer <= alloc_stack_pointer) {
     alloc_stack_pointer = pointer;
   } else {
-    fprintf(stderr, ERROR_MSG_WRONG_DEALLOC);
+    print_error(ERROR_MSG_WRONG_DEALLOC);
   }
 }
 
@@ -71,11 +71,11 @@ size_t bind(struct val_t *loc, const struct val_t val) {
       eval_cache_invalidate();
       return bind_depth++;
     } else {
-      fprintf(stderr, ERROR_MSG_TOO_MANY_BINDS);
+      print_error(ERROR_MSG_TOO_MANY_BINDS);
       return MAX_BINDS;
     }
   } else {
-    fprintf(stderr, ERROR_MSG_NULL_BIND);
+    print_error(ERROR_MSG_NULL_BIND);
     return MAX_BINDS;
   }
 }

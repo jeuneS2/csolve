@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace normalize {
 #include "../src/arith.c"
@@ -15,6 +16,7 @@ class Mock {
   MOCK_METHOD1(alloc, void *(size_t));
   MOCK_METHOD3(update_expr, struct constr_t *(struct constr_t *, struct constr_t *, struct constr_t *));
   MOCK_METHOD2(update_unary_expr, struct constr_t *(struct constr_t *, struct constr_t *));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -33,6 +35,13 @@ struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct
 
 struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) {
   return MockProxy->update_unary_expr(constr, l);
+}
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
 }
 
 TEST(NormalizeEval, Basic) {

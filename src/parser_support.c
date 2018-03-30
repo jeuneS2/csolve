@@ -72,11 +72,11 @@ int32_t vars_count(struct constr_t *constr) {
     case OP_NOT:
       return vars_count(constr->constr.expr.l);
     default:
-      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_error(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+    print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return 0;
 }
@@ -104,11 +104,11 @@ void vars_weighten(struct constr_t *constr, int32_t weight) {
       vars_weighten(constr->constr.expr.l, weight);
       break;
     default:
-      fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_error(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+    print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
 

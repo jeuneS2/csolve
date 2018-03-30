@@ -130,7 +130,7 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
     solve(env, obj, constr, depth+1);
     break;
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_VARIABLE_TYPE, var->type);
+    print_error(ERROR_MSG_INVALID_VARIABLE_TYPE, var->type);
   }
 }
 

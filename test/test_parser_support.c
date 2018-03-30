@@ -1,19 +1,38 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace parser_support {
-#include "../src/print.c"
 #include "../src/parser_support.c"
+
+bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
+  return lhs.type == rhs.type && memcmp(&lhs.value, &rhs.value, sizeof(lhs.value)) == 0;
+}
 
 class Mock {
  public:
   MOCK_METHOD0(objective_best, domain_t(void));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_val, void(FILE *, struct val_t));
 };
 
 Mock *MockProxy;
 
 domain_t objective_best(void) {
   return MockProxy->objective_best();
+}
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
+}
+
+void print_val(FILE *file, const struct val_t val) {
+  MockProxy->print_val(file, val);
+  static int i = 0;
+  fprintf(file, "<val%i>", i++);
 }
 
 TEST(VarsFindKey, Find) {
@@ -96,17 +115,17 @@ TEST(VarsCount, Errors) {
   struct constr_t X;
   std::string output;
 
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   EXPECT_EQ(0, vars_count(&X));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid operation: ffffffff\n");
+  delete(MockProxy);
 
+  MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
   EXPECT_EQ(0, vars_count(&X));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(VarsWeighten, Basic) {
@@ -134,19 +153,18 @@ TEST(VarsWeighten, Basic) {
 
 TEST(VarsWeighten, Errors) {
   struct constr_t X;
-  std::string output;
 
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   vars_weighten(&X, 1);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid operation: ffffffff\n");
+  delete(MockProxy);
 
+  MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
   vars_weighten(&X, 1);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(VarsCompare, Basic) {
@@ -177,15 +195,23 @@ TEST(VarsPrint, Basic) {
 
   std::string output;
 
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_val(stderr, val1)).Times(1);
+  EXPECT_CALL(*MockProxy, print_val(stderr, val2)).Times(1);
   testing::internal::CaptureStderr();
   vars_print(stderr);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "x: 0 [-1;5]\ny: 3 [18;86]\n");
+  EXPECT_EQ(output, "x: 0<val0>\ny: 3<val1>\n");
+  delete(MockProxy);
 
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_val(stdout, val1)).Times(1);
+  EXPECT_CALL(*MockProxy, print_val(stdout, val2)).Times(1);
   testing::internal::CaptureStdout();
   vars_print(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "x: 0 [-1;5]\ny: 3 [18;86]\n");
+  EXPECT_EQ(output, "x: 0<val2>\ny: 3<val3>\n");
+  delete(MockProxy);
 }
 
 }

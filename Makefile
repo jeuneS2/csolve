@@ -23,6 +23,7 @@ SRC= \
 	src/csolve.c \
 	src/eval.c \
 	src/lexer.c \
+	src/main.c \
 	src/normalize.c \
 	src/objective.c \
 	src/parser.c \
@@ -77,11 +78,14 @@ fuzz/csolve: ${SRC} ${HEADERS}
 	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC}
 
 fuzz: fuzz/csolve
-	if [[ -e fuzz/findings ]]; then \
+	if[[ -e fuzz/findings ]]; then \
 		afl-fuzz -m 128 -t 1000+ -i fuzz/inputs -o fuzz/findings -- $<; \
 	else \
 		afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
 	fi
+
+clean:
+	rm -rf csolve fuzz/csolve test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno
 
 sonar_start:
 	${SONAR} start
@@ -90,5 +94,4 @@ sonar_stop:
 sonar_run:
 	${SONAR_RUNNER}
 
-clean:
-	rm -rf csolve fuzz/csolve test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno
+.PHONY: all test coverage fuzz clean sonar_start sonar_stop sonar_run

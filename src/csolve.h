@@ -228,28 +228,33 @@ void print_env(FILE *file, struct env_t *env);
 void print_stats(FILE *file);
 /** Print a solution */
 void print_solution(FILE *file, struct env_t *env);
+/** Print an error message */
+void print_error(const char *fmt, ...);
+
+/** Get the name of the program */
+const char *main_name(void);
 
 /** Error message for errors in the lexer */
-#define ERROR_MSG_LEXER_ERROR               "ERROR: invalid input `%c' in line %u\n"
+#define ERROR_MSG_LEXER_ERROR               "invalid input `%c' in line %u"
 /** Error message for errors in the parser */
-#define ERROR_MSG_PARSER_ERROR              "ERROR: %s in line %u\n"
+#define ERROR_MSG_PARSER_ERROR              "%s in line %u"
 /** Error message when running out of memory */
-#define ERROR_MSG_OUT_OF_MEMORY             "ERROR: out of memory\n"
+#define ERROR_MSG_OUT_OF_MEMORY             "out of memory"
 /** Error message when errors when deallocating memory */
-#define ERROR_MSG_WRONG_DEALLOC             "ERROR: wrong deallocation\n"
+#define ERROR_MSG_WRONG_DEALLOC             "wrong deallocation"
 /** Error message when exceeding the maximum number of binds */
-#define ERROR_MSG_TOO_MANY_BINDS            "ERROR: exceeded maximum number of binds\n"
+#define ERROR_MSG_TOO_MANY_BINDS            "exceeded maximum number of binds"
 /** Error message when trying to bind NULL */
-#define ERROR_MSG_NULL_BIND                 "ERROR: cannot bind NULL\n"
+#define ERROR_MSG_NULL_BIND                 "cannot bind NULL"
 /** Error message when encountering an invalid constraint type */
-#define ERROR_MSG_INVALID_CONSTRAINT_TYPE   "ERROR: invalid constraint type: %02x\n"
+#define ERROR_MSG_INVALID_CONSTRAINT_TYPE   "invalid constraint type: %02x"
 /** Error message when encountering an invalid operation */
-#define ERROR_MSG_INVALID_OPERATION         "ERROR: invalid operation: %02x\n"
+#define ERROR_MSG_INVALID_OPERATION         "invalid operation: %02x"
 /** Error message when encountering an invalid variable type */
-#define ERROR_MSG_INVALID_VARIABLE_TYPE     "ERROR: invalid variable type: %02x\n"
+#define ERROR_MSG_INVALID_VARIABLE_TYPE     "invalid variable type: %02x"
 /** Error message when encountering an invalid objective function type */
-#define ERROR_MSG_INVALID_OBJ_FUNC_TYPE     "ERROR: invalid objective function type: %02x\n"
+#define ERROR_MSG_INVALID_OBJ_FUNC_TYPE     "invalid objective function type: %02x"
 /** Error message when trying to update the best value with an interval */
-#define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "ERROR: trying to update best value with interval\n"
+#define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "trying to update best value with interval"
 
 #endif

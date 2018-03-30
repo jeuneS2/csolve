@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -11,6 +12,7 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -19,11 +21,18 @@ void eval_cache_invalidate(void) {
   MockProxy->eval_cache_invalidate();
 }
 
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
+}
+
 TEST(Bind, Success) {
   struct val_t loc = INTERVAL(0, 100);
 
-  bind_depth = 23;
   MockProxy = new Mock();
+  bind_depth = 23;
   EXPECT_CALL(*MockProxy, eval_cache_invalidate())
     .Times(1);
   EXPECT_EQ(23, bind(&loc, VALUE(17)));
@@ -33,20 +42,19 @@ TEST(Bind, Success) {
 }
 
 TEST(Bind, Fail) {
-  std::string output;
   struct val_t loc = INTERVAL(0, 100);
 
+  MockProxy = new Mock();
   bind_depth = 23;
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_NULL_BIND, testing::_)).Times(1);
   EXPECT_EQ(MAX_BINDS, bind(NULL, VALUE(17)));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: cannot bind NULL\n");
+  delete(MockProxy);
 
+  MockProxy = new Mock();
   bind_depth = MAX_BINDS;
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_TOO_MANY_BINDS, testing::_)).Times(1);
   EXPECT_EQ(MAX_BINDS, bind(&loc, VALUE(17)));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: exceeded maximum number of binds\n");
+  delete(MockProxy);
 }
 
 TEST(Unbind, Sucess) {

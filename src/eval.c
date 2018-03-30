@@ -155,7 +155,7 @@ const struct val_t eval_expr(const struct constr_t *constr) {
   case OP_AND: return eval_and(constr);
   case OP_OR : return eval_or(constr);
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+    print_error(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
   }
   return VALUE(0);
 }
@@ -174,7 +174,7 @@ const struct val_t eval(const struct constr_t *constr) {
     return retval;
   }
   default:
-    fprintf(stderr, ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+    print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return VALUE(0);
 }

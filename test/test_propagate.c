@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace propagate {
 #include "../src/arith.c"
@@ -15,6 +16,7 @@ class Mock {
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
   MOCK_METHOD3(update_expr, struct constr_t *(struct constr_t *, struct constr_t *, struct constr_t *));
   MOCK_METHOD2(update_unary_expr, struct constr_t *(struct constr_t *, struct constr_t *));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -29,6 +31,13 @@ struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct
 
 struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) {
   return MockProxy->update_unary_expr(constr, l);
+}
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
 }
 
 TEST(PropagateTerm, Value) {
@@ -786,17 +795,17 @@ TEST(Propagate, Errors) {
   struct constr_t X;
   std::string output;
 
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   EXPECT_EQ(&X, prop(&X, c));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid operation: ffffffff\n");
+  delete(MockProxy);
 
+  MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  testing::internal::CaptureStderr();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
   EXPECT_EQ(&X, prop(&X, c));
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(Propagate, Loop) {

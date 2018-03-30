@@ -94,7 +94,7 @@ SYM  ([_@\$[:alpha:]][_@\$[:alnum:]]*)
 \n         { /* ignore lin-breaks */ }
 
 . {
-    fprintf(stderr, ERROR_MSG_LEXER_ERROR, yytext[0], yylineno);
+    print_error(ERROR_MSG_LEXER_ERROR, yytext[0], yylineno);
     exit(EXIT_FAILURE);
   }
 

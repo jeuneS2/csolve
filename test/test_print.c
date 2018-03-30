@@ -7,12 +7,17 @@ namespace print {
 class Mock {
  public:
   MOCK_METHOD0(objective_best, domain_t(void));
+  MOCK_METHOD0(main_name, const char *(void));
 };
 
 Mock *MockProxy;
 
 domain_t objective_best(void) {
   return MockProxy->objective_best();
+}
+
+const char *main_name(void) {
+  return MockProxy->main_name();
 }
 
 TEST(PrintValue, Basic) {
@@ -121,11 +126,14 @@ TEST(PrintConstr, Error) {
   std::string output;
   struct constr_t X;
 
+  MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
+  EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<name>"));
   testing::internal::CaptureStderr();
   print_constr(stdout, &X);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
+  EXPECT_EQ(output, "<name>: error: invalid constraint type: ffffffff\n");
+  delete(MockProxy);
 }
 
 TEST(PrintEnv, Basic) {
@@ -179,6 +187,29 @@ TEST(PrintSolution, Basic) {
   print_solution(stdout, env);
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "SOLUTION: a = 17, b = 23, c = [-1;42], BEST: 77\n");
+  delete(MockProxy);
+}
+
+TEST(PrintError, Basic) {
+  std::string output;
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
+  EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<name>"));
+  testing::internal::CaptureStderr();
+  print_error(ERROR_MSG_NULL_BIND);
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(output, "<name>: error: " ERROR_MSG_NULL_BIND "\n");
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
+  EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<other>"));
+  testing::internal::CaptureStderr();
+  print_error(ERROR_MSG_OUT_OF_MEMORY);
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(output, "<other>: error: " ERROR_MSG_OUT_OF_MEMORY "\n");
   delete(MockProxy);
 }
 

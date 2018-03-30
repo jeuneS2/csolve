@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <stdarg.h>
 
 namespace update_expr {
 #include "../src/util.c"
@@ -14,12 +15,20 @@ bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
+  MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
 Mock *MockProxy;
 
 void eval_cache_invalidate(void) {
   MockProxy->eval_cache_invalidate();
+}
+
+void print_error(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  MockProxy->print_error(fmt, args);
+  va_end(args);
 }
 
 TEST(UpdateExpr, Basic) {
