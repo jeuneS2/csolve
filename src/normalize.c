@@ -24,6 +24,20 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 struct constr_t *normal(struct env_t *env, struct constr_t *constr);
 
+struct constr_t *normal_eval(struct env_t *env, struct constr_t *constr) {
+  struct val_t val = eval(env, constr);
+  if (is_value(val)) {
+    struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
+    retval->type = CONSTR_TERM;
+    retval->constr.term = (struct val_t *)alloc(sizeof(struct val_t));
+    *retval->constr.term = val;
+    retval->eval_cache.tag = 0;
+    retval->eval_cache.val = VALUE(0);
+    return retval;
+  }
+  return constr;
+}
+
 struct constr_t *normal_eq(struct env_t *env, struct constr_t *constr) {
   struct constr_t *l = normal(env, constr->constr.expr.l);
   struct constr_t *r = normal(env, constr->constr.expr.r);
@@ -178,15 +192,9 @@ struct constr_t *normal_or(struct env_t *env, struct constr_t *constr) {
 struct constr_t *normal(struct env_t *env, struct constr_t *constr) {
   if (constr->type == CONSTR_EXPR) {
     // merge constant values into new terminal node
-    struct val_t val = eval(env, constr);
-    if (is_value(val)) {
-      struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
-      retval->type = CONSTR_TERM;
-      retval->constr.term = (struct val_t *)alloc(sizeof(struct val_t));
-      *retval->constr.term = val;
-      retval->eval_cache.tag = 0;
-      retval->eval_cache.val = VALUE(0);
-      return retval;
+    struct constr_t *e = normal_eval(env, constr);
+    if (e != constr) {
+      return e;
     }
 
     // handle operation-specific normalization
