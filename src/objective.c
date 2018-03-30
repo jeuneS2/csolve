@@ -48,7 +48,7 @@ enum objective_t objective(void) {
   return _objective;
 }
 
-bool objective_better(struct env_t *env, struct constr_t *obj) {
+bool objective_better(struct constr_t *obj) {
   switch (_objective) {
   case OBJ_ANY:
   case OBJ_ALL:
@@ -56,13 +56,13 @@ bool objective_better(struct env_t *env, struct constr_t *obj) {
     break;
   case OBJ_MIN:
     if (_objective_best != DOMAIN_MAX) {
-      struct val_t o = eval(env, obj);
+      struct val_t o = eval(obj);
       return get_lo(o) < _objective_best;
     }
     break;
   case OBJ_MAX:
     if (_objective_best != DOMAIN_MIN) {
-      struct val_t o = eval(env, obj);
+      struct val_t o = eval(obj);
       return get_hi(o) > _objective_best;
     }
     break;
@@ -84,19 +84,19 @@ domain_t objective_best(void) {
   return _objective_best;
 }
 
-struct constr_t *objective_optimize(struct env_t *env, struct constr_t *obj) {
+struct constr_t *objective_optimize(struct constr_t *obj) {
   struct constr_t *retval = obj;
   switch (_objective) {
   case OBJ_ANY:
   case OBJ_ALL:
     break;
   case OBJ_MIN:
-    retval = normalize(env, retval);
-    retval = propagate(env, retval, INTERVAL(DOMAIN_MIN, add(_objective_best, neg(1))));
+    retval = normalize(retval);
+    retval = propagate(retval, INTERVAL(DOMAIN_MIN, add(_objective_best, neg(1))));
     break;
   case OBJ_MAX:
-    retval = normalize(env, retval);
-    retval = propagate(env, retval, INTERVAL(add(_objective_best, 1), DOMAIN_MAX));
+    retval = normalize(retval);
+    retval = propagate(retval, INTERVAL(add(_objective_best, 1), DOMAIN_MAX));
     break;
   default:
     fprintf(stderr, ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);

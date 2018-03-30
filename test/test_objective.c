@@ -11,23 +11,23 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 
 class Mock {
  public:
-  MOCK_METHOD2(eval, const struct val_t(const struct env_t *, const struct constr_t *));
-  MOCK_METHOD2(normalize, struct constr_t *(struct env_t *env, struct constr_t *constr));
-  MOCK_METHOD3(propagate, struct constr_t *(struct env_t *env, struct constr_t *constr, struct val_t val));
+  MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
+  MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *constr));
+  MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *constr, struct val_t val));
 };
 
 Mock *MockProxy;
 
-const struct val_t eval(const struct env_t *env, const struct constr_t *constr) {
-  return MockProxy->eval(env, constr);
+const struct val_t eval(const struct constr_t *constr) {
+  return MockProxy->eval(constr);
 }
 
-struct constr_t *normalize(struct env_t *env, struct constr_t *constr) {
-  return MockProxy->normalize(env, constr);
+struct constr_t *normalize(struct constr_t *constr) {
+  return MockProxy->normalize(constr);
 }
 
-struct constr_t *propagate(struct env_t *env, struct constr_t *constr, struct val_t val) {
-  return MockProxy->propagate(env, constr, val);
+struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
+  return MockProxy->propagate(constr, val);
 }
 
 TEST(ObjectiveInit, Basic) {
@@ -68,22 +68,18 @@ TEST(ObjectiveBetter, Basic) {
   struct val_t a = VALUE(-1);
   struct val_t b = VALUE(23);
 
-  struct env_t env [3] = { { "a", &a },
-                           { "b", &b },
-                           { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
 
   _objective = OBJ_ANY;
   _objective_best = 17;
-  EXPECT_EQ(true, objective_better(env, &A));
-  EXPECT_EQ(true, objective_better(env, &B));
+  EXPECT_EQ(true, objective_better(&A));
+  EXPECT_EQ(true, objective_better(&B));
 
   _objective = OBJ_ALL;
   _objective_best = 17;
-  EXPECT_EQ(true, objective_better(env, &A));
-  EXPECT_EQ(true, objective_better(env, &B));
+  EXPECT_EQ(true, objective_better(&A));
+  EXPECT_EQ(true, objective_better(&B));
 }
 
 TEST(ObjectiveBetter, Min) {
@@ -91,12 +87,6 @@ TEST(ObjectiveBetter, Min) {
   struct val_t b = VALUE(23);
   struct val_t c = INTERVAL(-1, 0);
   struct val_t d = INTERVAL(18, 23);
-
-  struct env_t env [5] = { { "a", &a },
-                           { "b", &b },
-                           { "c", &b },
-                           { "d", &b },
-                           { NULL, NULL } };
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
@@ -106,40 +96,40 @@ TEST(ObjectiveBetter, Min) {
   _objective = OBJ_MIN;
   _objective_best = DOMAIN_MAX;
   MockProxy = new Mock();
-  EXPECT_EQ(true, objective_better(env, &A));
-  EXPECT_EQ(true, objective_better(env, &B));
-  EXPECT_EQ(true, objective_better(env, &C));
-  EXPECT_EQ(true, objective_better(env, &D));
+  EXPECT_EQ(true, objective_better(&A));
+  EXPECT_EQ(true, objective_better(&B));
+  EXPECT_EQ(true, objective_better(&C));
+  EXPECT_EQ(true, objective_better(&D));
   delete(MockProxy);
 
   _objective = OBJ_MIN;
   _objective_best = 17;
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &A))
+  EXPECT_CALL(*MockProxy, eval(&A))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(a));
-  EXPECT_EQ(true, objective_better(env, &A));
+  EXPECT_EQ(true, objective_better(&A));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &B))
+  EXPECT_CALL(*MockProxy, eval(&B))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(b));
-  EXPECT_EQ(false, objective_better(env, &B));
+  EXPECT_EQ(false, objective_better(&B));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &C))
+  EXPECT_CALL(*MockProxy, eval(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(c));
-  EXPECT_EQ(true, objective_better(env, &C));
+  EXPECT_EQ(true, objective_better(&C));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &D))
+  EXPECT_CALL(*MockProxy, eval(&D))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(d));
-  EXPECT_EQ(false, objective_better(env, &D));
+  EXPECT_EQ(false, objective_better(&D));
   delete(MockProxy);
 }
 
@@ -149,12 +139,6 @@ TEST(ObjectiveBetter, Max) {
   struct val_t c = INTERVAL(-1, 0);
   struct val_t d = INTERVAL(0, 23);
 
-  struct env_t env [5] = { { "a", &a },
-                           { "b", &b },
-                           { "c", &b },
-                           { "d", &b },
-                           { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
@@ -163,40 +147,40 @@ TEST(ObjectiveBetter, Max) {
   _objective = OBJ_MAX;
   _objective_best = DOMAIN_MIN;
   MockProxy = new Mock();
-  EXPECT_EQ(true, objective_better(env, &A));
-  EXPECT_EQ(true, objective_better(env, &B));
-  EXPECT_EQ(true, objective_better(env, &C));
-  EXPECT_EQ(true, objective_better(env, &D));
+  EXPECT_EQ(true, objective_better(&A));
+  EXPECT_EQ(true, objective_better(&B));
+  EXPECT_EQ(true, objective_better(&C));
+  EXPECT_EQ(true, objective_better(&D));
   delete(MockProxy);
 
   _objective = OBJ_MAX;
   _objective_best = 17;
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &A))
+  EXPECT_CALL(*MockProxy, eval(&A))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(a));
-  EXPECT_EQ(false, objective_better(env, &A));
+  EXPECT_EQ(false, objective_better(&A));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &B))
+  EXPECT_CALL(*MockProxy, eval(&B))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(b));
-  EXPECT_EQ(true, objective_better(env, &B));
+  EXPECT_EQ(true, objective_better(&B));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &C))
+  EXPECT_CALL(*MockProxy, eval(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(c));
-  EXPECT_EQ(false, objective_better(env, &C));
+  EXPECT_EQ(false, objective_better(&C));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(env, &D))
+  EXPECT_CALL(*MockProxy, eval(&D))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(d));
-  EXPECT_EQ(true, objective_better(env, &D));
+  EXPECT_EQ(true, objective_better(&D));
   delete(MockProxy);
 }
 
@@ -205,7 +189,7 @@ TEST(ObjectiveBetter, Errors) {
 
   testing::internal::CaptureStderr();
   _objective = (objective_t)-1;
-  objective_better(NULL, NULL);
+  objective_better(NULL);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "ERROR: invalid objective function type: ffffffff\n");
 }
@@ -236,10 +220,6 @@ TEST(ObjectiveOptimize, Basic) {
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
 
-  struct env_t env [3] = { { "a", &a },
-                           { "b", &b },
-                           { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t X;
@@ -248,22 +228,18 @@ TEST(ObjectiveOptimize, Basic) {
 
   MockProxy = new Mock();
   objective_init(OBJ_ANY);
-  EXPECT_EQ(&X, objective_optimize(env, &X));
+  EXPECT_EQ(&X, objective_optimize(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
   objective_init(OBJ_ALL);
-  EXPECT_EQ(&X, objective_optimize(env, &X));
+  EXPECT_EQ(&X, objective_optimize(&X));
   delete(MockProxy);
 }
 
 TEST(ObjectiveOptimize, Min) {
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
-
-  struct env_t env [3] = { { "a", &a },
-                           { "b", &b },
-                           { NULL, NULL } };
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
@@ -273,23 +249,19 @@ TEST(ObjectiveOptimize, Min) {
   MockProxy = new Mock();
   objective_init(OBJ_MIN);
   objective_update(VALUE(17));
-  EXPECT_CALL(*MockProxy, normalize(env, &X))
+  EXPECT_CALL(*MockProxy, normalize(&X))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, propagate(env, &X, INTERVAL(DOMAIN_MIN, 16)))
+  EXPECT_CALL(*MockProxy, propagate(&X, INTERVAL(DOMAIN_MIN, 16)))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(&X));
-  EXPECT_EQ(&X, objective_optimize(env, &X));
+  EXPECT_EQ(&X, objective_optimize(&X));
   delete(MockProxy);
 }
 
 TEST(ObjectiveOptimize, Max) {
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
-
-  struct env_t env [3] = { { "a", &a },
-                           { "b", &b },
-                           { NULL, NULL } };
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
@@ -299,23 +271,19 @@ TEST(ObjectiveOptimize, Max) {
   MockProxy = new Mock();
   objective_init(OBJ_MAX);
   objective_update(VALUE(17));
-  EXPECT_CALL(*MockProxy, normalize(env, &X))
+  EXPECT_CALL(*MockProxy, normalize(&X))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, propagate(env, &X, INTERVAL(18, DOMAIN_MAX)))
+  EXPECT_CALL(*MockProxy, propagate(&X, INTERVAL(18, DOMAIN_MAX)))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(&X));
-  EXPECT_EQ(&X, objective_optimize(env, &X));
+  EXPECT_EQ(&X, objective_optimize(&X));
   delete(MockProxy);
 }
 
 TEST(ObjectiveOptimize, Error) {
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
-
-  struct env_t env [3] = { { "a", &a },
-                           { "b", &b },
-                           { NULL, NULL } };
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
@@ -328,7 +296,7 @@ TEST(ObjectiveOptimize, Error) {
   _objective = (enum objective_t)-1;
   objective_update(VALUE(17));
   testing::internal::CaptureStderr();
-  EXPECT_EQ(&X, objective_optimize(env, &X));
+  EXPECT_EQ(&X, objective_optimize(&X));
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "ERROR: invalid objective function type: ffffffff\n");
   delete(MockProxy);

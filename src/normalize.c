@@ -22,10 +22,10 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
-struct constr_t *normal(struct env_t *env, struct constr_t *constr);
+struct constr_t *normal(struct constr_t *constr);
 
-struct constr_t *normal_eval(struct env_t *env, struct constr_t *constr) {
-  struct val_t val = eval(env, constr);
+struct constr_t *normal_eval(struct constr_t *constr) {
+  struct val_t val = eval(constr);
   if (is_value(val)) {
     struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
     retval->type = CONSTR_TERM;
@@ -38,15 +38,15 @@ struct constr_t *normal_eval(struct env_t *env, struct constr_t *constr) {
   return constr;
 }
 
-struct constr_t *normal_eq(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
-  struct constr_t *r = normal(env, constr->constr.expr.r);
+struct constr_t *normal_eq(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *r = normal(constr->constr.expr.r);
   return update_expr(constr, l, r);
 }
 
-struct constr_t *normal_lt(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
-  struct constr_t *r = normal(env, constr->constr.expr.r);
+struct constr_t *normal_lt(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *r = normal(constr->constr.expr.r);
 
   if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NEG &&
       r->type == CONSTR_EXPR && r->constr.expr.op == OP_NEG) {
@@ -61,13 +61,13 @@ struct constr_t *normal_lt(struct env_t *env, struct constr_t *constr) {
 
       struct constr_t *c = (struct constr_t *)alloc(sizeof(struct constr_t));
       *c = CONSTRAINT_EXPR(OP_NEG, r->constr.expr.r, NULL);
-      c = normal(env, update_expr(r, l, c));
+      c = normal(update_expr(r, l, c));
 
       return update_expr(constr, c, r->constr.expr.l);
     }
 
     if (r->type == CONSTR_EXPR && r->constr.expr.op == OP_NEG) {
-      return update_expr(constr, r->constr.expr.l, normal(env, update_unary_expr(r, l)));
+      return update_expr(constr, r->constr.expr.l, normal(update_unary_expr(r, l)));
     }
   }
 
@@ -79,30 +79,30 @@ struct constr_t *normal_lt(struct env_t *env, struct constr_t *constr) {
 
       struct constr_t *c = (struct constr_t *)alloc(sizeof(struct constr_t));
       *c = CONSTRAINT_EXPR(OP_NEG, l->constr.expr.r, NULL);
-      c = normal(env, update_expr(l, r, c));
+      c = normal(update_expr(l, r, c));
 
       return update_expr(constr, l->constr.expr.l, c);
     }
 
     if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NEG) {
-      return update_expr(constr, normal(env, update_unary_expr(l, r)), l->constr.expr.l);
+      return update_expr(constr, normal(update_unary_expr(l, r)), l->constr.expr.l);
     }
   }
 
   return update_expr(constr, l, r);
 }
 
-struct constr_t *normal_neg(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
+struct constr_t *normal_neg(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
   if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NEG) {
     return l->constr.expr.l;
   }
   return update_unary_expr(constr, l);
 }
 
-struct constr_t *normal_add(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
-  struct constr_t *r = normal(env, constr->constr.expr.r);
+struct constr_t *normal_add(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *r = normal(constr->constr.expr.r);
 
   if (is_const(l)) {
     return update_expr(constr, r, l);
@@ -127,9 +127,9 @@ struct constr_t *normal_add(struct env_t *env, struct constr_t *constr) {
   return update_expr(constr, l, r);
 }
 
-struct constr_t *normal_mul(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
-  struct constr_t *r = normal(env, constr->constr.expr.r);
+struct constr_t *normal_mul(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *r = normal(constr->constr.expr.r);
 
   if (is_const(l)) {
     return update_expr(constr, r, l);
@@ -154,14 +154,14 @@ struct constr_t *normal_mul(struct env_t *env, struct constr_t *constr) {
   return update_expr(constr, l, r);
 }
 
-struct constr_t *normal_not(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
+struct constr_t *normal_not(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
   return update_unary_expr(constr, l);
 }
 
-struct constr_t *normal_and(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
-  struct constr_t *r = normal(env, constr->constr.expr.r);
+struct constr_t *normal_and(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *r = normal(constr->constr.expr.r);
 
   if (is_const(l) && is_true(*l->constr.term)) {
     return r;
@@ -174,9 +174,9 @@ struct constr_t *normal_and(struct env_t *env, struct constr_t *constr) {
   return update_expr(constr, l, r);
 }
 
-struct constr_t *normal_or(struct env_t *env, struct constr_t *constr) {
-  struct constr_t *l = normal(env, constr->constr.expr.l);
-  struct constr_t *r = normal(env, constr->constr.expr.r);
+struct constr_t *normal_or(struct constr_t *constr) {
+  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *r = normal(constr->constr.expr.r);
 
   if (is_const(l) && is_false(*l->constr.term)) {
     return r;
@@ -189,24 +189,24 @@ struct constr_t *normal_or(struct env_t *env, struct constr_t *constr) {
   return update_expr(constr, l, r);
 }
 
-struct constr_t *normal(struct env_t *env, struct constr_t *constr) {
+struct constr_t *normal(struct constr_t *constr) {
   if (constr->type == CONSTR_EXPR) {
     // merge constant values into new terminal node
-    struct constr_t *e = normal_eval(env, constr);
+    struct constr_t *e = normal_eval(constr);
     if (e != constr) {
       return e;
     }
 
     // handle operation-specific normalization
     switch (constr->constr.expr.op) {
-    case OP_EQ:  return normal_eq(env, constr);
-    case OP_LT:  return normal_lt(env, constr);
-    case OP_NEG: return normal_neg(env, constr);
-    case OP_ADD: return normal_add(env, constr);
-    case OP_MUL: return normal_mul(env, constr);
-    case OP_NOT: return normal_not(env, constr);
-    case OP_AND: return normal_and(env, constr);
-    case OP_OR : return normal_or(env, constr);
+    case OP_EQ:  return normal_eq(constr);
+    case OP_LT:  return normal_lt(constr);
+    case OP_NEG: return normal_neg(constr);
+    case OP_ADD: return normal_add(constr);
+    case OP_MUL: return normal_mul(constr);
+    case OP_NOT: return normal_not(constr);
+    case OP_AND: return normal_and(constr);
+    case OP_OR : return normal_or(constr);
     default:
       fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
@@ -215,12 +215,12 @@ struct constr_t *normal(struct env_t *env, struct constr_t *constr) {
   return constr;
 }
 
-struct constr_t *normalize(struct env_t *env, struct constr_t *constr) {
+struct constr_t *normalize(struct constr_t *constr) {
   struct constr_t *prev = constr;
-  struct constr_t *norm = normal(env, prev);
+  struct constr_t *norm = normal(prev);
   while (norm != prev) {
     prev = norm;
-    norm = normal(env, prev);
+    norm = normal(prev);
   }
   return norm;
 }

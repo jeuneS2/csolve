@@ -53,20 +53,20 @@ void yyerror(const char *);
 Input : Objective Constraints
       {
         vars_sort();
-        struct env_t *env = generate_env();
 
-        struct constr_t *norm = normalize(env, $2);
-        struct constr_t *prop = propagate(env, norm, VALUE(1));
+        struct constr_t *norm = normalize($2);
+        struct constr_t *prop = propagate(norm, VALUE(1));
 
         if (prop != NULL) {
           do {
-            norm = normalize(env, prop);
-            prop = propagate(env, norm, VALUE(1));
+            norm = normalize(prop);
+            prop = propagate(norm, VALUE(1));
           } while (norm != prop && prop != NULL);
         }
 
         if (prop != NULL) {
-          struct constr_t *obj = objective_optimize(env, $1);
+          struct env_t *env = generate_env();
+          struct constr_t *obj = objective_optimize($1);
           solve(env, obj, prop, 0);
         }
 

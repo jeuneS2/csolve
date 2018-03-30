@@ -188,11 +188,11 @@ size_t bind(struct val_t *loc, const struct val_t val);
 void unbind(size_t depth);
 
 /** Evaluate a constraint */
-const struct val_t eval(const struct env_t *env, const struct constr_t *constr);
+const struct val_t eval(const struct constr_t *constr);
 /** Normalize a constraint */
-struct constr_t *normalize(struct env_t *env, struct constr_t *constr);
+struct constr_t *normalize(struct constr_t *constr);
 /** Propagate a result value to the terminal nodes of the constraint */
-struct constr_t *propagate(struct env_t *env, struct constr_t *constr, struct val_t val);
+struct constr_t *propagate(struct constr_t *constr, struct val_t val);
 
 /** Update children of constraint, possibly allocating a new node */
 struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct constr_t *r);
@@ -207,13 +207,13 @@ void objective_init(enum objective_t o);
 /** Get objective function type */
 enum objective_t objective(void);
 /** Check whether the objective value can be possibly better */
-bool objective_better(struct env_t *env, struct constr_t *obj);
+bool objective_better(struct constr_t *obj);
 /** Update the objective value */
 void objective_update(struct val_t obj);
 /** Get the current best objective value */
 domain_t objective_best(void);
 /** Optimize objective function */
-struct constr_t *objective_optimize(struct env_t *env, struct constr_t *obj);
+struct constr_t *objective_optimize(struct constr_t *obj);
 
 /** Find solutions */
 void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth);

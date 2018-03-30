@@ -48,20 +48,20 @@ void solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *const
   // bind variable
   size_t bind_depth = bind(env[depth].val, val);
 
-  bool better = objective_better(env, obj);
+  bool better = objective_better(obj);
 
   // continue if better objective value is possible
   if (better) {
 
     // optimize objective function
-    struct constr_t *new_obj = objective_optimize(env, obj);
+    struct constr_t *new_obj = objective_optimize(obj);
 
     // continue if objective function is feasible
     if (new_obj != NULL) {
 
       // optimize constraints
-      struct constr_t *norm = normalize(env, constr);
-      struct constr_t *prop = propagate(env, norm, VALUE(1));
+      struct constr_t *norm = normalize(constr);
+      struct constr_t *prop = propagate(norm, VALUE(1));
 
       // continue if still feasible
       if (prop != NULL) {
@@ -113,7 +113,7 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
       // some new solutions were found
       if (s != solutions) {
         // optimize objective function
-        obj = objective_optimize(env, obj);
+        obj = objective_optimize(obj);
         // abort if objective function has become infeasible
         if (obj == NULL) {
           break;
@@ -143,9 +143,9 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
   if (env[depth].key != NULL) {
     solve_variable(env, obj, constr, depth);
   } else {
-    struct val_t feasible = eval(env, constr);
-    if (is_true(feasible) && objective_better(env, obj)) {
-      objective_update(eval(env, obj));
+    struct val_t feasible = eval(constr);
+    if (is_true(feasible) && objective_better(obj)) {
+      objective_update(eval(obj));
       print_solution(stdout, env);
       solutions++;
     }

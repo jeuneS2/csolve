@@ -128,34 +128,29 @@ TEST(EvalAnd, Basic) {
   struct val_t b = VALUE(1);
   struct val_t c = INTERVAL(0, 1);
 
-  const struct env_t env [4] = { { "a", &a },
-                                 { "b", &b },
-                                 { "c", &c },
-                                 { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(OP_AND, &A, &A);
-  EXPECT_EQ(VALUE(0), eval_and(env, &X));
+  EXPECT_EQ(VALUE(0), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(VALUE(0), eval_and(env, &X));
+  EXPECT_EQ(VALUE(0), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &B, &A);
-  EXPECT_EQ(VALUE(0), eval_and(env, &X));
+  EXPECT_EQ(VALUE(0), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &B, &B);
-  EXPECT_EQ(VALUE(1), eval_and(env, &X));
+  EXPECT_EQ(VALUE(1), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &A, &C);
-  EXPECT_EQ(VALUE(0), eval_and(env, &X));
+  EXPECT_EQ(VALUE(0), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &C, &A);
-  EXPECT_EQ(VALUE(0), eval_and(env, &X));
+  EXPECT_EQ(VALUE(0), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &B, &C);
-  EXPECT_EQ(INTERVAL(0, 1), eval_and(env, &X));
+  EXPECT_EQ(INTERVAL(0, 1), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &C, &B);
-  EXPECT_EQ(INTERVAL(0, 1), eval_and(env, &X));
+  EXPECT_EQ(INTERVAL(0, 1), eval_and(&X));
   X = CONSTRAINT_EXPR(OP_AND, &C, &C);
-  EXPECT_EQ(INTERVAL(0, 1), eval_and(env, &X));
+  EXPECT_EQ(INTERVAL(0, 1), eval_and(&X));
 }
 
 TEST(EvalOr, Basic) {
@@ -163,117 +158,101 @@ TEST(EvalOr, Basic) {
   struct val_t b = VALUE(1);
   struct val_t c = INTERVAL(0, 1);
 
-  const struct env_t env [4] = { { "a", &a },
-                                 { "b", &b },
-                                 { "c", &c },
-                                 { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(OP_OR, &A, &A);
-  EXPECT_EQ(VALUE(0), eval_or(env, &X));
+  EXPECT_EQ(VALUE(0), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(VALUE(1), eval_or(env, &X));
+  EXPECT_EQ(VALUE(1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &B, &A);
-  EXPECT_EQ(VALUE(1), eval_or(env, &X));
+  EXPECT_EQ(VALUE(1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &B, &B);
-  EXPECT_EQ(VALUE(1), eval_or(env, &X));
+  EXPECT_EQ(VALUE(1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &A, &C);
-  EXPECT_EQ(INTERVAL(0, 1), eval_or(env, &X));
+  EXPECT_EQ(INTERVAL(0, 1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &C, &A);
-  EXPECT_EQ(INTERVAL(0, 1), eval_or(env, &X));
+  EXPECT_EQ(INTERVAL(0, 1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &B, &C);
-  EXPECT_EQ(VALUE(1), eval_or(env, &X));
+  EXPECT_EQ(VALUE(1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &C, &B);
-  EXPECT_EQ(VALUE(1), eval_or(env, &X));
+  EXPECT_EQ(VALUE(1), eval_or(&X));
   X = CONSTRAINT_EXPR(OP_OR, &C, &C);
-  EXPECT_EQ(INTERVAL(0, 1), eval_or(env, &X));
+  EXPECT_EQ(INTERVAL(0, 1), eval_or(&X));
 }
 
 TEST(Eval, Basic) {
   struct val_t a = VALUE(0);
   struct val_t b = VALUE(1);
 
-  const struct env_t env [3] = { { "a", &a },
-                                 { "b", &b },
-                                 { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &A);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_LT, &A, &A);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_NEG, &B, NULL);
-  EXPECT_EQ(VALUE(-1), eval(env, &X));
+  EXPECT_EQ(VALUE(-1), eval(&X));
   X = CONSTRAINT_EXPR(OP_ADD, &A, &A);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_ADD, &B, &B);
-  EXPECT_EQ(VALUE(2), eval(env, &X));
+  EXPECT_EQ(VALUE(2), eval(&X));
   X = CONSTRAINT_EXPR(OP_MUL, &A, &A);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_MUL, &B, &B);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
   X = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_AND, &B, &B);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
   X = CONSTRAINT_EXPR(OP_OR, &A, &A);
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
 }
 
 TEST(Eval, Cache) {
   struct val_t a = VALUE(23);
 
-  const struct env_t env [2] = { { "a", &a },
-                                 { NULL, NULL } };
-
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &A);
-  EXPECT_EQ(VALUE(1), eval(env, &X));
-  EXPECT_EQ(VALUE(1), eval(env, &X));
-  EXPECT_EQ(VALUE(1), eval(env, &X));
+  EXPECT_EQ(VALUE(1), eval(&X));
+  EXPECT_EQ(VALUE(1), eval(&X));
+  EXPECT_EQ(VALUE(1), eval(&X));
 }
 
 TEST(Eval, Errors) {
   struct val_t a = VALUE(0);
   struct val_t b = VALUE(1);
 
-  const struct env_t env [4] = { { "a", &a },
-                                 { "b", &b },
-                                 { NULL, NULL } };
-
   struct constr_t X;
   std::string output;
 
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
   testing::internal::CaptureStderr();
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "ERROR: invalid operation: ffffffff\n");
 
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
   testing::internal::CaptureStderr();
-  EXPECT_EQ(VALUE(0), eval(env, &X));
+  EXPECT_EQ(VALUE(0), eval(&X));
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "ERROR: invalid constraint type: ffffffff\n");
 }

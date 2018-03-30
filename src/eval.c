@@ -106,13 +106,13 @@ const struct val_t eval_not(const struct val_t a) {
   return (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
 }
 
-const struct val_t eval_and(const struct env_t *env, const struct constr_t *constr) {
-  const struct val_t lval = eval(env, constr->constr.expr.l);
+const struct val_t eval_and(const struct constr_t *constr) {
+  const struct val_t lval = eval(constr->constr.expr.l);
   if (is_false(lval)) {
     return VALUE(0);
   }
 
-  const struct val_t rval = eval(env, constr->constr.expr.r);
+  const struct val_t rval = eval(constr->constr.expr.r);
   if (is_false(rval)) {
     return VALUE(0);
   }
@@ -124,13 +124,13 @@ const struct val_t eval_and(const struct env_t *env, const struct constr_t *cons
   return INTERVAL(0, 1);
 }
 
-const struct val_t eval_or(const struct env_t *env, const struct constr_t *constr) {
-  const struct val_t lval = eval(env, constr->constr.expr.l);
+const struct val_t eval_or(const struct constr_t *constr) {
+  const struct val_t lval = eval(constr->constr.expr.l);
   if (is_true(lval)) {
     return VALUE(1);
   }
 
-  const struct val_t rval = eval(env, constr->constr.expr.r);
+  const struct val_t rval = eval(constr->constr.expr.r);
   if (is_true(rval)) {
     return VALUE(1);
   }
@@ -142,25 +142,25 @@ const struct val_t eval_or(const struct env_t *env, const struct constr_t *const
   return INTERVAL(0, 1);
 }
 
-const struct val_t eval_expr(const struct env_t *env, const struct constr_t *constr) {
+const struct val_t eval_expr(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
   const struct constr_t *r = constr->constr.expr.r;
   switch (constr->constr.expr.op) {
-  case OP_EQ:  return eval_eq(eval(env, l), eval(env, r));
-  case OP_LT:  return eval_lt(eval(env, l), eval(env, r));
-  case OP_NEG: return eval_neg(eval(env, l));
-  case OP_ADD: return eval_add(eval(env, l), eval(env, r));
-  case OP_MUL: return eval_mul(eval(env, l), eval(env, r));
-  case OP_NOT: return eval_not(eval(env, l));
-  case OP_AND: return eval_and(env, constr);
-  case OP_OR : return eval_or(env, constr);
+  case OP_EQ:  return eval_eq(eval(l), eval(r));
+  case OP_LT:  return eval_lt(eval(l), eval(r));
+  case OP_NEG: return eval_neg(eval(l));
+  case OP_ADD: return eval_add(eval(l), eval(r));
+  case OP_MUL: return eval_mul(eval(l), eval(r));
+  case OP_NOT: return eval_not(eval(l));
+  case OP_AND: return eval_and(constr);
+  case OP_OR : return eval_or(constr);
   default:
     fprintf(stderr, ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
   }
   return VALUE(0);
 }
 
-const struct val_t eval(const struct env_t *env, const struct constr_t *constr) {
+const struct val_t eval(const struct constr_t *constr) {
   switch (constr->type) {
   case CONSTR_TERM:
     return *constr->constr.term;
@@ -168,7 +168,7 @@ const struct val_t eval(const struct env_t *env, const struct constr_t *constr) 
     if (constr->eval_cache.tag == _eval_cache_tag) {
       return constr->eval_cache.val;
     }
-    struct val_t retval = eval_expr(env, constr);
+    struct val_t retval = eval_expr(constr);
     ((struct constr_t *)constr)->eval_cache.val = retval;
     ((struct constr_t *)constr)->eval_cache.tag = _eval_cache_tag;
     return retval;
