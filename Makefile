@@ -28,7 +28,8 @@ SRC= \
 	src/parser.c \
 	src/parser_support.c \
 	src/print.c \
-	src/propagate.c
+	src/propagate.c \
+	src/util.c
 TESTS= \
 	test/test_alloc.c \
 	test/test_arith.c \
@@ -75,7 +76,11 @@ fuzz/csolve: ${SRC} ${HEADERS}
 	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC}
 
 fuzz: fuzz/csolve
-	afl-fuzz -m 128 -i fuzz/inputs -o fuzz/findings -- $<
+	if [[ -e fuzz/findings ]]; then \
+		afl-fuzz -m 128 -t 1000+ -i fuzz/inputs -o fuzz/findings -- $<; \
+	else \
+		afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
+	fi
 
 sonar_start:
 	${SONAR} start

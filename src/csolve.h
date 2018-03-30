@@ -179,9 +179,13 @@ const domain_t max(const domain_t a, const domain_t b);
 
 /** Allocate memory on the allocation stack */
 void *alloc(size_t size);
+/** Deallocate memory on the allocation stack */
+void dealloc(void *elem);
 
 /** Bind a variable (at location loc) to a specific value */
 size_t bind(struct val_t *loc, const struct val_t val);
+/** Undo variable binds down to a given depth */
+void unbind(size_t depth);
 
 /** Evaluate a constraint */
 const struct val_t eval(const struct env_t *env, const struct constr_t *constr);
