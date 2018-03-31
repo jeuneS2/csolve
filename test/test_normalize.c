@@ -419,8 +419,8 @@ TEST(NormalizeOr, Basic) {
 }
 
 TEST(Normalize, Basic) {
-  struct val_t a = INTERVAL(17,23);
-  struct val_t b = INTERVAL(42,77);
+  struct val_t a = INTERVAL(-17,23);
+  struct val_t b = INTERVAL(-42,77);
   struct val_t c;
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };

@@ -163,11 +163,11 @@ struct constr_t *normal_and(struct constr_t *constr) {
   struct constr_t *l = normal(constr->constr.expr.l);
   struct constr_t *r = normal(constr->constr.expr.r);
 
-  if (is_const(l) && is_true(*l->constr.term)) {
+  if (is_term(l) && is_true(*l->constr.term)) {
     return r;
   }
 
-  if (is_const(r) && is_true(*r->constr.term)) {
+  if (is_term(r) && is_true(*r->constr.term)) {
     return l;
   }
 
@@ -178,11 +178,11 @@ struct constr_t *normal_or(struct constr_t *constr) {
   struct constr_t *l = normal(constr->constr.expr.l);
   struct constr_t *r = normal(constr->constr.expr.r);
 
-  if (is_const(l) && is_false(*l->constr.term)) {
+  if (is_term(l) && is_false(*l->constr.term)) {
     return r;
   }
 
-  if (is_const(r) && is_false(*r->constr.term)) {
+  if (is_term(r) && is_false(*r->constr.term)) {
     return l;
   }
 

@@ -99,11 +99,13 @@ const struct val_t eval_mul(const struct val_t a, const struct val_t b) {
 }
 
 const struct val_t eval_not(const struct val_t a) {
-  domain_t a_lo = get_lo(a);
-  domain_t a_hi = get_hi(a);
-  domain_t lo = !a_hi;
-  domain_t hi = !a_lo;
-  return (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+  if (is_true(a)) {
+    return VALUE(0);
+  }
+  if (is_false(a)) {
+    return VALUE(1);
+  }
+  return INTERVAL(0, 1);
 }
 
 const struct val_t eval_and(const struct constr_t *constr) {
@@ -117,8 +119,8 @@ const struct val_t eval_and(const struct constr_t *constr) {
     return VALUE(0);
   }
 
-  if (is_value(lval) && is_value(rval)) {
-    return VALUE(lval.value.val && rval.value.val);
+  if (is_true(lval) && is_true(rval)) {
+    return VALUE(1);
   }
 
   return INTERVAL(0, 1);
@@ -135,8 +137,8 @@ const struct val_t eval_or(const struct constr_t *constr) {
     return VALUE(1);
   }
 
-  if (is_value(lval) && is_value(rval)) {
-    return VALUE(lval.value.val || rval.value.val);
+  if (is_false(lval) && is_false(rval)) {
+    return VALUE(0);
   }
 
   return INTERVAL(0, 1);

@@ -61,14 +61,6 @@ struct val_t {
 static inline bool is_value(struct val_t v) {
   return v.type == VAL_VALUE;
 }
-/** Checks whether value represents a boolean "true" */
-static inline bool is_true(struct val_t v) {
-  return is_value(v) && v.value.val != 0;
-}
-/** Checks whether value represents a boolean "false" */
-static inline bool is_false(struct val_t v) {
-  return is_value(v) && v.value.val == 0;
-}
 /** Get the lower bound of an interval or the single value */
 static inline domain_t get_lo(struct val_t v) {
   return is_value(v) ? v.value.val : v.value.ivl.lo;
@@ -76,6 +68,14 @@ static inline domain_t get_lo(struct val_t v) {
 /** Get the upper bound of an interval or the single value */
 static inline domain_t get_hi(struct val_t v) {
   return is_value(v) ? v.value.val : v.value.ivl.hi;
+}
+/** Checks whether value represents a boolean "true" */
+static inline bool is_true(struct val_t v) {
+  return get_lo(v) > 0 || get_hi(v) < 0;
+}
+/** Checks whether value represents a boolean "false" */
+static inline bool is_false(struct val_t v) {
+  return is_value(v) && v.value.val == 0;
 }
 
 #define VALUE(V)                                    \

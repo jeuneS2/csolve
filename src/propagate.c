@@ -145,10 +145,13 @@ struct constr_t *propagate_mul(struct constr_t *constr, struct val_t val) {
 struct constr_t *propagate_not(struct constr_t *constr, struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
 
-  domain_t lo = !get_hi(val);
-  domain_t hi = !get_lo(val);
-  struct val_t v = (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
-  l = prop(constr->constr.expr.l, v);
+  if (is_true(val)) {
+    l = prop(constr->constr.expr.l, VALUE(0));
+  }
+
+  if (is_false(val)) {
+    l = prop(constr->constr.expr.l, VALUE(1));
+  }
 
   return update_unary_expr(constr, l);
 }
