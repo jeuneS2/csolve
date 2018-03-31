@@ -84,10 +84,8 @@ void parse_options(int argc, char **argv) {
 
   FILE *in = stdin;
 
-  if (optind == argc-1) {
-    if (strcmp(argv[optind], "-") != 0) {
-      in = fopen(argv[optind], "r");
-    }
+  if (optind == argc-1 && strcmp(argv[optind], "-") != 0) {
+    in = fopen(argv[optind], "r");
     if (in == NULL) {
       print_error("%s: %s", argv[optind], strerror(errno));
       exit(EXIT_FAILURE);

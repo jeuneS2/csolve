@@ -793,7 +793,6 @@ TEST(Propagate, Errors) {
   struct val_t c = INTERVAL(0, 1);
 
   struct constr_t X;
-  std::string output;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
