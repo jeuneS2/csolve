@@ -44,7 +44,7 @@ TESTS= \
 	test/test_propagate.c \
 	test/test_update_expr.c
 
-all: csolve test coverage
+all: csolve test coverage doc
 
 src/lexer.c: src/lexer.l src/parser.h
 	${LEX} ${LFLAGS} -o $@ $<
@@ -84,8 +84,13 @@ fuzz: fuzz/csolve
 		afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
 	fi
 
+doxygen:
+	doxygen doxygen.config
+
+doc: doxygen
+
 clean:
-	rm -rf csolve fuzz/csolve test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno
+	rm -rf csolve fuzz/csolve test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
 
 sonar_start:
 	${SONAR} start
@@ -94,4 +99,4 @@ sonar_stop:
 sonar_run:
 	${SONAR_RUNNER}
 
-.PHONY: all test coverage fuzz clean sonar_start sonar_stop sonar_run
+.PHONY: all test coverage fuzz doxygen doc clean sonar_start sonar_stop sonar_run

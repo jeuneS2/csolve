@@ -5,3 +5,4 @@ src/lexer.c
 test/*.xml
 *.gcda
 *.gcno
+doc/doxygen
