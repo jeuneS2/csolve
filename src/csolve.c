@@ -41,7 +41,17 @@ void print_stats(FILE *file) {
           alloc_max, solutions);
 }
 
-void solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth, struct val_t val) {
+void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
+  if (env[depth1].key != NULL && env[depth2].key != NULL) {
+    struct env_t t = env[depth2];
+    env[depth2] = env[depth1];
+    env[depth1] = t;
+  }
+}
+
+bool solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth, struct val_t val) {
+  bool failed = true;
+
   // mark how much memory is allocated
   void *alloc_marker = alloc(0);
 
@@ -68,6 +78,7 @@ void solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *const
 
         // solve recursively
         solve(env, new_obj, prop, depth+1);
+        failed = false;
 
       } else {
         cuts_prop++;
@@ -87,12 +98,15 @@ void solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *const
 
   // free up memory
   dealloc(alloc_marker);
+
+  return failed;
 }
 
 void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth) {
   struct val_t *var = env[depth].val;
   switch (var->type) {
   case VAL_INTERVAL: {
+    bool failed = true;
     restart:;
     domain_t lo = get_lo(*var);
     domain_t hi = get_hi(*var);
@@ -103,7 +117,7 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
       domain_t v = (i & 1) ? hi - (i >> 1) : lo + (i >> 1);
 
       // solve for particular value of variable
-      solve_value(env, obj, constr, depth, VALUE(v));
+      failed &= solve_value(env, obj, constr, depth, VALUE(v));
 
       // stop searching if looking just for any solution
       if (objective() == OBJ_ANY && solutions > 0) {
@@ -124,10 +138,18 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
         }
       }
     }
+
+    // swap failed depth forward
+    if (solutions == 0 && !failed) {
+      swap_env(env, depth, depth+1);
+    }
     break;
   }
   case VAL_VALUE:
     solve(env, obj, constr, depth+1);
+    if (solutions == 0) {
+      swap_env(env, depth, depth+1);
+    }
     break;
   default:
     print_error(ERROR_MSG_INVALID_VARIABLE_TYPE, var->type);
