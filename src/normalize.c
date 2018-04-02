@@ -32,7 +32,6 @@ struct constr_t *normal_eval(struct constr_t *constr) {
     retval->constr.term = (struct val_t *)alloc(sizeof(struct val_t));
     *retval->constr.term = val;
     retval->eval_cache.tag = 0;
-    retval->eval_cache.val = VALUE(0);
     return retval;
   }
   return constr;
@@ -156,6 +155,9 @@ struct constr_t *normal_mul(struct constr_t *constr) {
 
 struct constr_t *normal_not(struct constr_t *constr) {
   struct constr_t *l = normal(constr->constr.expr.l);
+  if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NOT) {
+    return l->constr.expr.l;
+  }
   return update_unary_expr(constr, l);
 }
 
@@ -171,6 +173,15 @@ struct constr_t *normal_and(struct constr_t *constr) {
     return l;
   }
 
+  if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NOT &&
+      r->type == CONSTR_EXPR && r->constr.expr.op == OP_NOT) {
+
+    struct constr_t *c = (struct constr_t *)alloc(sizeof(struct constr_t));
+    *c = CONSTRAINT_EXPR(OP_OR, l->constr.expr.l, r->constr.expr.l);
+
+    return update_unary_expr(l, c);
+  }
+
   return update_expr(constr, l, r);
 }
 
@@ -184,6 +195,15 @@ struct constr_t *normal_or(struct constr_t *constr) {
 
   if (is_term(r) && is_false(*r->constr.term)) {
     return l;
+  }
+
+  if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NOT &&
+      r->type == CONSTR_EXPR && r->constr.expr.op == OP_NOT) {
+
+    struct constr_t *c = (struct constr_t *)alloc(sizeof(struct constr_t));
+    *c = CONSTRAINT_EXPR(OP_AND, l->constr.expr.l, r->constr.expr.l);
+
+    return update_unary_expr(l, c);
   }
 
   return update_expr(constr, l, r);
