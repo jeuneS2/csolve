@@ -9,6 +9,8 @@ class Mock {
  public:
   MOCK_METHOD0(yyparse, int(void));
   MOCK_METHOD1(yyset_in, void(FILE *));
+  MOCK_METHOD1(alloc_init, void(size_t));
+  MOCK_METHOD1(bind_init, void(size_t));
   MOCK_METHOD2(print_error, void (const char *, va_list));
 };
 
@@ -20,6 +22,14 @@ int yyparse() {
 
 void yyset_in(FILE *file) {
   MockProxy->yyset_in(file);
+}
+
+void alloc_init(size_t size) {
+  MockProxy->alloc_init(size);
+}
+
+void bind_init(size_t size) {
+  MockProxy->bind_init(size);
 }
 
 void print_error(const char *fmt, ...) {
@@ -72,12 +82,12 @@ TEST(PrintUsage, Basic) {
   testing::internal::CaptureStdout();
   print_usage(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "Usage: <foo> [-v] [-h] [<file>]\n");
+  EXPECT_EQ(output, "Usage: <foo> [-v] [-h] [-b <binds>] [-m <size>] [<file>]\n");
 
   testing::internal::CaptureStderr();
   print_usage(stderr);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "Usage: <foo> [-v] [-h] [<file>]\n");
+  EXPECT_EQ(output, "Usage: <foo> [-v] [-h] [-b <binds>] [-m <size>] [<file>]\n");
 }
 
 TEST(PrintHelp, Basic) {
@@ -88,8 +98,10 @@ TEST(PrintHelp, Basic) {
   testing::internal::CaptureStdout();
   print_help(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "Usage: <bar> [-v] [-h] [<file>]\n"
+  EXPECT_EQ(output, "Usage: <bar> [-v] [-h] [-b <binds>] [-m <size>] [<file>]\n"
             "Options:\n"
+            "  -b --binds <binds>   maximum number of binds (default: 1024)\n"
+            "  -m --memory <size>   allocation stack size (default: 16777216)\n"
             "  -h --help            show this message and exit\n"
             "  -v --version         print version and exit\n");
 }
@@ -105,8 +117,10 @@ TEST(ParseOptions, Help) {
   testing::internal::CaptureStdout();
   EXPECT_EXIT(parse_options(argc, (char **)argv), ::testing::ExitedWithCode(0), "");
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "Usage: <bar> [-v] [-h] [<file>]\n"
+  EXPECT_EQ(output, "Usage: <bar> [-v] [-h] [-b <binds>] [-m <size>] [<file>]\n"
             "Options:\n"
+            "  -b --binds <binds>   maximum number of binds (default: 1024)\n"
+            "  -m --memory <size>   allocation stack size (default: 16777216)\n"
             "  -h --help            show this message and exit\n"
             "  -v --version         print version and exit\n");
 }

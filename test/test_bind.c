@@ -31,12 +31,14 @@ void print_error(const char *fmt, ...) {
 TEST(Bind, Success) {
   struct val_t loc = INTERVAL(0, 100);
 
+  bind_init(64);
+
   MockProxy = new Mock();
-  bind_depth = 23;
+  _bind_depth = 23;
   EXPECT_CALL(*MockProxy, eval_cache_invalidate())
     .Times(1);
   EXPECT_EQ(23, bind(&loc, VALUE(17)));
-  EXPECT_EQ(24, bind_depth);
+  EXPECT_EQ(24, _bind_depth);
   EXPECT_EQ(loc, VALUE(17));
   delete(MockProxy);
 }
@@ -44,16 +46,18 @@ TEST(Bind, Success) {
 TEST(Bind, Fail) {
   struct val_t loc = INTERVAL(0, 100);
 
+  bind_init(64);
+
   MockProxy = new Mock();
-  bind_depth = 23;
+  _bind_depth = 23;
   EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_NULL_BIND, testing::_)).Times(1);
-  EXPECT_EQ(MAX_BINDS, bind(NULL, VALUE(17)));
+  EXPECT_EQ(_bind_stack_size, bind(NULL, VALUE(17)));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  bind_depth = MAX_BINDS;
+  _bind_depth = _bind_stack_size;
   EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_TOO_MANY_BINDS, testing::_)).Times(1);
-  EXPECT_EQ(MAX_BINDS, bind(&loc, VALUE(17)));
+  EXPECT_EQ(_bind_stack_size, bind(&loc, VALUE(17)));
   delete(MockProxy);
 }
 
@@ -61,7 +65,9 @@ TEST(Unbind, Sucess) {
   struct val_t loc1 = INTERVAL(0, 100);
   struct val_t loc2 = INTERVAL(17, 23);
 
-  bind_depth = 17;
+  bind_init(64);
+
+  _bind_depth = 17;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, eval_cache_invalidate())
     .Times(2);
@@ -75,7 +81,7 @@ TEST(Unbind, Sucess) {
   unbind(17);
   EXPECT_EQ(loc1, INTERVAL(0, 100));
   EXPECT_EQ(loc2, INTERVAL(17, 23));
-  EXPECT_EQ(17, bind_depth);
+  EXPECT_EQ(17, _bind_depth);
   delete(MockProxy);
 }
 

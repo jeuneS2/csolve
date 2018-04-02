@@ -177,11 +177,19 @@ const domain_t min(const domain_t a, const domain_t b);
 /** Return maximum of two values */
 const domain_t max(const domain_t a, const domain_t b);
 
+/** Default size of allocation stack */
+#define ALLOC_STACK_SIZE_DEFAULT (16*1024*1024)
+/** Initialize the allocation stack */
+void alloc_init(size_t size);
 /** Allocate memory on the allocation stack */
 void *alloc(size_t size);
 /** Deallocate memory on the allocation stack */
 void dealloc(void *elem);
 
+/** Default size of allocation stack */
+#define BIND_STACK_SIZE_DEFAULT (1024)
+/** Initialize the binding structures */
+void bind_init(size_t size);
 /** Bind a variable (at location loc) to a specific value */
 size_t bind(struct val_t *loc, const struct val_t val);
 /** Undo variable binds down to a given depth */
@@ -256,5 +264,7 @@ const char *main_name(void);
 #define ERROR_MSG_INVALID_OBJ_FUNC_TYPE     "invalid objective function type: %02x"
 /** Error message when trying to update the best value with an interval */
 #define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "trying to update best value with interval"
+/** Error message when encountering invalid size arguments on the command line */
+#define ERROR_MSG_INVALID_SIZE_ARG          "invalid size argument: %s"
 
 #endif

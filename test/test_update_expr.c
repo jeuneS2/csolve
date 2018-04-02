@@ -9,7 +9,22 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
   return lhs.type == rhs.type && memcmp(&lhs.value, &rhs.value, sizeof(lhs.value)) == 0;
 }
 bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
-  return lhs.type == rhs.type && memcmp(&lhs.constr, &rhs.constr, sizeof(lhs.constr)) == 0;
+  if (lhs.type != rhs.type) {
+    return false;
+  }
+  if (lhs.type == CONSTR_TERM) {
+    if (lhs.constr.term != rhs.constr.term) {
+      return false;
+    }
+  }
+  if (lhs.type == CONSTR_EXPR) {
+    if (lhs.constr.expr.op != rhs.constr.expr.op ||
+        lhs.constr.expr.l != rhs.constr.expr.l ||
+        lhs.constr.expr.r != rhs.constr.expr.r) {
+      return false;
+    }
+  }
+  return true;
 }
 
 class Mock {
@@ -43,6 +58,8 @@ TEST(UpdateExpr, Basic) {
 
   struct constr_t *P, *Q, *R;
 
+  alloc_init(1024);
+
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
 
   EXPECT_EQ(&X, update_expr(&X, &A, &B));
@@ -69,6 +86,8 @@ TEST(UpdateExpr, Null) {
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t X;
 
+  alloc_init(1024);
+
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
   EXPECT_EQ(NULL, update_expr(&X, &A, NULL));
   EXPECT_EQ(NULL, update_expr(&X, NULL, &B));
@@ -86,6 +105,8 @@ TEST(UpdateUnaryExpr, Basic) {
   struct constr_t X;
 
   struct constr_t *P, *Q;
+
+  alloc_init(1024);
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, NULL);
 
@@ -106,6 +127,8 @@ TEST(UpdateUnaryExpr, Null) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t X;
+
+  alloc_init(1024);
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, NULL);
   EXPECT_EQ(NULL, update_unary_expr(&X, NULL));
