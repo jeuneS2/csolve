@@ -100,6 +100,7 @@ struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct
     retval->constr.expr.op = constr->constr.expr.op;
     retval->constr.expr.l = l;
     retval->constr.expr.r = r;
+    retval->eval_cache.tag = 0;
     return retval;
   }
   return constr;
@@ -115,6 +116,7 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
     retval->constr.expr.op = constr->constr.expr.op;
     retval->constr.expr.l = l;
     retval->constr.expr.r = NULL;
+    retval->eval_cache.tag = 0;
     return retval;
   }
   return constr;
