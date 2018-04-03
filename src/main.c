@@ -25,6 +25,10 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "parser.h"
 #include "version.h"
 
+#define KILO 1024
+#define MEGA (KILO * KILO)
+#define GIGA (KILO * KILO * KILO)
+
 void yyset_in(FILE *);
 
 const char *_main_name;
@@ -59,11 +63,11 @@ size_t parse_size(const char *str) {
   if (endptr[0] == '\0') {
     return size;
   } else if ((endptr[0] == 'k' || endptr[0] == 'K') && endptr[1] == '\0') {
-    return size * 1024;
+    return size * KILO;
   } else if ((endptr[0] == 'm' || endptr[0] == 'M') && endptr[1] == '\0') {
-    return size * 1024 * 1024;
+    return size * MEGA;
   } else if ((endptr[0] == 'g' || endptr[0] == 'G') && endptr[1] == '\0') {
-    return size * 1024 * 1024 * 1024;
+    return size * GIGA;
   } else {
     print_error(ERROR_MSG_INVALID_SIZE_ARG, str);
     exit(EXIT_FAILURE);
