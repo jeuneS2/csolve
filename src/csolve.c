@@ -75,14 +75,15 @@ bool solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *const
     if (new_obj != NULL) {
 
       // optimize constraints
-      struct constr_t *norm = normalize(constr);
-      struct constr_t *prop = propagate(norm, VALUE(1));
+      struct constr_t *prop = propagate(constr, VALUE(1));
 
       // continue if still feasible
       if (prop != NULL) {
 
+        struct constr_t *norm = normalize(prop);
+
         // solve recursively
-        solve(env, new_obj, prop, depth+1);
+        solve(env, new_obj, norm, depth+1);
         failed = false;
 
       } else {

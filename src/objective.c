@@ -53,7 +53,6 @@ bool objective_better(struct constr_t *obj) {
   case OBJ_ANY:
   case OBJ_ALL:
     return true;
-    break;
   case OBJ_MIN:
     if (_objective_best != DOMAIN_MAX) {
       struct val_t o = eval(obj);
@@ -91,12 +90,12 @@ struct constr_t *objective_optimize(struct constr_t *obj) {
   case OBJ_ALL:
     break;
   case OBJ_MIN:
-    retval = normalize(retval);
     retval = propagate(retval, INTERVAL(DOMAIN_MIN, add(_objective_best, neg(1))));
+    retval = retval != NULL ? normalize(retval) : retval;
     break;
   case OBJ_MAX:
-    retval = normalize(retval);
     retval = propagate(retval, INTERVAL(add(_objective_best, 1), DOMAIN_MAX));
+    retval = retval != NULL ? normalize(retval) : retval;
     break;
   default:
     print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);

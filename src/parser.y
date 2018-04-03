@@ -53,10 +53,10 @@ Input : Objective Constraints
       {
         vars_sort();
 
-        struct constr_t *norm = normalize($2);
-        struct constr_t *prop = propagate(norm, VALUE(1));
+        struct constr_t *prop = propagate($2, VALUE(1));
 
         if (prop != NULL) {
+          struct constr_t *norm = prop;
           do {
             norm = normalize(prop);
             prop = propagate(norm, VALUE(1));
