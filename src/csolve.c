@@ -32,13 +32,18 @@ uint64_t cuts_bound = 0;
 uint64_t cuts_obj = 0;
 uint64_t cut_depth = 0;
 uint64_t solutions = 0;
+size_t depth_min = SIZE_MAX;
+size_t depth_max = 0;
 extern size_t alloc_max;
 
 void print_stats(FILE *file) {
-  fprintf(file, "CALLS: %ld, CUTS: %ld/%ld, BOUND: %ld, AVG DEPTH: %f, MEMORY: %ld, SOLUTIONS: %ld\n",
+  fprintf(file, "CALLS: %ld, CUTS: %ld/%ld, BOUND: %ld, DEPTH: %ld/%ld, AVG DEPTH: %f, MEMORY: %ld, SOLUTIONS: %ld\n",
           calls, cuts_prop, cuts_obj, cuts_bound,
+          depth_min, depth_max,
           (double)cut_depth / (cuts_prop + cuts_obj + cuts_bound),
           alloc_max, solutions);
+  depth_min = SIZE_MAX;
+  depth_max = 0;
 }
 
 void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
@@ -157,6 +162,12 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
 }
 
 void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth) {
+  if (depth < depth_min) {
+    depth_min = depth;
+  }
+  if (depth > depth_max) {
+    depth_max = depth;
+  }
   calls++;
   if (calls % STATS_FREQUENCY == 0) {
     print_stats(stdout);
