@@ -80,7 +80,7 @@ void bind_init(size_t size) {
   _bind_stack_size = size;
   _bind_depth = 0;
 
-  _bind_stack = (struct binding_t *)malloc(sizeof(struct binding_t *) * _bind_stack_size);
+  _bind_stack = (struct binding_t *)malloc(sizeof(struct binding_t) * _bind_stack_size);
   if (_bind_stack == 0) {
     print_error("%s", strerror(errno));
     exit(EXIT_FAILURE);
