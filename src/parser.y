@@ -31,19 +31,21 @@ void yyerror(const char *);
 %union {
   const char *strval;
   domain_t intval;
-  struct constr_t *constr;
+  struct constr_t *expr;
+  struct expr_list_t *expr_list;
 }
 
 %locations
 %define parse.error verbose
 %define parse.lac full
 
-%token ANY ALL MIN MAX NEQ LEQ GEQ
+%token ANY ALL MIN MAX NEQ LEQ GEQ ALL_DIFFERENT
 %token <intval> NUM
 %token <strval> IDENT
 
-%type <constr> PrimaryExpr UnaryExpr MultExpr AddExpr RelatExpr EqualExpr AndExpr OrExpr Expr
-%type <constr> Objective Constraint Constraints
+%type <expr> PrimaryExpr UnaryExpr MultExpr AddExpr RelatExpr EqualExpr AndExpr OrExpr Expr
+%type <expr> Objective Constraint Constraints
+%type <expr_list> ExprList
 
 %start Input
 
@@ -79,7 +81,6 @@ Objective : ANY ';'
             $$->constr.term = alloc(sizeof(struct val_t));
             *$$->constr.term = VALUE(0);
             $$->eval_cache.tag = 0;
-            $$->eval_cache.val = VALUE(0);
           }
           | ALL ';'
           { objective_init(OBJ_ALL);
@@ -88,7 +89,6 @@ Objective : ANY ';'
             $$->constr.term = alloc(sizeof(struct val_t));
             *$$->constr.term = VALUE(0);
             $$->eval_cache.tag = 0;
-            $$->eval_cache.val = VALUE(0);
           }
           | MIN Expr ';'
           { objective_init(OBJ_MIN);
@@ -117,7 +117,6 @@ PrimaryExpr : NUM
               $$->constr.term = alloc(sizeof(struct val_t));
               *$$->constr.term = VALUE($1);
               $$->eval_cache.tag = 0;
-              $$->eval_cache.val = VALUE($1);
             }
             | IDENT
             { $$ = alloc(sizeof(struct constr_t));
@@ -131,7 +130,6 @@ PrimaryExpr : NUM
                 vars_add($1, $$->constr.term);
               }
               $$->eval_cache.tag = 0;
-              $$->eval_cache.val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
             }
             | '(' Expr ')'
             { $$ = $2;
@@ -147,7 +145,38 @@ UnaryExpr : PrimaryExpr
           { $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_NOT, $2, NULL);
           }
+          | ALL_DIFFERENT '(' ExprList ')'
+          {
+            // start with TRUE
+            $$ = alloc(sizeof(struct constr_t));
+            $$->type = CONSTR_TERM;
+            $$->constr.term = alloc(sizeof(struct val_t));
+            *$$->constr.term = VALUE(1);
+            $$->eval_cache.tag = 0;
+            // add != constraints for all pairs
+            for (struct expr_list_t *l = $3; l != NULL; l = l->next) {
+              for (struct expr_list_t *k = l->next; k != NULL; k = k->next) {
+                struct constr_t *a = alloc(sizeof(struct constr_t));
+                *a = CONSTRAINT_EXPR(OP_LT, l->expr, k->expr);
+                struct constr_t *b = alloc(sizeof(struct constr_t));
+                *b = CONSTRAINT_EXPR(OP_LT, k->expr, l->expr);
+                struct constr_t *c = alloc(sizeof(struct constr_t));
+                *c = CONSTRAINT_EXPR(OP_OR, a, b);
+                struct constr_t *d = alloc(sizeof(struct constr_t));
+                *d = CONSTRAINT_EXPR(OP_AND, $$, c);
+                $$ = d;
+              }
+            }
+          }
+;
 
+ExprList : Expr
+         { $$ = expr_list_append(NULL, $1);
+         }
+         | ExprList ',' Expr
+         { $$ = expr_list_append($1, $3);
+         }
+;
 
 MultExpr : UnaryExpr
          | MultExpr '*' UnaryExpr
@@ -186,7 +215,6 @@ RelatExpr : AddExpr
             v->constr.term = alloc(sizeof(struct val_t));
             *v->constr.term = VALUE(1);
             v->eval_cache.tag = 0;
-            v->eval_cache.val = VALUE(1);
             struct constr_t *c = alloc(sizeof(struct constr_t));
             *c = CONSTRAINT_EXPR(OP_ADD, $3, v);
             $$ = alloc(sizeof(struct constr_t));
@@ -199,7 +227,6 @@ RelatExpr : AddExpr
             v->constr.term = alloc(sizeof(struct val_t));
             *v->constr.term = VALUE(1);
             v->eval_cache.tag = 0;
-            v->eval_cache.val = VALUE(1);
             struct constr_t *c = alloc(sizeof(struct constr_t));
             *c = CONSTRAINT_EXPR(OP_ADD, $1, v);
             $$ = alloc(sizeof(struct constr_t));

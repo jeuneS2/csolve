@@ -46,6 +46,8 @@ SYM  ([_@\$[:alpha:]][_@\$[:alnum:]]*)
 "MAX"  return MAX;
 "MIN"  return MIN;
 
+"all_different"  return ALL_DIFFERENT;
+
 "="    return '=';
 "!="   return NEQ;
 "<"    return '<';
@@ -62,6 +64,7 @@ SYM  ([_@\$[:alpha:]][_@\$[:alnum:]]*)
 "("    return '(';
 ")"    return ')';
 
+","    return ',';
 ";"    return ';';
 
 {BNUM} {

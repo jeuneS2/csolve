@@ -139,3 +139,10 @@ struct env_t *generate_env() {
   env[var_count].val = NULL;
   return env;
 }
+
+struct expr_list_t *expr_list_append(struct expr_list_t *list, struct constr_t *elem) {
+  struct expr_list_t *retval = (struct expr_list_t *)malloc(sizeof(struct expr_list_t));
+  retval->expr = elem;
+  retval->next = list;
+  return retval;
+}

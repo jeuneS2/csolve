@@ -48,4 +48,13 @@ void vars_sort(void);
 /** Generate variable environment */
 struct env_t *generate_env(void);
 
+/** Type to represent a list of expressions during parsing */
+struct expr_list_t {
+  struct constr_t *expr; ///< Expression
+  struct expr_list_t *next; ///< Next element of list
+};
+
+/** Add an element to a list of expressions */
+struct expr_list_t *expr_list_append(struct expr_list_t *list, struct constr_t *elem);
+
 #endif
