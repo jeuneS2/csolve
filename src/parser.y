@@ -202,12 +202,16 @@ RelatExpr : AddExpr
           | RelatExpr '<' AddExpr
           { $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_LT, $1, $3);
-            vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            if (strategy_compute_weights()) {
+              vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            }
           }
           | RelatExpr '>' AddExpr
           { $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_LT, $3, $1);
-            vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            if (strategy_compute_weights()) {
+              vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            }
           }
           | RelatExpr LEQ AddExpr
           { struct constr_t *v = alloc(sizeof(struct constr_t));
@@ -219,7 +223,9 @@ RelatExpr : AddExpr
             *c = CONSTRAINT_EXPR(OP_ADD, $3, v);
             $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_LT, $1, c);
-            vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            if (strategy_compute_weights()) {
+              vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            }
           }
           | RelatExpr GEQ AddExpr
           { struct constr_t *v = alloc(sizeof(struct constr_t));
@@ -231,7 +237,9 @@ RelatExpr : AddExpr
             *c = CONSTRAINT_EXPR(OP_ADD, $1, v);
             $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_LT, $3, c);
-            vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            if (strategy_compute_weights()) {
+              vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
+            }
           }
 ;
 
@@ -239,7 +247,9 @@ EqualExpr : RelatExpr
           | EqualExpr '=' RelatExpr
           { $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_EQ, $1, $3);
-            vars_weighten($$, WEIGHT_EQUAL / max(1, vars_count($$)));
+            if (strategy_compute_weights()) {
+              vars_weighten($$, WEIGHT_EQUAL / max(1, vars_count($$)));
+            }
           }
           | EqualExpr NEQ RelatExpr
           { struct constr_t *a = alloc(sizeof(struct constr_t));
@@ -248,7 +258,9 @@ EqualExpr : RelatExpr
             *b = CONSTRAINT_EXPR(OP_LT, $3, $1);
             $$ = alloc(sizeof(struct constr_t));
             *$$ = CONSTRAINT_EXPR(OP_OR, a, b);
-            vars_weighten($$, WEIGHT_NOT_EQUAL / max(1, vars_count($$)));
+            if (strategy_compute_weights()) {
+              vars_weighten($$, WEIGHT_NOT_EQUAL / max(1, vars_count($$)));
+            }
           }
 ;
 

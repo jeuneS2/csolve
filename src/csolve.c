@@ -146,14 +146,14 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
     }
 
     // swap failed depth forward
-    if (solutions == 0 && !failed) {
+    if (strategy_prefer_failing() && !failed) {
       swap_env(env, depth, depth+1);
     }
     break;
   }
   case VAL_VALUE:
     solve(env, obj, constr, depth+1);
-    if (solutions == 0) {
+    if (strategy_prefer_failing()) {
       swap_env(env, depth, depth+1);
     }
     break;
@@ -175,6 +175,7 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
   }
 
   if (env[depth].key != NULL) {
+    strategy_pick_var(env, depth);
     solve_variable(env, obj, constr, depth);
   } else {
     struct val_t feasible = eval(constr);

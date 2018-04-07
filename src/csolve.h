@@ -166,6 +166,15 @@ enum objective_t {
   OBJ_MAX  ///< Find solution that maximizes objective function
 };
 
+/** Types of ordering strategies */
+enum order_t {
+  ORDER_NONE,            ///< Pick the next variable in environment during solving
+  ORDER_SMALLEST_DOMAIN, ///< Pick variable with the smallest domain
+  ORDER_LARGEST_DOMAIN,  ///< Pick variable with the largest domain
+  ORDER_SMALLEST_VALUE,  ///< Pick variable with lowest possible value
+  ORDER_LARGEST_VALUE    ///< Pick variable with highest possible value
+};
+
 /** Negate a value */
 const domain_t neg(const domain_t a);
 /** Add two values */
@@ -226,6 +235,27 @@ struct constr_t *objective_optimize(struct constr_t *obj);
 /** Find solutions */
 void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth);
 
+/** Whether to prefer failing variables as default */
+#define STRATEGY_PREFER_FAILING_DEFAULT true
+/** Set whether to prefer failing variables when ordering */
+void strategy_prefer_failing_init(bool prefer_failing);
+/** Get whether to prefer failing variables when ordering */
+bool strategy_prefer_failing(void);
+
+/** Whether to compute weights for initial ordering as default */
+#define STRATEGY_COMPUTE_WEIGHTS_DEFAULT true
+/** Set whether to compute weights for initial ordering */
+void strategy_compute_weights_init(bool assign_weights);
+/** Get whether to compute weights for initial ordering */
+bool strategy_compute_weights(void);
+
+/** Which ordering to use as default */
+#define STRATEGY_ORDER_DEFAULT ORDER_SMALLEST_DOMAIN
+/** Set the ordering to use when searching */
+void strategy_order_init(enum order_t order);
+/** Pick a variable according to the chosen strategy */
+void strategy_pick_var(struct env_t *env, size_t depth);
+
 /** Print value */
 void print_val(FILE *file, const struct val_t val);
 /** Print constraint */
@@ -264,7 +294,13 @@ const char *main_name(void);
 #define ERROR_MSG_INVALID_OBJ_FUNC_TYPE     "invalid objective function type: %02x"
 /** Error message when trying to update the best value with an interval */
 #define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "trying to update best value with interval"
+/** Error message when encountering invalid boolean arguments on the command line */
+#define ERROR_MSG_INVALID_BOOL_ARG          "invalid boolean argument: %s"
+/** Error message when encountering invalid order arguments on the command line */
+#define ERROR_MSG_INVALID_ORDER_ARG         "invalid order argument: %s"
 /** Error message when encountering invalid size arguments on the command line */
 #define ERROR_MSG_INVALID_SIZE_ARG          "invalid size argument: %s"
+/** Error message when encountering invalid ordering strategy */
+#define ERROR_MSG_INVALID_STRATEGY_ORDER    "invalid ordering strategy: %02x"
 
 #endif

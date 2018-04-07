@@ -30,6 +30,7 @@ SRC= \
 	src/parser_support.c \
 	src/print.c \
 	src/propagate.c \
+	src/strategy.c \
 	src/util.c
 TESTS= \
 	test/test_alloc.c \

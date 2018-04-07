@@ -25,13 +25,16 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "parser.h"
 #include "version.h"
 
+#define STR(X) #X
+#define STRVAL(X) STR(X)
+
 #define KILO 1024
 #define MEGA (KILO * KILO)
 #define GIGA (KILO * KILO * KILO)
 
 void yyset_in(FILE *);
 
-const char *_main_name;
+static const char *_main_name;
 
 const char *main_name() {
   return _main_name;
@@ -45,16 +48,47 @@ void print_version(FILE *file) {
 }
 
 void print_usage(FILE *file) {
-  fprintf(file, "Usage: %s [-v] [-h] [-b <binds>] [-m <size>] [<file>]\n", _main_name);
+  fprintf(file, "Usage: %s [<options>] [<file>]\n", _main_name);
 }
 
 void print_help(FILE *file) {
   print_usage(file);
   fprintf(file, "Options:\n");
-  fprintf(file, "  -b --binds <binds>   maximum number of binds (default: %d)\n", BIND_STACK_SIZE_DEFAULT);
-  fprintf(file, "  -m --memory <size>   allocation stack size (default: %d)\n", ALLOC_STACK_SIZE_DEFAULT);
-  fprintf(file, "  -h --help            show this message and exit\n");
-  fprintf(file, "  -v --version         print version and exit\n");
+  fprintf(file, "  -b --binds <size>           maximum number of binds (default: %d)\n", BIND_STACK_SIZE_DEFAULT);
+  fprintf(file, "  -h --help                   show this message and exit\n");
+  fprintf(file, "  -m --memory <size>          allocation stack size in bytes (default: %d)\n", ALLOC_STACK_SIZE_DEFAULT);
+  fprintf(file, "  -o --order <order>          how to order variables during solving (default: %s)\n", STRVAL(STRATEGY_ORDER_DEFAULT));
+  fprintf(file, "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false));
+  fprintf(file, "  -v --version                print version and exit\n");
+  fprintf(file, "  -w --weighten <bool>        compute weights of variables for initial order (default: %s)\n", STRATEGY_COMPUTE_WEIGHTS_DEFAULT ? STR(true) : STR(false));
+}
+
+bool parse_bool(const char *str) {
+  if (strcmp(str, STR(true)) == 0) {
+    return true;
+  } else if (strcmp(str, STR(false)) == 0) {
+    return false;
+  } else {
+    print_error(ERROR_MSG_INVALID_BOOL_ARG, str);
+    exit(EXIT_FAILURE);
+  }
+}
+
+enum order_t parse_order(const char *str) {
+  if (strcmp(str, "none") == 0) {
+    return ORDER_NONE;
+  } else if (strcmp(str, "smallest-domain") == 0) {
+    return ORDER_SMALLEST_DOMAIN;
+  } else if (strcmp(str, "largest-domain") == 0) {
+    return ORDER_LARGEST_DOMAIN;
+  } else if (strcmp(str, "smallest-value") == 0) {
+    return ORDER_SMALLEST_VALUE;
+  } else if (strcmp(str, "largest-value") == 0) {
+    return ORDER_LARGEST_DOMAIN;
+  } else {
+    print_error(ERROR_MSG_INVALID_BOOL_ARG, str);
+    exit(EXIT_FAILURE);
+  }
 }
 
 size_t parse_size(const char *str) {
@@ -76,41 +110,47 @@ size_t parse_size(const char *str) {
 
 void parse_options(int argc, char **argv) {
 
-  static const char *short_options = "b:m:hv";
+  static const char *short_options = "b:hm:o:p:vw:";
   static struct option long_options[] = {
-    {"binds",   required_argument, 0, 'b' },
-    {"memory",  required_argument, 0, 'm' },
-    {"help",    no_argument,       0, 'h' },
-    {"version", no_argument,       0, 'v' },
-    {0,         0,                 0, 0   }
+    {"binds",          required_argument, 0, 'b' },
+    {"help",           no_argument,       0, 'h' },
+    {"memory",         required_argument, 0, 'm' },
+    {"order",          required_argument, 0, 'o' },
+    {"prefer-failing", required_argument, 0, 'p' },
+    {"version",        no_argument,       0, 'v' },
+    {"weighten",       required_argument, 0, 'w' },
+    {0,                0,                 0, 0   }
   };
 
-  bool seen_b = false;
-  bool seen_m = false;
+  bool seen [0x100];
+  for (size_t i = 0; i < sizeof(seen)/sizeof(seen[0]); i++) {
+    seen[i] = false;
+  }
 
   int c;
   while ((c = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
+    if (seen[c & 0xff]) {
+      print_usage(stderr);
+      exit(EXIT_SUCCESS);
+    }
+    seen[c & 0xff] = true;
+
     switch(c) {
     case 'b':
-      if (seen_b) {
-        print_usage(stderr);
-        exit(EXIT_SUCCESS);
-      } else {
-        size_t max_binds = parse_size(optarg);
-        bind_init(max_binds);
-        seen_b = true;
-        break;
-      }
+      bind_init(parse_size(optarg));
+      break;
     case 'm':
-      if (seen_m) {
-        print_usage(stderr);
-        exit(EXIT_SUCCESS);
-      } else {
-        size_t max_memory = parse_size(optarg);
-        alloc_init(max_memory);
-        seen_m = true;
-        break;
-      }
+      alloc_init(parse_size(optarg));
+      break;
+    case 'o':
+      strategy_order_init(parse_order(optarg));
+      break;
+    case 'p':
+      strategy_prefer_failing_init(parse_bool(optarg));
+      break;
+    case 'w':
+      strategy_compute_weights_init(parse_bool(optarg));
+      break;
     case 'h':
       print_help(stdout);
       exit(EXIT_SUCCESS);
@@ -128,11 +168,20 @@ void parse_options(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  if (!seen_b) {
+  if (!seen['b']) {
     bind_init(BIND_STACK_SIZE_DEFAULT);
   }
-  if (!seen_m) {
+  if (!seen['m']) {
     alloc_init(ALLOC_STACK_SIZE_DEFAULT);
+  }
+  if (!seen['o']) {
+    strategy_order_init(STRATEGY_ORDER_DEFAULT);
+  }
+  if (!seen['p']) {
+    strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT);
+  }
+  if (!seen['w']) {
+    strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT);
   }
 
   FILE *in = stdin;
