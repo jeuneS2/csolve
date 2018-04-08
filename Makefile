@@ -54,7 +54,7 @@ src/parser.c src/parser.h: src/parser.y
 	${YACC} ${YFLAGS} -o src/parser.c --defines=src/parser.h $<
 
 csolve: ${SRC} ${HEADERS}
-	${CC} ${CFLAGS} -o $@ ${SRC}
+	${CC} ${CFLAGS} -o $@ ${SRC} -lpthread
 
 googletest/googlemock/libgooglemock.a: /usr/src/googletest
 	mkdir -p googletest; cd googletest; cmake /usr/src/googletest; ${MAKE}
@@ -79,7 +79,7 @@ fuzz/csolve: ${SRC} ${HEADERS}
 	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC}
 
 fuzz: fuzz/csolve
-	if[[ -e fuzz/findings ]]; then \
+	if [ -e fuzz/findings ]; then \
 		afl-fuzz -m 128 -t 1000+ -i fuzz/inputs -o fuzz/findings -- $<; \
 	else \
 		afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \

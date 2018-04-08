@@ -40,27 +40,33 @@ void print_error(const char *fmt, ...) {
 }
 
 TEST(ObjectiveInit, Basic) {
-  objective_init(OBJ_ANY);
+  domain_t best;
+
+  objective_init(OBJ_ANY, &best);
   EXPECT_EQ(OBJ_ANY, _objective);
-  EXPECT_EQ(0, _objective_best);
+  EXPECT_EQ(&best, _objective_best);
+  EXPECT_EQ(0, *_objective_best);
 
-  objective_init(OBJ_ALL);
+  objective_init(OBJ_ALL, &best);
   EXPECT_EQ(OBJ_ALL, _objective);
-  EXPECT_EQ(0, _objective_best);
+  EXPECT_EQ(&best, _objective_best);
+  EXPECT_EQ(0, *_objective_best);
 
-  objective_init(OBJ_MIN);
+  objective_init(OBJ_MIN, &best);
   EXPECT_EQ(OBJ_MIN, _objective);
-  EXPECT_EQ(DOMAIN_MAX, _objective_best);
+  EXPECT_EQ(&best, _objective_best);
+  EXPECT_EQ(DOMAIN_MAX, *_objective_best);
 
-  objective_init(OBJ_MAX);
+  objective_init(OBJ_MAX, &best);
   EXPECT_EQ(OBJ_MAX, _objective);
-  EXPECT_EQ(DOMAIN_MIN, _objective_best);
+  EXPECT_EQ(&best, _objective_best);
+  EXPECT_EQ(DOMAIN_MIN, *_objective_best);
 }
 
 TEST(ObjectiveInit, Errors) {
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
-  objective_init((objective_t)-1);
+  objective_init((objective_t)-1, NULL);
   delete(MockProxy);
 }
 
@@ -78,13 +84,16 @@ TEST(ObjectiveBetter, Basic) {
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
 
+  domain_t best;
+  _objective_best = &best;
+
   _objective = OBJ_ANY;
-  _objective_best = 17;
+  *_objective_best = 17;
   EXPECT_EQ(true, objective_better(&A));
   EXPECT_EQ(true, objective_better(&B));
 
   _objective = OBJ_ALL;
-  _objective_best = 17;
+  *_objective_best = 17;
   EXPECT_EQ(true, objective_better(&A));
   EXPECT_EQ(true, objective_better(&B));
 }
@@ -100,8 +109,11 @@ TEST(ObjectiveBetter, Min) {
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct constr_t D = { .type = CONSTR_TERM, .constr = { .term = &d } };
 
+  domain_t best;
+  _objective_best = &best;
+
   _objective = OBJ_MIN;
-  _objective_best = DOMAIN_MAX;
+  *_objective_best = DOMAIN_MAX;
   MockProxy = new Mock();
   EXPECT_EQ(true, objective_better(&A));
   EXPECT_EQ(true, objective_better(&B));
@@ -110,7 +122,7 @@ TEST(ObjectiveBetter, Min) {
   delete(MockProxy);
 
   _objective = OBJ_MIN;
-  _objective_best = 17;
+  *_objective_best = 17;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, eval(&A))
     .Times(::testing::AtLeast(1))
@@ -151,8 +163,11 @@ TEST(ObjectiveBetter, Max) {
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct constr_t D = { .type = CONSTR_TERM, .constr = { .term = &d } };
 
+  domain_t best;
+  _objective_best = &best;
+
   _objective = OBJ_MAX;
-  _objective_best = DOMAIN_MIN;
+  *_objective_best = DOMAIN_MIN;
   MockProxy = new Mock();
   EXPECT_EQ(true, objective_better(&A));
   EXPECT_EQ(true, objective_better(&B));
@@ -161,7 +176,7 @@ TEST(ObjectiveBetter, Max) {
   delete(MockProxy);
 
   _objective = OBJ_MAX;
-  _objective_best = 17;
+  *_objective_best = 17;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, eval(&A))
     .Times(::testing::AtLeast(1))
@@ -200,9 +215,12 @@ TEST(ObjectiveBetter, Errors) {
 }
 
 TEST(ObjectiveUpdate, Basic) {
-  _objective_best = -1;
+  domain_t best;
+  _objective_best = &best;
+
+  *_objective_best = -1;
   objective_update(VALUE(17));
-  EXPECT_EQ(17, _objective_best);
+  EXPECT_EQ(17, *_objective_best);
 }
 
 TEST(ObjectiveUpdate, Errors) {
@@ -213,13 +231,18 @@ TEST(ObjectiveUpdate, Errors) {
 }
 
 TEST(ObjectiveBest, Basic) {
-  _objective_best = 23;
+  domain_t best;
+  _objective_best = &best;
+
+  *_objective_best = 23;
   EXPECT_EQ(23, objective_best());
-  _objective_best = 17;
+  *_objective_best = 17;
   EXPECT_EQ(17, objective_best());
 }
 
 TEST(ObjectiveOptimize, Basic) {
+  domain_t best;
+
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
 
@@ -230,17 +253,19 @@ TEST(ObjectiveOptimize, Basic) {
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
 
   MockProxy = new Mock();
-  objective_init(OBJ_ANY);
+  objective_init(OBJ_ANY, &best);
   EXPECT_EQ(&X, objective_optimize(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  objective_init(OBJ_ALL);
+  objective_init(OBJ_ALL, &best);
   EXPECT_EQ(&X, objective_optimize(&X));
   delete(MockProxy);
 }
 
 TEST(ObjectiveOptimize, Min) {
+  domain_t best;
+
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
 
@@ -250,7 +275,7 @@ TEST(ObjectiveOptimize, Min) {
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
   MockProxy = new Mock();
-  objective_init(OBJ_MIN);
+  objective_init(OBJ_MIN, &best);
   objective_update(VALUE(17));
   EXPECT_CALL(*MockProxy, normalize(&X))
     .Times(::testing::AtLeast(1))
@@ -263,6 +288,8 @@ TEST(ObjectiveOptimize, Min) {
 }
 
 TEST(ObjectiveOptimize, Max) {
+  domain_t best;
+
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
 
@@ -272,7 +299,7 @@ TEST(ObjectiveOptimize, Max) {
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
   MockProxy = new Mock();
-  objective_init(OBJ_MAX);
+  objective_init(OBJ_MAX, &best);
   objective_update(VALUE(17));
   EXPECT_CALL(*MockProxy, normalize(&X))
     .Times(::testing::AtLeast(1))

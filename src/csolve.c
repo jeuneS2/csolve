@@ -16,34 +16,149 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define _DEFAULT_SOURCE
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
+#include <semaphore.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "csolve.h"
+
+static int32_t _workers_max;
+static int32_t _worker_id;
+static struct shared_t *_shared;
 
 // statistics
 #define STATS_FREQUENCY 10000
 
-uint64_t calls = 0;
-uint64_t cuts_prop = 0;
-uint64_t cuts_bound = 0;
-uint64_t cuts_obj = 0;
-uint64_t cut_depth = 0;
-uint64_t solutions = 0;
-size_t depth_min = SIZE_MAX;
-size_t depth_max = 0;
+uint64_t calls;
+uint64_t cuts_prop;
+uint64_t cuts_bound;
+uint64_t cuts_obj;
+uint64_t cut_depth;
+size_t depth_min;
+size_t depth_max;
 extern size_t alloc_max;
 
+void stats_init(void) {
+  calls = 0;
+  cuts_prop = 0;
+  cuts_bound = 0;
+  cuts_obj = 0;
+  cut_depth = 0;
+  depth_min = SIZE_MAX;
+  depth_max = 0;
+  alloc_max = 0;
+}
+
 void print_stats(FILE *file) {
-  fprintf(file, "CALLS: %ld, CUTS: %ld/%ld, BOUND: %ld, DEPTH: %ld/%ld, AVG DEPTH: %f, MEMORY: %ld, SOLUTIONS: %ld\n",
+  fprintf(file, "#%d: CALLS: %ld, CUTS: %ld/%ld, BOUND: %ld, DEPTH: %ld/%ld, AVG DEPTH: %f, MEMORY: %ld, SOLUTIONS: %ld\n",
+          _worker_id,
           calls, cuts_prop, cuts_obj, cuts_bound,
           depth_min, depth_max,
           (double)cut_depth / (cuts_prop + cuts_obj + cuts_bound),
-          alloc_max, solutions);
+          alloc_max, shared()->solutions);
+  fflush(file);
   depth_min = SIZE_MAX;
   depth_max = 0;
+}
+
+void shared_init(int32_t workers_max) {
+  _workers_max = workers_max;
+  _shared = mmap(NULL, sizeof(struct shared_t),
+                 PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  sema_init(&shared()->semaphore);
+  shared()->workers = 1;
+  shared()->workers_id = 1;
+  _worker_id = 1;
+}
+
+struct shared_t *shared(void) {
+  return _shared;
+}
+
+pid_t worker_spawn(struct env_t *env, size_t depth) {
+
+  if (env[depth+1].key == NULL) {
+    // do not fork at last level
+    return -1;
+  }
+
+  if (!is_value(*env[depth].val) && shared()->workers < _workers_max) {
+
+    sema_wait(&shared()->semaphore);
+    // avoid race condition
+    if (shared()->workers >= _workers_max) {
+      sema_post(&shared()->semaphore);
+      return -1;
+    }
+    ++shared()->workers;
+    int32_t id = ++shared()->workers_id;
+    sema_post(&shared()->semaphore);
+
+    domain_t lo = get_lo(*env[depth].val);
+    domain_t hi = get_hi(*env[depth].val);
+    domain_t mid = (lo + hi) / 2;
+
+    // pick up any children that may have finished
+    int status;
+    waitpid(-1, &status, WNOHANG);
+
+    pid_t pid = fork();
+    if (pid == -1) {
+      print_error("%s", strerror(errno));
+      exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+      // child gets a new id and searches the upper half
+      _worker_id = id;
+      struct val_t v = (mid+1 == hi) ? VALUE(hi) : INTERVAL(mid+1, hi);
+      bind(env[depth].val, v);
+      // reset stats for child
+      stats_init();
+      depth_min = depth;
+      depth_max = depth;
+    } else {
+      // parent searches the lower half
+      struct val_t v = (lo == mid) ? VALUE(lo) : INTERVAL(lo, mid);
+      bind(env[depth].val, v);
+    }
+    return pid;
+  }
+
+  return -1;
+}
+
+void await_children(void) {
+  for (;;) {
+    int status;
+    pid_t pid = wait(&status);
+    if (pid == -1 && errno == ECHILD) {
+      break;
+    }
+  }
+}
+
+void worker_die(pid_t pid) {
+  if (pid == 0) {
+    sema_wait(&shared()->semaphore);
+    shared()->workers--;
+    sema_post(&shared()->semaphore);
+
+    await_children();
+
+    if (calls > 0) {
+      print_stats(stdout);
+    }
+
+    exit(EXIT_SUCCESS);
+  }
 }
 
 void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
@@ -116,7 +231,7 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
     restart:;
     domain_t lo = get_lo(*var);
     domain_t hi = get_hi(*var);
-    uint64_t s = solutions;
+    uint64_t s = shared()->solutions;
 
     for (domain_t i = 0; i <= hi - lo; i++) {
       // search from the edges of the interval
@@ -126,12 +241,12 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
       failed &= solve_value(env, obj, constr, depth, VALUE(v));
 
       // stop searching if looking just for any solution
-      if (objective() == OBJ_ANY && solutions > 0) {
+      if (objective() == OBJ_ANY && shared()->solutions > 0) {
         break;
       }
 
       // some new solutions were found
-      if (s != solutions) {
+      if (s != shared()->solutions) {
         // optimize objective function
         obj = objective_optimize(obj);
         // abort if objective function has become infeasible
@@ -176,14 +291,29 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
 
   if (env[depth].key != NULL) {
     strategy_pick_var(env, depth);
+    pid_t pid = worker_spawn(env, depth);
     solve_variable(env, obj, constr, depth);
+    worker_die(pid);
   } else {
     struct val_t feasible = eval(constr);
-    if (is_true(feasible) && objective_better(obj)) {
-      objective_update(eval(obj));
-      print_solution(stdout, env);
-      solutions++;
+    if (is_true(feasible)) {
+      sema_wait(&shared()->semaphore);
+
+      if (!(objective() == OBJ_ANY && shared()->solutions > 0)
+          && objective_better(obj)) {
+
+        objective_update(eval(obj));
+        fprintf(stderr, "#%d: ", _worker_id);
+        print_solution(stderr, env);
+        shared()->solutions++;
+      }
+
+      sema_post(&shared()->semaphore);
     }
+  }
+
+  if (depth == 0) {
+    worker_die(0);
   }
 }
 

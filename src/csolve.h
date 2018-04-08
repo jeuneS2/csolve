@@ -21,6 +21,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <semaphore.h>
 
 /** The type representing the value domain */
 typedef int32_t domain_t;
@@ -175,6 +176,15 @@ enum order_t {
   ORDER_LARGEST_VALUE    ///< Pick variable with highest possible value
 };
 
+/** A struct holding shared information */
+struct shared_t {
+  sem_t semaphore; ///< Semaphore to synchronize accesses to shared data
+  volatile uint32_t workers; ///< Number of active workers
+  volatile uint32_t workers_id; ///< Number of generated workers
+  volatile domain_t objective_best; ///< The current best objective value
+  volatile uint64_t solutions; ///< Number of solutions found
+};
+
 /** Negate a value */
 const domain_t neg(const domain_t a);
 /** Add two values */
@@ -204,6 +214,13 @@ size_t bind(struct val_t *loc, const struct val_t val);
 /** Undo variable binds down to a given depth */
 void unbind(size_t depth);
 
+/** Initialize a semaphore */
+void sema_init(sem_t *sema);
+/** Wait for a semaphore */
+void sema_wait(sem_t *sema);
+/** Release a semaphore */
+void sema_post(sem_t *sema);
+
 /** Evaluate a constraint */
 const struct val_t eval(const struct constr_t *constr);
 /** Normalize a constraint */
@@ -220,7 +237,7 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l);
 void eval_cache_invalidate(void);
 
 /** Initialize objective function type */
-void objective_init(enum objective_t o);
+void objective_init(enum objective_t o, volatile domain_t *best);
 /** Get objective function type */
 enum objective_t objective(void);
 /** Check whether the objective value can be possibly better */
@@ -255,6 +272,16 @@ bool strategy_compute_weights(void);
 void strategy_order_init(enum order_t order);
 /** Pick a variable according to the chosen strategy */
 void strategy_pick_var(struct env_t *env, size_t depth);
+
+/** How many workers to use by default */
+#define WORKERS_MAX_DEFAULT 1
+/** Initialize the shared data area */
+void shared_init(int32_t workers_max);
+/** Return pointer to the shared data area */
+struct shared_t *shared(void);
+
+/** Reset statistics */
+void stats_init(void);
 
 /** Print value */
 void print_val(FILE *file, const struct val_t val);
@@ -296,6 +323,8 @@ const char *main_name(void);
 #define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "trying to update best value with interval"
 /** Error message when encountering invalid boolean arguments on the command line */
 #define ERROR_MSG_INVALID_BOOL_ARG          "invalid boolean argument: %s"
+/** Error message when encountering invalid integer arguments on the command line */
+#define ERROR_MSG_INVALID_INT_ARG           "invalid integer argument: %s"
 /** Error message when encountering invalid order arguments on the command line */
 #define ERROR_MSG_INVALID_ORDER_ARG         "invalid order argument: %s"
 /** Error message when encountering invalid size arguments on the command line */

@@ -65,17 +65,17 @@ Input : Objective Constraints
           } while (norm != prop && prop != NULL);
         }
 
+        stats_init();
+
         if (prop != NULL) {
           struct env_t *env = generate_env();
           struct constr_t *obj = objective_optimize($1);
           solve(env, obj, prop, 0);
         }
-
-        print_stats(stdout);
       }
 
 Objective : ANY ';'
-          { objective_init(OBJ_ANY);
+          { objective_init(OBJ_ANY, &shared()->objective_best);
             $$ = alloc(sizeof(struct constr_t));
             $$->type = CONSTR_TERM;
             $$->constr.term = alloc(sizeof(struct val_t));
@@ -83,7 +83,7 @@ Objective : ANY ';'
             $$->eval_cache.tag = 0;
           }
           | ALL ';'
-          { objective_init(OBJ_ALL);
+          { objective_init(OBJ_ALL, &shared()->objective_best);
             $$ = alloc(sizeof(struct constr_t));
             $$->type = CONSTR_TERM;
             $$->constr.term = alloc(sizeof(struct val_t));
@@ -91,11 +91,11 @@ Objective : ANY ';'
             $$->eval_cache.tag = 0;
           }
           | MIN Expr ';'
-          { objective_init(OBJ_MIN);
+          { objective_init(OBJ_MIN, &shared()->objective_best);
             $$ = $2;
           }
           | MAX Expr ';'
-          { objective_init(OBJ_MAX);
+          { objective_init(OBJ_MAX, &shared()->objective_best);
             $$ = $2;
           }
 ;

@@ -11,6 +11,7 @@ class Mock {
   MOCK_METHOD1(yyset_in, void(FILE *));
   MOCK_METHOD1(alloc_init, void(size_t));
   MOCK_METHOD1(bind_init, void(size_t));
+  MOCK_METHOD1(shared_init, void(int32_t));
   MOCK_METHOD1(strategy_prefer_failing_init, void(bool));
   MOCK_METHOD1(strategy_compute_weights_init, void(bool));
   MOCK_METHOD1(strategy_order_init, void(enum order_t));
@@ -33,6 +34,10 @@ void alloc_init(size_t size) {
 
 void bind_init(size_t size) {
   MockProxy->bind_init(size);
+}
+
+void shared_init(int32_t workers) {
+  MockProxy->shared_init(workers);
 }
 
 void strategy_prefer_failing_init(bool prefer_failing) {
@@ -117,6 +122,7 @@ TEST(PrintHelp, Basic) {
             "Options:\n"
             "  -b --binds <size>           maximum number of binds (default: 1024)\n"
             "  -h --help                   show this message and exit\n"
+            "  -j --jobs <int>             number of jobs to run simultaneously (default: 1)\n"
             "  -m --memory <size>          allocation stack size in bytes (default: 16777216)\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_SMALLEST_DOMAIN)\n"
             "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: true)\n"
@@ -139,6 +145,7 @@ TEST(ParseOptions, Help) {
             "Options:\n"
             "  -b --binds <size>           maximum number of binds (default: 1024)\n"
             "  -h --help                   show this message and exit\n"
+            "  -j --jobs <int>             number of jobs to run simultaneously (default: 1)\n"
             "  -m --memory <size>          allocation stack size in bytes (default: 16777216)\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_SMALLEST_DOMAIN)\n"
             "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: true)\n"

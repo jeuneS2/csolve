@@ -24,20 +24,21 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 static enum objective_t _objective;
-static domain_t _objective_best;
+static volatile domain_t *_objective_best;
 
-void objective_init(enum objective_t o) {
+void objective_init(enum objective_t o, volatile domain_t *best) {
   _objective = o;
+  _objective_best = best;
   switch (o) {
   case OBJ_ANY:
   case OBJ_ALL:
-    _objective_best = 0;
+    *_objective_best = 0;
     break;
   case OBJ_MIN:
-    _objective_best = DOMAIN_MAX;
+    *_objective_best = DOMAIN_MAX;
     break;
   case OBJ_MAX:
-    _objective_best = DOMAIN_MIN;
+    *_objective_best = DOMAIN_MIN;
     break;
   default:
     print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
@@ -54,15 +55,15 @@ bool objective_better(struct constr_t *obj) {
   case OBJ_ALL:
     return true;
   case OBJ_MIN:
-    if (_objective_best != DOMAIN_MAX) {
+    if (objective_best() != DOMAIN_MAX) {
       struct val_t o = eval(obj);
-      return get_lo(o) < _objective_best;
+      return get_lo(o) < objective_best();
     }
     break;
   case OBJ_MAX:
-    if (_objective_best != DOMAIN_MIN) {
+    if (objective_best() != DOMAIN_MIN) {
       struct val_t o = eval(obj);
-      return get_hi(o) > _objective_best;
+      return get_hi(o) > objective_best();
     }
     break;
   default:
@@ -73,14 +74,14 @@ bool objective_better(struct constr_t *obj) {
 
 void objective_update(struct val_t obj) {
   if (is_value(obj)) {
-    _objective_best = obj.value.val;
+    *_objective_best = obj.value.val;
   } else {
     print_error(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL);
   }
 }
 
 domain_t objective_best(void) {
-  return _objective_best;
+  return *_objective_best;
 }
 
 struct constr_t *objective_optimize(struct constr_t *obj) {
@@ -90,11 +91,11 @@ struct constr_t *objective_optimize(struct constr_t *obj) {
   case OBJ_ALL:
     break;
   case OBJ_MIN:
-    retval = propagate(retval, INTERVAL(DOMAIN_MIN, add(_objective_best, neg(1))));
+    retval = propagate(retval, INTERVAL(DOMAIN_MIN, add(objective_best(), neg(1))));
     retval = retval != NULL ? normalize(retval) : retval;
     break;
   case OBJ_MAX:
-    retval = propagate(retval, INTERVAL(add(_objective_best, 1), DOMAIN_MAX));
+    retval = propagate(retval, INTERVAL(add(objective_best(), 1), DOMAIN_MAX));
     retval = retval != NULL ? normalize(retval) : retval;
     break;
   default:

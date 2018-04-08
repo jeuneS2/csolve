@@ -21,12 +21,17 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <semaphore.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "csolve.h"
 #include "parser.h"
 #include "version.h"
 
 #define STR(X) #X
 #define STRVAL(X) STR(X)
+
+#define MAX_OPTS 0x100
 
 #define KILO 1024
 #define MEGA (KILO * KILO)
@@ -56,6 +61,7 @@ void print_help(FILE *file) {
   fprintf(file, "Options:\n");
   fprintf(file, "  -b --binds <size>           maximum number of binds (default: %d)\n", BIND_STACK_SIZE_DEFAULT);
   fprintf(file, "  -h --help                   show this message and exit\n");
+  fprintf(file, "  -j --jobs <int>             number of jobs to run simultaneously (default: %d)\n", WORKERS_MAX_DEFAULT);
   fprintf(file, "  -m --memory <size>          allocation stack size in bytes (default: %d)\n", ALLOC_STACK_SIZE_DEFAULT);
   fprintf(file, "  -o --order <order>          how to order variables during solving (default: %s)\n", STRVAL(STRATEGY_ORDER_DEFAULT));
   fprintf(file, "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false));
@@ -70,6 +76,17 @@ bool parse_bool(const char *str) {
     return false;
   } else {
     print_error(ERROR_MSG_INVALID_BOOL_ARG, str);
+    exit(EXIT_FAILURE);
+  }
+}
+
+int32_t parse_int(const char *str) {
+  char *endptr;
+  int32_t size = strtol(str, &endptr, 0);
+  if (endptr[0] == '\0') {
+    return size;
+  } else {
+    print_error(ERROR_MSG_INVALID_INT_ARG, str);
     exit(EXIT_FAILURE);
   }
 }
@@ -110,10 +127,11 @@ size_t parse_size(const char *str) {
 
 void parse_options(int argc, char **argv) {
 
-  static const char *short_options = "b:hm:o:p:vw:";
+  static const char *short_options = "b:hj:m:o:p:vw:";
   static struct option long_options[] = {
     {"binds",          required_argument, 0, 'b' },
     {"help",           no_argument,       0, 'h' },
+    {"jobs",           required_argument, 0, 'j' },
     {"memory",         required_argument, 0, 'm' },
     {"order",          required_argument, 0, 'o' },
     {"prefer-failing", required_argument, 0, 'p' },
@@ -122,18 +140,18 @@ void parse_options(int argc, char **argv) {
     {0,                0,                 0, 0   }
   };
 
-  bool seen [0x100];
+  bool seen [MAX_OPTS];
   for (size_t i = 0; i < sizeof(seen)/sizeof(seen[0]); i++) {
     seen[i] = false;
   }
 
   int c;
   while ((c = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
-    if (seen[c & 0xff]) {
+    if (seen[c % MAX_OPTS]) {
       print_usage(stderr);
       exit(EXIT_SUCCESS);
     }
-    seen[c & 0xff] = true;
+    seen[c % MAX_OPTS] = true;
 
     switch(c) {
     case 'b':
@@ -141,6 +159,9 @@ void parse_options(int argc, char **argv) {
       break;
     case 'm':
       alloc_init(parse_size(optarg));
+      break;
+    case 'j':
+      shared_init(parse_int(optarg));
       break;
     case 'o':
       strategy_order_init(parse_order(optarg));
@@ -174,6 +195,9 @@ void parse_options(int argc, char **argv) {
   if (!seen['m']) {
     alloc_init(ALLOC_STACK_SIZE_DEFAULT);
   }
+  if (!seen['j']) {
+    shared_init(WORKERS_MAX_DEFAULT);
+  }
   if (!seen['o']) {
     strategy_order_init(STRATEGY_ORDER_DEFAULT);
   }
@@ -196,7 +220,6 @@ void parse_options(int argc, char **argv) {
 
   yyset_in(in);
 }
-
 
 int main(int argc, char **argv) {
   _main_name = argv[0];

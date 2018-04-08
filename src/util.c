@@ -22,6 +22,8 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <semaphore.h>
+#include <sys/mman.h>
 #include "csolve.h"
 
 // memory allocation functions
@@ -145,4 +147,29 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
     return retval;
   }
   return constr;
+}
+
+// functions for semaphores
+void sema_init(sem_t *sema) {
+  int status = sem_init(sema, 1, 1);
+  if (status == -1) {
+    print_error("%s", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+}
+
+void sema_wait(sem_t *sema) {
+  int status = sem_wait(sema);
+  if (status == -1) {
+    print_error("%s", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+}
+
+void sema_post(sem_t *sema) {
+  int status = sem_post(sema);
+  if (status == -1) {
+    print_error("%s", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
 }
