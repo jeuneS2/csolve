@@ -147,6 +147,11 @@ void await_children(void) {
 
 void worker_die(pid_t pid) {
   if (pid == 0) {
+    // throttle the reation of new workers
+    if (_workers_max > 1 && shared()->workers == _workers_max) {
+      usleep(100000);
+    }
+
     sema_wait(&shared()->semaphore);
     shared()->workers--;
     sema_post(&shared()->semaphore);
