@@ -102,7 +102,7 @@ TEST(PropagateEq, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_eq(&X, VALUE(1)));
@@ -172,7 +172,7 @@ TEST(PropagateLt, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_lt(&X, VALUE(1)));
@@ -333,7 +333,7 @@ TEST(PropagateAdd, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_add(&X, VALUE(1)));
@@ -341,7 +341,7 @@ TEST(PropagateAdd, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_add(&X, INTERVAL(-100, 0)));
@@ -376,7 +376,7 @@ TEST(PropagateAdd, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_add(&X, VALUE(1)));
@@ -384,7 +384,7 @@ TEST(PropagateAdd, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_add(&X, INTERVAL(-100, 0)));
@@ -411,7 +411,7 @@ TEST(PropagateMul, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, propagate_mul(&X, VALUE(0)));
@@ -427,7 +427,7 @@ TEST(PropagateMul, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_mul(&X, VALUE(1)));
@@ -435,7 +435,7 @@ TEST(PropagateMul, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, NULL, NULL))
+  EXPECT_CALL(*MockProxy, update_expr(&X, &A, NULL))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_EQ(NULL, propagate_mul(&X, INTERVAL(-100, 0)));
