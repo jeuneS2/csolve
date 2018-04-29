@@ -1,0 +1,37 @@
+#! /usr/bin/awk -f
+
+BEGIN {
+    print "ANY;"
+    mode = 0
+}
+
+(mode == 1) && /-?[0-9]+/ {
+    if ($1 == 0) {
+        if (start == 0) {
+            print ";"
+            start = 1
+        }
+    } else {
+        if (start == 0) {
+            printf " | "
+        }
+        if ($1 < 0) {
+            printf "!x" (-$1)
+        } else {
+            printf "x" $1
+        }
+        start = 0
+    }
+}
+
+(mode == 0) && /^c.*$/ {
+    print "#" $0
+}
+(mode == 0) && /^p[[:space:]]+cnf[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]*$/ {
+    for (i = 1; i <= $3; i++) {
+        print "0 <= x" i "; x" i " <= 1;"
+    }
+    mode = 1
+    RS="[[:space:]]"
+    start = 1
+}
