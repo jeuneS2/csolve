@@ -25,6 +25,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 static bool _prefer_failing;
 static bool _compute_weights;
+static uint64_t _restart_frequency;
 static enum order_t _order;
 
 
@@ -42,6 +43,14 @@ void strategy_compute_weights_init(bool compute_weights) {
 
 bool strategy_compute_weights(void) {
   return _compute_weights;
+}
+
+void strategy_restart_frequency_init(uint64_t restart_frequency) {
+  _restart_frequency = restart_frequency;
+}
+
+uint64_t strategy_restart_frequency(void) {
+  return _restart_frequency;
 }
 
 void strategy_order_init(enum order_t order) {

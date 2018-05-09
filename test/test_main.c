@@ -14,6 +14,7 @@ class Mock {
   MOCK_METHOD1(shared_init, void(int32_t));
   MOCK_METHOD1(strategy_prefer_failing_init, void(bool));
   MOCK_METHOD1(strategy_compute_weights_init, void(bool));
+  MOCK_METHOD1(strategy_restart_frequency_init, void(uint64_t));
   MOCK_METHOD1(strategy_order_init, void(enum order_t));
   MOCK_METHOD2(print_error, void (const char *, va_list));
 };
@@ -46,6 +47,10 @@ void strategy_prefer_failing_init(bool prefer_failing) {
 
 void strategy_compute_weights_init(bool compute_weights) {
   MockProxy->strategy_compute_weights_init(compute_weights);
+}
+
+void strategy_restart_frequency_init(uint64_t restart_frequency) {
+  MockProxy->strategy_restart_frequency_init(restart_frequency);
 }
 
 void strategy_order_init(enum order_t order) {
@@ -126,6 +131,7 @@ TEST(PrintHelp, Basic) {
             "  -m --memory <size>          allocation stack size in bytes (default: 16777216)\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_SMALLEST_DOMAIN)\n"
             "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: true)\n"
+            "  -r --restart-freq <int>     restart frequency when looking for any solution (default: 100), set to 0 to disable\n"
             "  -v --version                print version and exit\n"
             "  -w --weighten <bool>        compute weights of variables for initial order (default: true)\n");
 }
@@ -149,6 +155,7 @@ TEST(ParseOptions, Help) {
             "  -m --memory <size>          allocation stack size in bytes (default: 16777216)\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_SMALLEST_DOMAIN)\n"
             "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: true)\n"
+            "  -r --restart-freq <int>     restart frequency when looking for any solution (default: 100), set to 0 to disable\n"
             "  -v --version                print version and exit\n"
             "  -w --weighten <bool>        compute weights of variables for initial order (default: true)\n");
 }
@@ -179,9 +186,11 @@ TEST(ParseOptions, Stdout) {
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc1, (char **)argv1);
   delete(MockProxy);
@@ -191,9 +200,11 @@ TEST(ParseOptions, Stdout) {
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc2, (char **)argv2);
   delete(MockProxy);

@@ -31,9 +31,17 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/wait.h>
 #include "csolve.h"
 
+// parallelizing data
+#define THROTTLE_DELAY 100000
+
 static int32_t _workers_max;
 static int32_t _worker_id;
 static struct shared_t *_shared;
+
+// restarting data
+static uint32_t _fail_count = 0;
+static uint64_t _fail_threshold = 1;
+static bool _restart = false;
 
 // statistics
 #define STATS_FREQUENCY 10000
@@ -43,6 +51,7 @@ uint64_t cuts_prop;
 uint64_t cuts_bound;
 uint64_t cuts_obj;
 uint64_t cut_depth;
+uint64_t restarts;
 size_t depth_min;
 size_t depth_max;
 extern size_t alloc_max;
@@ -53,21 +62,35 @@ void stats_init(void) {
   cuts_bound = 0;
   cuts_obj = 0;
   cut_depth = 0;
+  restarts = 0;
   depth_min = SIZE_MAX;
   depth_max = 0;
   alloc_max = 0;
 }
 
 void print_stats(FILE *file) {
-  fprintf(file, "#%d: CALLS: %ld, CUTS: %ld/%ld, BOUND: %ld, DEPTH: %ld/%ld, AVG DEPTH: %f, MEMORY: %ld, SOLUTIONS: %ld\n",
+  fprintf(file, "#%d: CALLS: %lu, CUTS: %lu/%lu, BOUND: %lu, RESTARTS: %lu, DEPTH: %lu/%lu, AVG DEPTH: %f, MEMORY: %lu, SOLUTIONS: %lu\n",
           _worker_id,
           calls, cuts_prop, cuts_obj, cuts_bound,
+          restarts,
           depth_min, depth_max,
           (double)cut_depth / (cuts_prop + cuts_obj + cuts_bound),
           alloc_max, shared()->solutions);
   fflush(file);
   depth_min = SIZE_MAX;
   depth_max = 0;
+}
+
+// calculate Luby sequence using algorithm by Knuth
+uint64_t fail_threshold_next(void) {
+  static uint64_t counter = 1;
+  if ((counter & -counter) == _fail_threshold) {
+    counter++;
+    _fail_threshold = 1;
+  } else {
+    _fail_threshold <<= 1;
+  }
+  return _fail_threshold;
 }
 
 void shared_init(int32_t workers_max) {
@@ -148,8 +171,8 @@ void await_children(void) {
 void worker_die(pid_t pid) {
   if (pid == 0) {
     // throttle the reation of new workers
-    if (_workers_max > 1 && shared()->workers == _workers_max) {
-      usleep(100000);
+    if (_workers_max > 1) {
+      usleep(THROTTLE_DELAY);
     }
 
     sema_wait(&shared()->semaphore);
@@ -230,23 +253,31 @@ bool solve_value(struct env_t *env, struct constr_t *obj, struct constr_t *const
 
 void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth) {
   struct val_t *var = env[depth].val;
+
+  int r = strategy_restart_frequency() > 0 ? rand() : 0;
+
   switch (var->type) {
   case VAL_INTERVAL: {
     bool failed = true;
-    restart:;
+    resolve:;
     domain_t lo = get_lo(*var);
     domain_t hi = get_hi(*var);
     uint64_t s = shared()->solutions;
 
     for (domain_t i = 0; i <= hi - lo; i++) {
       // search from the edges of the interval
-      domain_t v = (i & 1) ? hi - (i >> 1) : lo + (i >> 1);
+      domain_t v = ((i ^ r) & 1) ? hi - (i >> 1) : lo + (i >> 1);
 
       // solve for particular value of variable
       failed &= solve_value(env, obj, constr, depth, VALUE(v));
 
       // stop searching if looking just for any solution
       if (objective() == OBJ_ANY && shared()->solutions > 0) {
+        break;
+      }
+
+      // stop searching when a restart is scheduled
+      if (_restart) {
         break;
       }
 
@@ -260,8 +291,20 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
         }
         // restart if bounds for current variable have changed
         if (lo != get_lo(*var) || hi != get_hi(*var)) {
-          goto restart;
+          goto resolve;
         }
+      }
+    }
+
+    // check whether to restart (only useful when looking for any solution)
+    if (strategy_restart_frequency() > 0 && objective() == OBJ_ANY && failed) {
+      _fail_count++;
+
+      if (_fail_count > _fail_threshold * strategy_restart_frequency()) {
+        _fail_count = 0;
+        _fail_threshold = fail_threshold_next();
+        _restart = true;
+        restarts++;
       }
     }
 
@@ -283,6 +326,7 @@ void solve_variable(struct env_t *env, struct constr_t *obj, struct constr_t *co
 }
 
 void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth) {
+ restart:
   if (depth < depth_min) {
     depth_min = depth;
   }
@@ -297,7 +341,10 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
   if (env[depth].key != NULL) {
     strategy_pick_var(env, depth);
     pid_t pid = worker_spawn(env, depth);
-    solve_variable(env, obj, constr, depth);
+    do {
+      _restart = false;
+      solve_variable(env, obj, constr, depth);
+    } while (pid == 0 && _restart);
     worker_die(pid);
   } else {
     struct val_t feasible = eval(constr);
@@ -318,7 +365,12 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
   }
 
   if (depth == 0) {
-    worker_die(0);
+    if (_restart) {
+      _restart = false;
+      goto restart;
+    } else {
+      worker_die(0);
+    }
   }
 }
 

@@ -266,6 +266,13 @@ void strategy_compute_weights_init(bool assign_weights);
 /** Get whether to compute weights for initial ordering */
 bool strategy_compute_weights(void);
 
+/** Whether to enable restarts as default */
+#define STRATEGY_RESTART_FREQUENCY_DEFAULT 100
+/** Set whether to enable restarts */
+void strategy_restart_frequency_init(uint64_t restart_frequency);
+/** Get whether to enable restarts */
+uint64_t strategy_restart_frequency(void);
+
 /** Which ordering to use as default */
 #define STRATEGY_ORDER_DEFAULT ORDER_SMALLEST_DOMAIN
 /** Set the ordering to use when searching */

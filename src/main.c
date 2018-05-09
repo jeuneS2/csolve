@@ -61,10 +61,11 @@ void print_help(FILE *file) {
   fprintf(file, "Options:\n");
   fprintf(file, "  -b --binds <size>           maximum number of binds (default: %d)\n", BIND_STACK_SIZE_DEFAULT);
   fprintf(file, "  -h --help                   show this message and exit\n");
-  fprintf(file, "  -j --jobs <int>             number of jobs to run simultaneously (default: %d)\n", WORKERS_MAX_DEFAULT);
+  fprintf(file, "  -j --jobs <int>             number of jobs to run simultaneously (default: %u)\n", WORKERS_MAX_DEFAULT);
   fprintf(file, "  -m --memory <size>          allocation stack size in bytes (default: %d)\n", ALLOC_STACK_SIZE_DEFAULT);
   fprintf(file, "  -o --order <order>          how to order variables during solving (default: %s)\n", STRVAL(STRATEGY_ORDER_DEFAULT));
   fprintf(file, "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false));
+  fprintf(file, "  -r --restart-freq <int>     restart frequency when looking for any solution (default: %u), set to 0 to disable\n", STRATEGY_RESTART_FREQUENCY_DEFAULT);
   fprintf(file, "  -v --version                print version and exit\n");
   fprintf(file, "  -w --weighten <bool>        compute weights of variables for initial order (default: %s)\n", STRATEGY_COMPUTE_WEIGHTS_DEFAULT ? STR(true) : STR(false));
 }
@@ -135,6 +136,7 @@ void parse_options(int argc, char **argv) {
     {"memory",         required_argument, 0, 'm' },
     {"order",          required_argument, 0, 'o' },
     {"prefer-failing", required_argument, 0, 'p' },
+    {"restart-freq",   required_argument, 0, 'r' },
     {"version",        no_argument,       0, 'v' },
     {"weighten",       required_argument, 0, 'w' },
     {0,                0,                 0, 0   }
@@ -168,6 +170,9 @@ void parse_options(int argc, char **argv) {
       break;
     case 'p':
       strategy_prefer_failing_init(parse_bool(optarg));
+      break;
+    case 'r':
+      strategy_restart_frequency_init(parse_int(optarg));
       break;
     case 'w':
       strategy_compute_weights_init(parse_bool(optarg));
@@ -203,6 +208,9 @@ void parse_options(int argc, char **argv) {
   }
   if (!seen['p']) {
     strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT);
+  }
+  if (!seen['r']) {
+    strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT);
   }
   if (!seen['w']) {
     strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT);
