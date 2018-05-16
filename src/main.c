@@ -128,7 +128,7 @@ size_t parse_size(const char *str) {
 
 void parse_options(int argc, char **argv) {
 
-  static const char *short_options = "b:hj:m:o:p:vw:";
+  static const char *short_options = "b:hj:m:o:p:r:vw:";
   static struct option long_options[] = {
     {"binds",          required_argument, 0, 'b' },
     {"help",           no_argument,       0, 'h' },
