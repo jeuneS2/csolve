@@ -104,7 +104,7 @@ enum order_t parse_order(const char *str) {
   } else if (strcmp(str, "largest-value") == 0) {
     return ORDER_LARGEST_DOMAIN;
   } else {
-    print_error(ERROR_MSG_INVALID_BOOL_ARG, str);
+    print_error(ERROR_MSG_INVALID_ORDER_ARG, str);
     exit(EXIT_FAILURE);
   }
 }
