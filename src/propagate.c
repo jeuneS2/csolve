@@ -29,21 +29,15 @@ struct constr_t *prop(struct constr_t *constr, struct val_t val);
 struct constr_t *propagate_term(struct constr_t *constr, struct val_t val) {
   struct val_t *term = constr->constr.term;
 
-  if (is_value(*term)) {
-    if (term->value.val < get_lo(val) || term->value.val > get_hi(val)) {
-      return NULL;
-    }
+  if (get_lo(*term) > get_hi(val) || get_hi(*term) < get_lo(val)) {
+    return NULL;
   } else {
-    if (get_lo(*term) > get_hi(val) || get_hi(*term) < get_lo(val)) {
-      return NULL;
-    } else {
-      domain_t lo = max(get_lo(*term), get_lo(val));
-      domain_t hi = min(get_hi(*term), get_hi(val));
-      if (lo != get_lo(*term) || hi != get_hi(*term)) {
-        struct val_t v = (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
-        bind(term, v);
-        _prop_count++;
-      }
+    domain_t lo = max(get_lo(*term), get_lo(val));
+    domain_t hi = min(get_hi(*term), get_hi(val));
+    if (lo != get_lo(*term) || hi != get_hi(*term)) {
+      struct val_t v = (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+      bind(term, v);
+      _prop_count++;
     }
   }
 
