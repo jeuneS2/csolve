@@ -3,6 +3,7 @@
 BEGIN {
     print "ANY;"
     mode = 0
+    count = 0
 }
 
 (mode == 1) && /-?[0-9]+/ {
@@ -28,10 +29,14 @@ BEGIN {
     print "#" $0
 }
 (mode == 0) && /^p[[:space:]]+cnf[[:space:]]+[[:digit:]]+[[:space:]]+[[:digit:]]+[[:space:]]*$/ {
-    for (i = 1; i <= $3; i++) {
-        print "0 <= x" i "; x" i " <= 1;"
-    }
+    count = $3
     mode = 1
     RS="[[:space:]]"
     start = 1
+}
+
+END {
+    for (i = 1; i <= count; i++) {
+        print "0 <= x" i "; x" i " <= 1;"
+    }
 }
