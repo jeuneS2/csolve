@@ -43,6 +43,7 @@ TESTS= \
 	test/test_parser_support.c \
 	test/test_print.c \
 	test/test_propagate.c \
+	test/test_strategy.c \
 	test/test_update_expr.c
 
 all: csolve test coverage doc

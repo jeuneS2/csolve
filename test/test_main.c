@@ -220,6 +220,13 @@ TEST(ParseOptions, Stdout) {
   delete(MockProxy);
 }
 
+TEST(Cleanup, Basic) {
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_free()).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_free()).Times(1);
+  cleanup();
+  delete(MockProxy);
+}
 }
 
 int main(int argc, char** argv) {
