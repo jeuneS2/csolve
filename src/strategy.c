@@ -57,35 +57,49 @@ void strategy_order_init(enum order_t order) {
   _order = order;
 }
 
-domain_t strategy_pick_var_value(struct env_t *env, size_t depth) {
+int strategy_pick_var_cmp(struct env_t *env, size_t depth1, size_t depth2) {
+  struct val_t v1 = *env[depth1].val;
+  struct val_t v2 = *env[depth2].val;
+  domain_t d1 = add(get_hi(v1), neg(get_lo(v1)));
+  domain_t d2 = add(get_hi(v2), neg(get_lo(v2)));
+
+  int cmp = 0;
   switch (_order) {
   case ORDER_SMALLEST_DOMAIN:
-    return add(get_hi(*env[depth].val), neg(get_lo(*env[depth].val)));
+    cmp = add(d2, neg(d1));
+    break;
   case ORDER_LARGEST_DOMAIN:
-    return add(get_lo(*env[depth].val), neg(get_hi(*env[depth].val)));
+    cmp = add(d1, neg(d2));
+    break;
   case ORDER_SMALLEST_VALUE:
-    return get_lo(*env[depth].val);
+    cmp = add(get_lo(v2), neg(get_lo(v1)));
+    break;
   case ORDER_LARGEST_VALUE:
-    return neg(get_hi(*env[depth].val));
+    cmp = add(get_hi(v1), neg(get_hi(v2)));
+    break;
+  case ORDER_NONE:
+    cmp = 0;
+    break;
   default:
     print_error(ERROR_MSG_INVALID_STRATEGY_ORDER, _order);
     return 0;
   }
+
+  if (strategy_prefer_failing() && cmp == 0) {
+    cmp = env[depth1].fails - env[depth2].fails;
+  }
+
+  return cmp;
 }
 
 void strategy_pick_var(struct env_t *env, size_t depth) {
-  if (_order != ORDER_NONE && env[depth].key != NULL) {
-    domain_t value = strategy_pick_var_value(env, depth);
+  if (env[depth].key != NULL) {
     size_t best_depth = depth;
     for (size_t i = depth; env[i].key != NULL; i++) {
-      domain_t v = strategy_pick_var_value(env, i);
-      if (v < value) {
+      if (strategy_pick_var_cmp(env, i, best_depth) > 0) {
         best_depth = i;
-        value = v;
       }
     }
-    struct env_t t = env[depth];
-    env[depth] = env[best_depth];
-    env[best_depth] = t;
+    swap_env(env, depth, best_depth);
   }
 }

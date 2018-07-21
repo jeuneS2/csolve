@@ -48,6 +48,8 @@ void vars_add(const char *key, struct val_t *val) {
   vars[var_count-1].var.key = (const char *)malloc(strlen(key)+1);
   strcpy((char *)vars[var_count-1].var.key, key);
   vars[var_count-1].var.val = val;
+  vars[var_count-1].var.fails = 0;
+  vars[var_count-1].var.step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
   vars[var_count-1].weight = 0;
 }
 
@@ -137,6 +139,8 @@ struct env_t *generate_env() {
   }
   env[var_count].key = NULL;
   env[var_count].val = NULL;
+  env[var_count].fails = 0;
+  env[var_count].step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
   return env;
 }
 

@@ -88,12 +88,6 @@ static inline bool is_false(struct val_t v) {
     .type = VAL_INTERVAL,                           \
       .value = { .ivl = { .lo = L, .hi = H } } })
 
-/** Variable environment entry */
-struct env_t {
-  const char *key; ///< Key (identifier) of variable
-  struct val_t *val; ///< Value of variable
-};
-
 
 /** Binding entry */
 struct binding_t {
@@ -158,6 +152,25 @@ static inline bool is_const(struct constr_t *c) {
       .constr = { .expr = { .op = O, .l = L, .r = R } }, \
       .eval_cache = { .tag = 0, .val = VALUE(0) } })
 
+/** Type holding information for a solving step */
+struct solve_step_t {
+  size_t bind_depth; ///< Bind depth before binding variable
+  void *alloc_marker; ///< Allocation marker before normalization
+  bool active; ///< Iteration active
+  udomain_t iter; ///< Iteration state
+  udomain_t seed; ///< Iteration random seed
+  struct val_t bounds; ///< Iteration bounds
+  struct constr_t *constr; ///< Normalized constraint after binding variable
+  struct constr_t *obj; ///< Normalized objective function after binding variable
+};
+
+/** Variable environment entry */
+struct env_t {
+  const char *key; ///< Key (identifier) of variable
+  struct val_t *val; ///< Value of variable
+  uint64_t fails; ///< Number of times this variable has failed
+  struct solve_step_t *step; ///< Solving state
+};
 
 /** Types of objective functions */
 enum objective_t {
@@ -251,6 +264,9 @@ struct constr_t *objective_optimize(struct constr_t *obj);
 
 /** Find solutions */
 void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth);
+
+/** Swap two environment entries (keeping step) */
+void swap_env(struct env_t *env, size_t depth1, size_t depth2);
 
 /** Whether to prefer failing variables as default */
 #define STRATEGY_PREFER_FAILING_DEFAULT true
