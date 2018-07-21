@@ -229,12 +229,19 @@ void parse_options(int argc, char **argv) {
   yyset_in(in);
 }
 
+void cleanup() {
+  bind_free();
+  alloc_free();
+}
+
 int main(int argc, char **argv) {
   _main_name = argv[0];
 
   parse_options(argc, argv);
 
   yyparse();
+
+  cleanup();
 
   return EXIT_SUCCESS;
 }

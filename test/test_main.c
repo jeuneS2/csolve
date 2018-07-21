@@ -10,7 +10,9 @@ class Mock {
   MOCK_METHOD0(yyparse, int(void));
   MOCK_METHOD1(yyset_in, void(FILE *));
   MOCK_METHOD1(alloc_init, void(size_t));
+  MOCK_METHOD0(alloc_free, void(void));
   MOCK_METHOD1(bind_init, void(size_t));
+  MOCK_METHOD0(bind_free, void(void));
   MOCK_METHOD1(shared_init, void(int32_t));
   MOCK_METHOD1(strategy_prefer_failing_init, void(bool));
   MOCK_METHOD1(strategy_compute_weights_init, void(bool));
@@ -33,8 +35,16 @@ void alloc_init(size_t size) {
   MockProxy->alloc_init(size);
 }
 
+void alloc_free(void) {
+  MockProxy->alloc_free();
+}
+
 void bind_init(size_t size) {
   MockProxy->bind_init(size);
+}
+
+void bind_free(void) {
+  MockProxy->bind_free();
 }
 
 void shared_init(int32_t workers) {

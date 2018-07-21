@@ -68,9 +68,10 @@ Input : Objective Constraints
         stats_init();
 
         if (prop != NULL) {
-          struct env_t *env = generate_env();
+          struct env_t *env = env_generate();
           struct constr_t *obj = objective_optimize($1);
           solve(env, obj, prop, 0);
+          env_free(env);
         }
       }
 
@@ -167,6 +168,7 @@ UnaryExpr : PrimaryExpr
                 $$ = d;
               }
             }
+            expr_list_free($3);
           }
 ;
 

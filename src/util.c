@@ -46,6 +46,11 @@ void alloc_init(size_t size) {
   }
 }
 
+void alloc_free(void) {
+  free(_alloc_stack);
+  _alloc_stack = NULL;
+}
+
 void *alloc(size_t size) {
   // align size
   size_t sz = (size + (ALLOC_ALIGNMENT-1)) & ~(ALLOC_ALIGNMENT-1);
@@ -87,6 +92,11 @@ void bind_init(size_t size) {
     print_error("%s", strerror(errno));
     exit(EXIT_FAILURE);
   }
+}
+
+void bind_free(void) {
+  free(_bind_stack);
+  _bind_stack = NULL;
 }
 
 size_t bind(struct val_t *loc, const struct val_t val) {

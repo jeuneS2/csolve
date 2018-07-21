@@ -46,7 +46,9 @@ void vars_weighten(struct constr_t *constr, int32_t weight);
 void vars_sort(void);
 
 /** Generate variable environment */
-struct env_t *generate_env(void);
+struct env_t *env_generate(void);
+/** Deallocate memory occipied by variable environment */
+void env_free(struct env_t *);
 
 /** Type to represent a list of expressions during parsing */
 struct expr_list_t {
@@ -56,5 +58,7 @@ struct expr_list_t {
 
 /** Add an element to a list of expressions */
 struct expr_list_t *expr_list_append(struct expr_list_t *list, struct constr_t *elem);
+/** Deallocate memory occupied by list of expressions */
+void expr_list_free(struct expr_list_t *list);
 
 #endif

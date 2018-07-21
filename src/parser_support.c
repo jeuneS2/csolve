@@ -22,35 +22,35 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 #include "parser_support.h"
 
-struct var_t *vars = NULL;
-size_t var_count = 0;
+static struct var_t *_vars = NULL;
+static size_t _var_count = 0;
 
 struct var_t *vars_find_key(const char *key) {
-  for (size_t i = 0; i < var_count; i++) {
-    if (strcmp(vars[i].var.key, key) == 0) {
-      return &vars[i];
+  for (size_t i = 0; i < _var_count; i++) {
+    if (strcmp(_vars[i].var.key, key) == 0) {
+      return &_vars[i];
     }
   }
   return NULL;
 }
 struct var_t *vars_find_val(const struct val_t *val) {
-  for (size_t i = 0; i < var_count; i++) {
-    if (vars[i].var.val == val) {
-      return &vars[i];
+  for (size_t i = 0; i < _var_count; i++) {
+    if (_vars[i].var.val == val) {
+      return &_vars[i];
     }
   }
   return NULL;
 }
 
 void vars_add(const char *key, struct val_t *val) {
-  var_count++;
-  vars = (struct var_t *)realloc(vars, sizeof(struct var_t) * var_count);
-  vars[var_count-1].var.key = (const char *)malloc(strlen(key)+1);
-  strcpy((char *)vars[var_count-1].var.key, key);
-  vars[var_count-1].var.val = val;
-  vars[var_count-1].var.fails = 0;
-  vars[var_count-1].var.step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
-  vars[var_count-1].weight = 0;
+  _var_count++;
+  _vars = (struct var_t *)realloc(_vars, sizeof(struct var_t) * _var_count);
+  _vars[_var_count-1].var.key = (const char *)malloc(strlen(key)+1);
+  strcpy((char *)_vars[_var_count-1].var.key, key);
+  _vars[_var_count-1].var.val = val;
+  _vars[_var_count-1].var.fails = 0;
+  _vars[_var_count-1].var.step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
+  _vars[_var_count-1].weight = 0;
 }
 
 int32_t vars_count(struct constr_t *constr) {
@@ -121,27 +121,46 @@ int vars_compare(const void *a, const void *b) {
 }
 
 void vars_sort(void) {
-  qsort(vars, var_count, sizeof(struct var_t), vars_compare);
+  qsort(_vars, _var_count, sizeof(struct var_t), vars_compare);
 }
 
 void vars_print(FILE *file) {
-  for (size_t i = 0; i < var_count; i++) {
-    fprintf(file, "%s: %d", vars[i].var.key, vars[i].weight);
-    print_val(file, *vars[i].var.val);
+  for (size_t i = 0; i < _var_count; i++) {
+    fprintf(file, "%s: %d", _vars[i].var.key, _vars[i].weight);
+    print_val(file, *_vars[i].var.val);
     fprintf(file, "\n");
   }
 }
 
-struct env_t *generate_env() {
-  struct env_t *env = (struct env_t *)malloc(sizeof(struct env_t) * (var_count+1));
-  for (size_t i = 0; i < var_count; i++) {
-    env[i] = vars[i].var;
+void vars_free(void) {
+  free(_vars);
+  _vars = NULL;
+  _var_count = 0;
+}
+
+struct env_t *env_generate(void) {
+  struct env_t *env = (struct env_t *)malloc(sizeof(struct env_t) * (_var_count+1));
+  for (size_t i = 0; i < _var_count; i++) {
+    env[i] = _vars[i].var;
   }
-  env[var_count].key = NULL;
-  env[var_count].val = NULL;
-  env[var_count].fails = 0;
-  env[var_count].step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
+  env[_var_count].key = NULL;
+  env[_var_count].val = NULL;
+  env[_var_count].fails = 0;
+  env[_var_count].step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
+
+  vars_free();
+
   return env;
+}
+
+void env_free(struct env_t *env) {
+  size_t i;
+  for (i = 0; env[i].key != NULL; i++) {
+    free((char *)env[i].key);
+    free(env[i].step);
+  }
+  free(env[i].step);
+  free(env);
 }
 
 struct expr_list_t *expr_list_append(struct expr_list_t *list, struct constr_t *elem) {
@@ -149,4 +168,12 @@ struct expr_list_t *expr_list_append(struct expr_list_t *list, struct constr_t *
   retval->expr = elem;
   retval->next = list;
   return retval;
+}
+
+void expr_list_free(struct expr_list_t *list) {
+  struct expr_list_t *next;
+  for (struct expr_list_t *l = list; l != NULL; l = next) {
+    next = l->next;
+    free(l);
+  }
 }

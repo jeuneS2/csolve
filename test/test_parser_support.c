@@ -39,19 +39,19 @@ TEST(VarsFindKey, Find) {
   struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct var_t v[2]  = { { { "x", &val }, 0 },
                          { { "y", &val }, 1 } };
-  vars = &v[0];
-  var_count = 2;
+  _vars = &v[0];
+  _var_count = 2;
 
-  EXPECT_EQ(&vars[1], vars_find_key("y"));
-  EXPECT_EQ(&vars[0], vars_find_key("x"));
+  EXPECT_EQ(&_vars[1], vars_find_key("y"));
+  EXPECT_EQ(&_vars[0], vars_find_key("x"));
 }
 
 TEST(VarsFindKey, NotFound) {
   struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct var_t v[2]  = { { { "x", &val }, 0 },
                          { { "y", &val }, 1 } };
-  vars = &v[0];
-  var_count = 2;
+  _vars = &v[0];
+  _var_count = 2;
 
   EXPECT_EQ(NULL, vars_find_key("z"));
 }
@@ -61,11 +61,11 @@ TEST(VarsFindVal, Find) {
   struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct var_t v[2]  = { { { "x", &val1 }, 0 },
                          { { "y", &val2 }, 1 } };
-  vars = &v[0];
-  var_count = 2;
+  _vars = &v[0];
+  _var_count = 2;
 
-  EXPECT_EQ(&vars[1], vars_find_val(&val2));
-  EXPECT_EQ(&vars[0], vars_find_val(&val1));
+  EXPECT_EQ(&_vars[1], vars_find_val(&val2));
+  EXPECT_EQ(&_vars[0], vars_find_val(&val1));
 }
 
 TEST(VarsFindVal, NotFound) {
@@ -74,8 +74,8 @@ TEST(VarsFindVal, NotFound) {
   struct val_t val3 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct var_t v[2]  = { { { "x", &val1 }, 0 },
                          { { "y", &val2 }, 1 } };
-  vars = &v[0];
-  var_count = 2;
+  _vars = &v[0];
+  _var_count = 2;
 
   EXPECT_EQ(NULL, vars_find_val(&val3));
 }
@@ -133,8 +133,8 @@ TEST(VarsWeighten, Basic) {
   struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct var_t v[2]  = { { { "x", &val1 }, 0 },
                          { { "y", &val2 }, 3 } };
-  vars = &v[0];
-  var_count = 2;
+  _vars = &v[0];
+  _var_count = 2;
 
   struct constr_t X = { .type = CONSTR_TERM, .constr = { .term = &val1 } };
   struct constr_t Y = { .type = CONSTR_TERM, .constr = { .term = &val2 } };
@@ -190,8 +190,8 @@ TEST(VarsPrint, Basic) {
   struct val_t val2 = INTERVAL(18, 86);
   struct var_t v[2]  = { { { "x", &val1 }, 0 },
                          { { "y", &val2 }, 3 } };
-  vars = &v[0];
-  var_count = 2;
+  _vars = &v[0];
+  _var_count = 2;
 
   std::string output;
 
