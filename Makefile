@@ -36,6 +36,7 @@ TESTS= \
 	test/test_alloc.c \
 	test/test_arith.c \
 	test/test_bind.c \
+	test/test_csolve.c \
 	test/test_eval.c \
 	test/test_main.c \
 	test/test_normalize.c \

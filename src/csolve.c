@@ -16,7 +16,9 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE
+#endif
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -32,14 +34,15 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 // parallelizing data
-static int32_t _workers_max;
-static int32_t _worker_id;
-static int32_t _worker_min_depth;
+static uint32_t _workers_max;
+static uint32_t _worker_id;
+static size_t _worker_min_depth;
 static struct shared_t *_shared;
 
 // restarting data
 static uint32_t _fail_count = 0;
 static uint64_t _fail_threshold = 1;
+static uint64_t _fail_threshold_counter = 1;
 
 // statistics
 #define STATS_FREQUENCY 10000
@@ -94,20 +97,21 @@ void print_stats(FILE *file) {
 
 // calculate Luby sequence using algorithm by Knuth
 uint64_t fail_threshold_next(void) {
-  static uint64_t counter = 1;
-  if ((counter & -counter) == _fail_threshold) {
-    counter++;
+  uint64_t threshold = _fail_threshold;
+  if ((_fail_threshold_counter & -_fail_threshold_counter) == _fail_threshold) {
+    _fail_threshold_counter++;
     _fail_threshold = 1;
   } else {
     _fail_threshold <<= 1;
   }
-  return _fail_threshold;
+  return threshold;
 }
 
 void shared_init(int32_t workers_max) {
   _workers_max = workers_max;
-  _shared = mmap(NULL, sizeof(struct shared_t),
-                 PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+  _shared = (struct shared_t *)mmap(NULL, sizeof(struct shared_t),
+                                    PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
+                                    -1, 0);
   sema_init(&shared()->semaphore);
   shared()->workers = 1;
   shared()->workers_id = 1;
@@ -268,15 +272,6 @@ static bool check_restart(void) {
   return false;
 }
 
-static void unwind(struct env_t *env, size_t depth, size_t stop) {
-  // unwind search steps up to a specified level
-  for (size_t i = depth; i != (stop-1); --i) {
-    env[i].step->active = false;
-    unbind(env[i].step->bind_depth);
-    dealloc(env[i].step->alloc_marker);
-  }
-}
-
 static void step_activate(struct env_t *env, size_t depth) {
   // set up iteration
   env[depth].step->active = true;
@@ -313,7 +308,7 @@ static bool step_check(struct env_t *env, size_t depth) {
   udomain_t i = env[depth].step->iter;
   domain_t lo = get_lo(env[depth].step->bounds);
   domain_t hi = get_hi(env[depth].step->bounds);
-  return i <= (hi - lo);
+  return i <= (udomain_t)(hi - lo);
 }
 
 static domain_t step_val(struct env_t *env, size_t depth) {
@@ -323,6 +318,14 @@ static domain_t step_val(struct env_t *env, size_t depth) {
   domain_t lo = get_lo(env[depth].step->bounds);
   domain_t hi = get_hi(env[depth].step->bounds);
   return ((i ^ s) & 1) ? hi - (i >> 1) : lo + (i >> 1);
+}
+
+static void unwind(struct env_t *env, size_t depth, size_t stop) {
+  // unwind search steps up to a specified level
+  for (size_t i = depth; i != (stop-1); --i) {
+    step_deactivate(env, i);
+    step_leave(env, i);
+  }
 }
 
 // backtrack by one level

@@ -366,6 +366,48 @@ TEST(NormalizeAnd, Basic) {
   delete(MockProxy);
 }
 
+TEST(NormalizeAnd, DeMorgan) {
+  struct val_t a = INTERVAL(0, 1);
+  struct val_t b = INTERVAL(0, 1);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C;
+  struct constr_t D;
+  struct constr_t X, Y, Z;
+
+  X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
+  Y = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
+  Z = CONSTRAINT_EXPR(OP_AND, &X, &Y);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, eval(&X))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(a));
+  EXPECT_CALL(*MockProxy, eval(&Y))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(b));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(&X));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&Y, &B))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(&Y));
+
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&C));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &C))
+    .Times(1)
+    .WillOnce(::testing::Return(&D));
+  EXPECT_EQ(&D, normal_and(&Z));
+  EXPECT_EQ(CONSTR_EXPR, C.type);
+  EXPECT_EQ(OP_OR, C.constr.expr.op);
+  EXPECT_EQ(&A, C.constr.expr.l);
+  EXPECT_EQ(&B, C.constr.expr.r);
+  delete(MockProxy);
+}
+
 TEST(NormalizeOr, Basic) {
   struct val_t a = VALUE(0);
   struct val_t b = VALUE(1);
@@ -415,6 +457,48 @@ TEST(NormalizeOr, Basic) {
     .Times(1)
     .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_or(&X));
+  delete(MockProxy);
+}
+
+TEST(NormalizeOr, DeMorgan) {
+  struct val_t a = INTERVAL(0, 1);
+  struct val_t b = INTERVAL(0, 1);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C;
+  struct constr_t D;
+  struct constr_t X, Y, Z;
+
+  X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
+  Y = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
+  Z = CONSTRAINT_EXPR(OP_OR, &X, &Y);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, eval(&X))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(a));
+  EXPECT_CALL(*MockProxy, eval(&Y))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(b));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(&X));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&Y, &B))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(&Y));
+
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&C));
+  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &C))
+    .Times(1)
+    .WillOnce(::testing::Return(&D));
+  EXPECT_EQ(&D, normal_or(&Z));
+  EXPECT_EQ(CONSTR_EXPR, C.type);
+  EXPECT_EQ(OP_AND, C.constr.expr.op);
+  EXPECT_EQ(&A, C.constr.expr.l);
+  EXPECT_EQ(&B, C.constr.expr.r);
   delete(MockProxy);
 }
 

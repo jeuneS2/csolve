@@ -234,4 +234,53 @@ TEST(PickVarCmp, None) {
   EXPECT_GT(strategy_pick_var_cmp(env, 2, 1), 0);
 }
 
+TEST(PickVarCmp, Error) {
+  _order = (order_t)0x1337;
+  _prefer_failing = false;
+
+  struct env_t env[4];
+
+  struct val_t a = INTERVAL(1, 27);
+  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  struct val_t b = INTERVAL(3, 17);
+  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  struct val_t c = INTERVAL(3, 17);
+  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_STRATEGY_ORDER, testing::_)).Times(1);
+  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  delete(MockProxy);
+}
+
+TEST(PickVar, Basic) {
+  _order = ORDER_SMALLEST_DOMAIN;
+  _prefer_failing = true;
+
+  struct env_t env[4];
+
+  struct val_t a = INTERVAL(5, 7);
+  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  struct val_t b = INTERVAL(3, 17);
+  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  struct val_t c = INTERVAL(3, 17);
+  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, swap_env(env, 1, 2)).Times(1);
+  strategy_pick_var(env, 1);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, swap_env(env, 2, 2)).Times(1);
+  strategy_pick_var(env, 2);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  strategy_pick_var(env, 3);
+  delete(MockProxy);
+}
+
 }

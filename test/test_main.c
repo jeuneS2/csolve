@@ -99,6 +99,7 @@ TEST(ParseOptions, Version) {
 
   int argc = 2;
   const char *argv [argc] = { "<xxx>", "-v" };
+  optind = 1;
 
   testing::internal::CaptureStdout();
   EXPECT_EXIT(parse_options(argc, (char **)argv), ::testing::ExitedWithCode(0), "");
@@ -153,6 +154,7 @@ TEST(ParseOptions, Help) {
 
   int argc = 2;
   const char *argv [argc] = { "<xxx>", "-h" };
+  optind = 1;
 
   testing::internal::CaptureStdout();
   EXPECT_EXIT(parse_options(argc, (char **)argv), ::testing::ExitedWithCode(0), "");
@@ -175,6 +177,7 @@ TEST(ParseOptions, InvalidOption) {
 
   int argc = 2;
   const char *argv [argc] = { "<xxx>", "-X" };
+  optind = 1;
   EXPECT_DEATH(parse_options(argc, (char **)argv),
                "<xxx>: invalid option .*\nUsage: .*\n");
 }
@@ -184,6 +187,7 @@ TEST(ParseOptions, MoreFiles) {
 
   int argc = 3;
   const char *argv [argc] = { "<xxx>", "X", "Y" };
+  optind = 1;
   EXPECT_DEATH(parse_options(argc, (char **)argv),
                "Usage: .*\n");
 }
@@ -193,6 +197,7 @@ TEST(ParseOptions, Stdout) {
 
   int argc1 = 1;
   const char *argv1 [argc1] = { "<xxx>" };
+  optind = 1;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
@@ -207,6 +212,7 @@ TEST(ParseOptions, Stdout) {
 
   int argc2 = 2;
   const char *argv2 [argc2] = { "<xxx>", "-" };
+  optind = 1;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
@@ -218,6 +224,193 @@ TEST(ParseOptions, Stdout) {
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc2, (char **)argv2);
   delete(MockProxy);
+}
+
+TEST(ParseOptions, Bind) {
+  int argc = 3;
+  const char *argv [argc] = { "<xxx>", "-b", "1234" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(1234)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc, (char **)argv);
+  delete(MockProxy);
+}
+
+TEST(ParseOptions, Alloc) {
+  int argc = 3;
+  const char *argv [argc] = { "<xxx>", "-m", "1234" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(1234)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc, (char **)argv);
+  delete(MockProxy);
+}
+
+TEST(ParseOptions, Jobs) {
+  int argc = 3;
+  const char *argv [argc] = { "<xxx>", "-j", "7" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(7)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc, (char **)argv);
+  delete(MockProxy);
+}
+
+TEST(ParseOptions, Order) {
+  int argc = 3;
+  const char *argv [argc] = { "<xxx>", "-o", "largest-value" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(ORDER_LARGEST_VALUE)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc, (char **)argv);
+  delete(MockProxy);
+}
+
+TEST(ParseOptions, PreferFailing) {
+  int argc1 = 3;
+  const char *argv1 [argc1] = { "<xxx>", "-p", "false" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(false)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc1, (char **)argv1);
+  delete(MockProxy);
+
+  int argc2 = 3;
+  const char *argv2 [argc2] = { "<xxx>", "-p", "true" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(true)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc2, (char **)argv2);
+  delete(MockProxy);
+}
+
+TEST(ParseOptions, Restarts) {
+  int argc = 3;
+  const char *argv [argc] = { "<xxx>", "-r", "1234" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(1234)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc, (char **)argv);
+  delete(MockProxy);
+}
+
+TEST(ParseOptions, Weighten) {
+  int argc1 = 3;
+  const char *argv1 [argc1] = { "<xxx>", "-w", "false" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(false)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc1, (char **)argv1);
+  delete(MockProxy);
+
+  int argc2 = 3;
+  const char *argv2 [argc2] = { "<xxx>", "-w", "true" };
+  optind = 1;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind_init(BIND_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_compute_weights_init(true)).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
+  parse_options(argc2, (char **)argv2);
+  delete(MockProxy);
+}
+
+TEST(ParseBool, Basic) {
+  EXPECT_EQ(true, parse_bool("true"));
+  EXPECT_EQ(false, parse_bool("false"));
+}
+
+TEST(ParseInt, Basic) {
+  EXPECT_EQ(10, parse_int("10"));
+  EXPECT_EQ(0x10, parse_int("0x10"));
+  EXPECT_EQ(0123, parse_int("0123"));
+}
+
+TEST(ParseOrder, Basic) {
+  EXPECT_EQ(ORDER_NONE, parse_order("none"));
+  EXPECT_EQ(ORDER_SMALLEST_DOMAIN, parse_order("smallest-domain"));
+  EXPECT_EQ(ORDER_LARGEST_DOMAIN, parse_order("largest-domain"));
+  EXPECT_EQ(ORDER_SMALLEST_VALUE, parse_order("smallest-value"));
+  EXPECT_EQ(ORDER_LARGEST_VALUE, parse_order("largest-value"));
+}
+
+TEST(ParseSize, Basic) {
+  EXPECT_EQ(7, parse_size("7"));
+  EXPECT_EQ(10*1024, parse_size("10k"));
+  EXPECT_EQ(12*1024, parse_size("12K"));
+  EXPECT_EQ(0x10*1024*1024, parse_size("0x10m"));
+  EXPECT_EQ(0x11*1024*1024, parse_size("0x11M"));
+  EXPECT_EQ(02ULL*1024*1024*1024, parse_size("02g"));
+  EXPECT_EQ(03ULL*1024*1024*1024, parse_size("03G"));
 }
 
 TEST(Cleanup, Basic) {

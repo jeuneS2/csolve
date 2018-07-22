@@ -28,6 +28,27 @@ void print_error(const char *fmt, ...) {
   va_end(args);
 }
 
+TEST(Bind, Init) {
+  _bind_stack = NULL;
+  bind_init(123);
+  EXPECT_EQ(123, _bind_stack_size);
+  EXPECT_NE((struct binding_t *)NULL, _bind_stack);
+  free(_bind_stack);
+
+  _bind_stack = NULL;
+  bind_init(17);
+  EXPECT_EQ(17, _bind_stack_size);
+  EXPECT_NE((struct binding_t *)NULL, _bind_stack);
+  free(_bind_stack);
+}
+
+TEST(Bind, Free) {
+  bind_init(64);
+  bind_free();
+  EXPECT_EQ(0, _bind_stack_size);
+  EXPECT_EQ((struct binding_t *)NULL, _bind_stack);
+}
+
 TEST(Bind, Success) {
   struct val_t loc = INTERVAL(0, 100);
 

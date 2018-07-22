@@ -49,6 +49,7 @@ void alloc_init(size_t size) {
 void alloc_free(void) {
   free(_alloc_stack);
   _alloc_stack = NULL;
+  _alloc_stack_size = 0;
 }
 
 void *alloc(size_t size) {
@@ -97,6 +98,7 @@ void bind_init(size_t size) {
 void bind_free(void) {
   free(_bind_stack);
   _bind_stack = NULL;
+  _bind_stack_size = 0;
 }
 
 size_t bind(struct val_t *loc, const struct val_t val) {

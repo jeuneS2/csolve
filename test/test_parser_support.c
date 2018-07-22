@@ -3,6 +3,10 @@
 #include <stdarg.h>
 
 namespace parser_support {
+
+void mock_qsort(void *, size_t, size_t, int (*)(const void *, const void *));
+#define qsort mock_qsort
+
 #include "../src/parser_support.c"
 
 bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
@@ -14,6 +18,7 @@ class Mock {
   MOCK_METHOD0(objective_best, domain_t(void));
   MOCK_METHOD2(print_error, void (const char *, va_list));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
+  MOCK_METHOD4(qsort, void(void *, size_t, size_t, int (*)(const void *, const void *)));
 };
 
 Mock *MockProxy;
@@ -33,6 +38,10 @@ void print_val(FILE *file, const struct val_t val) {
   MockProxy->print_val(file, val);
   static int i = 0;
   fprintf(file, "<val%i>", i++);
+}
+
+void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) {
+  MockProxy->qsort(base, nmemb, size, compar);
 }
 
 TEST(VarsFindKey, Find) {
@@ -80,6 +89,33 @@ TEST(VarsFindVal, NotFound) {
   EXPECT_EQ(NULL, vars_find_val(&val3));
 }
 
+TEST(VarsAdd, Basic) {
+  _vars = NULL;
+  _var_count = 0;
+
+  const char *k1 = "k1";
+  struct val_t v1;
+  vars_add(k1, &v1);
+  EXPECT_NE((struct var_t *)NULL, _vars);
+  EXPECT_EQ(1, _var_count);
+  EXPECT_NE(k1, _vars[0].var.key);
+  EXPECT_STREQ(k1, _vars[0].var.key);
+  EXPECT_EQ(&v1, _vars[0].var.val);
+  EXPECT_EQ(0, _vars[0].var.fails);
+  EXPECT_NE((struct solve_step_t *)NULL, _vars[0].var.step);
+  EXPECT_EQ(0, _vars[0].weight);
+
+  const char *k2 = "k2";
+  struct val_t v2;
+  vars_add(k2, &v2);
+  EXPECT_NE(k2, _vars[1].var.key);
+  EXPECT_STREQ(k2, _vars[1].var.key);
+  EXPECT_EQ(&v2, _vars[1].var.val);
+  EXPECT_EQ(0, _vars[1].var.fails);
+  EXPECT_NE((struct solve_step_t *)NULL, _vars[1].var.step);
+  EXPECT_EQ(0, _vars[1].weight);
+}
+
 TEST(VarsCount, Basic) {
   struct val_t a = VALUE(1);
   struct val_t b = INTERVAL(17, 23);
@@ -91,20 +127,20 @@ TEST(VarsCount, Basic) {
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &A);
   EXPECT_EQ(0, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  X = CONSTRAINT_EXPR(OP_LT, &A, &B);
   EXPECT_EQ(1, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_EQ, &B, &B);
+  X = CONSTRAINT_EXPR(OP_ADD, &B, &B);
   EXPECT_EQ(2, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_EQ, &B, &B);
-  Y = CONSTRAINT_EXPR(OP_EQ, &X, &B);
+  X = CONSTRAINT_EXPR(OP_MUL, &B, &B);
+  Y = CONSTRAINT_EXPR(OP_AND, &X, &B);
   EXPECT_EQ(3, vars_count(&Y));
-  X = CONSTRAINT_EXPR(OP_EQ, &B, &B);
+  X = CONSTRAINT_EXPR(OP_OR, &B, &B);
   Y = CONSTRAINT_EXPR(OP_EQ, &X, &X);
   EXPECT_EQ(4, vars_count(&Y));
 
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
   EXPECT_EQ(0, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_NEG, &B, NULL);
+  X = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
   EXPECT_EQ(1, vars_count(&X));
   X = CONSTRAINT_EXPR(OP_EQ, &B, &B);
   Y = CONSTRAINT_EXPR(OP_NEG, &X, NULL);
@@ -145,10 +181,20 @@ TEST(VarsWeighten, Basic) {
   EXPECT_EQ(v[0].weight, 10);
   EXPECT_EQ(v[1].weight, 13);
 
+  Z = CONSTRAINT_EXPR(OP_AND, &X, &Y);
+  vars_weighten(&Z, 15);
+  EXPECT_EQ(v[0].weight, 25);
+  EXPECT_EQ(v[1].weight, 28);
+
   Z = CONSTRAINT_EXPR(OP_NEG, &X, NULL);
   vars_weighten(&Z, 100);
-  EXPECT_EQ(v[0].weight, 110);
-  EXPECT_EQ(v[1].weight, 13);
+  EXPECT_EQ(v[0].weight, 125);
+  EXPECT_EQ(v[1].weight, 28);
+
+  Z = CONSTRAINT_EXPR(OP_NOT, &X, NULL);
+  vars_weighten(&Z, 200);
+  EXPECT_EQ(v[0].weight, 325);
+  EXPECT_EQ(v[1].weight, 28);
 }
 
 TEST(VarsWeighten, Errors) {
@@ -212,6 +258,65 @@ TEST(VarsPrint, Basic) {
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "x: 0<val2>\ny: 3<val3>\n");
   delete(MockProxy);
+}
+
+TEST(VarsFree, Basic) {
+  _vars = 0;
+  _var_count = 0;
+
+  struct val_t val;
+  vars_add("key", &val);
+  EXPECT_NE((struct var_t *)NULL, _vars);
+  EXPECT_EQ(1, _var_count);
+
+  vars_free();
+  EXPECT_EQ((struct var_t *)NULL, _vars);
+  EXPECT_EQ(0, _var_count);
+}
+
+TEST(VarsSort, Basic) {
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, qsort(_vars, _var_count, sizeof(struct var_t), vars_compare)).Times(1);
+  vars_sort();
+  delete(MockProxy);
+}
+
+TEST(EnvGenerate, Basic) {
+  _vars = 0;
+  _var_count = 0;
+  struct val_t v1;
+  vars_add("k1", &v1);
+  struct val_t v2;
+  vars_add("k2", &v2);
+  struct env_t *env = env_generate();
+  EXPECT_STREQ("k1", env[0].key);
+  EXPECT_EQ(&v1, env[0].val);
+  EXPECT_EQ(0, env[0].fails);
+  EXPECT_NE((struct solve_step_t *)NULL, env[0].step);
+  EXPECT_STREQ("k2", env[1].key);
+  EXPECT_EQ(&v2, env[1].val);
+  EXPECT_EQ(0, env[1].fails);
+  EXPECT_NE((struct solve_step_t *)NULL, env[1].step);
+  EXPECT_EQ((const char *)NULL, env[2].key);
+  EXPECT_EQ((struct val_t *)NULL, env[2].val);
+  EXPECT_EQ(0, env[2].fails);
+  EXPECT_NE((struct solve_step_t *)NULL, env[1].step);
+  EXPECT_EQ((struct var_t *)NULL, _vars);
+  EXPECT_EQ(0, _var_count);
+}
+
+TEST(ExprListAppend, Basic) {
+  struct constr_t e1;
+  struct expr_list_t *l1 = expr_list_append(NULL, &e1);
+  EXPECT_NE((struct expr_list_t *)NULL, l1);
+  EXPECT_EQ((struct expr_list_t *)NULL, l1->next);
+  EXPECT_EQ(&e1, l1->expr);
+
+  struct constr_t e2;
+  struct expr_list_t *l2 = expr_list_append(l1, &e2);
+  EXPECT_NE((struct expr_list_t *)NULL, l2);
+  EXPECT_EQ(l1, l2->next);
+  EXPECT_EQ(&e2, l2->expr);
 }
 
 }

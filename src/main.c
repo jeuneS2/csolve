@@ -102,7 +102,7 @@ enum order_t parse_order(const char *str) {
   } else if (strcmp(str, "smallest-value") == 0) {
     return ORDER_SMALLEST_VALUE;
   } else if (strcmp(str, "largest-value") == 0) {
-    return ORDER_LARGEST_DOMAIN;
+    return ORDER_LARGEST_VALUE;
   } else {
     print_error(ERROR_MSG_INVALID_ORDER_ARG, str);
     exit(EXIT_FAILURE);

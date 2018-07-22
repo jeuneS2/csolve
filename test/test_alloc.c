@@ -24,6 +24,27 @@ void print_error(const char *fmt, ...) {
   va_end(args);
 }
 
+TEST(Alloc, Init) {
+  _alloc_stack = NULL;
+  alloc_init(123);
+  EXPECT_EQ(123, _alloc_stack_size);
+  EXPECT_NE((char *)NULL, _alloc_stack);
+  free(_alloc_stack);
+
+  _alloc_stack = NULL;
+  alloc_init(17);
+  EXPECT_EQ(17, _alloc_stack_size);
+  EXPECT_NE((char *)NULL, _alloc_stack);
+  free(_alloc_stack);
+}
+
+TEST(Alloc, Free) {
+  alloc_init(64);
+  alloc_free();
+  EXPECT_EQ(0, _alloc_stack_size);
+  EXPECT_EQ((char *)NULL, _alloc_stack);
+}
+
 TEST(Alloc, Success) {
   alloc_init(1024);
   alloc_max = 64;
