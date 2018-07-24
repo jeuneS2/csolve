@@ -76,9 +76,9 @@ bool parse_bool(const char *str) {
   } else if (strcmp(str, STR(false)) == 0) {
     return false;
   } else {
-    print_error(ERROR_MSG_INVALID_BOOL_ARG, str);
-    exit(EXIT_FAILURE);
+    print_fatal(ERROR_MSG_INVALID_BOOL_ARG, str);
   }
+  return false;
 }
 
 int32_t parse_int(const char *str) {
@@ -87,9 +87,9 @@ int32_t parse_int(const char *str) {
   if (endptr[0] == '\0') {
     return size;
   } else {
-    print_error(ERROR_MSG_INVALID_INT_ARG, str);
-    exit(EXIT_FAILURE);
+    print_fatal(ERROR_MSG_INVALID_INT_ARG, str);
   }
+  return 0;
 }
 
 enum order_t parse_order(const char *str) {
@@ -104,9 +104,9 @@ enum order_t parse_order(const char *str) {
   } else if (strcmp(str, "largest-value") == 0) {
     return ORDER_LARGEST_VALUE;
   } else {
-    print_error(ERROR_MSG_INVALID_ORDER_ARG, str);
-    exit(EXIT_FAILURE);
+    print_fatal(ERROR_MSG_INVALID_ORDER_ARG, str);
   }
+  return ORDER_NONE;
 }
 
 size_t parse_size(const char *str) {
@@ -121,9 +121,9 @@ size_t parse_size(const char *str) {
   } else if ((endptr[0] == 'g' || endptr[0] == 'G') && endptr[1] == '\0') {
     return size * GIGA;
   } else {
-    print_error(ERROR_MSG_INVALID_SIZE_ARG, str);
-    exit(EXIT_FAILURE);
+    print_fatal(ERROR_MSG_INVALID_SIZE_ARG, str);
   }
+  return 0;
 }
 
 void parse_options(int argc, char **argv) {
@@ -151,7 +151,7 @@ void parse_options(int argc, char **argv) {
   while ((c = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
     if (seen[c % MAX_OPTS]) {
       print_usage(stderr);
-      exit(EXIT_SUCCESS);
+      exit(EXIT_FAILURE);
     }
     seen[c % MAX_OPTS] = true;
 
@@ -221,8 +221,7 @@ void parse_options(int argc, char **argv) {
   if (optind == argc-1 && strcmp(argv[optind], "-") != 0) {
     in = fopen(argv[optind], "r");
     if (in == NULL) {
-      print_error("%s: %s", argv[optind], strerror(errno));
-      exit(EXIT_FAILURE);
+      print_fatal("%s: %s", argv[optind], strerror(errno));
     }
   }
 

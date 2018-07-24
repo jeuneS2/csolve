@@ -9,7 +9,7 @@ namespace strategy {
 class Mock {
  public:
   MOCK_METHOD3(swap_env, void(struct env_t *, size_t, size_t));
-  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_fatal, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -18,10 +18,10 @@ void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
   MockProxy->swap_env(env, depth1, depth2);
 }
 
-void print_error(const char *fmt, ...) {
+void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
+  MockProxy->print_fatal(fmt, args);
   va_end(args);
 }
 
@@ -249,8 +249,8 @@ TEST(PickVarCmp, Error) {
   env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_STRATEGY_ORDER, testing::_)).Times(1);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER, testing::_)).Times(1);
+  strategy_pick_var_cmp(env, 2, 1);
   delete(MockProxy);
 }
 

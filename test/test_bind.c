@@ -12,7 +12,7 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
-  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_fatal, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -21,10 +21,10 @@ void eval_cache_invalidate(void) {
   MockProxy->eval_cache_invalidate();
 }
 
-void print_error(const char *fmt, ...) {
+void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
+  MockProxy->print_fatal(fmt, args);
   va_end(args);
 }
 
@@ -71,14 +71,14 @@ TEST(Bind, Fail) {
 
   MockProxy = new Mock();
   _bind_depth = 23;
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_NULL_BIND, testing::_)).Times(1);
-  EXPECT_EQ(_bind_stack_size, bind(NULL, VALUE(17)));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_NULL_BIND, testing::_)).Times(1);
+  bind(NULL, VALUE(17));
   delete(MockProxy);
 
   MockProxy = new Mock();
   _bind_depth = _bind_stack_size;
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_TOO_MANY_BINDS, testing::_)).Times(1);
-  EXPECT_EQ(_bind_stack_size, bind(&loc, VALUE(17)));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_TOO_MANY_BINDS, testing::_)).Times(1);
+  bind(&loc, VALUE(17));
   delete(MockProxy);
 }
 

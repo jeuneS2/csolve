@@ -4,7 +4,9 @@
 
 namespace parser_support {
 
+void mock_free(void *);
 void mock_qsort(void *, size_t, size_t, int (*)(const void *, const void *));
+#define free mock_free
 #define qsort mock_qsort
 
 #include "../src/parser_support.c"
@@ -16,8 +18,9 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD0(objective_best, domain_t(void));
-  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_fatal, void (const char *, va_list));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
+  MOCK_METHOD1(free, void(void *));
   MOCK_METHOD4(qsort, void(void *, size_t, size_t, int (*)(const void *, const void *)));
 };
 
@@ -27,10 +30,10 @@ domain_t objective_best(void) {
   return MockProxy->objective_best();
 }
 
-void print_error(const char *fmt, ...) {
+void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
+  MockProxy->print_fatal(fmt, args);
   va_end(args);
 }
 
@@ -38,6 +41,10 @@ void print_val(FILE *file, const struct val_t val) {
   MockProxy->print_val(file, val);
   static int i = 0;
   fprintf(file, "<val%i>", i++);
+}
+
+void free(void *ptr) {
+  MockProxy->free(ptr);
 }
 
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) {
@@ -153,14 +160,14 @@ TEST(VarsCount, Errors) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
-  EXPECT_EQ(0, vars_count(&X));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
+  vars_count(&X);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
-  EXPECT_EQ(0, vars_count(&X));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
+  vars_count(&X);
   delete(MockProxy);
 }
 
@@ -202,13 +209,13 @@ TEST(VarsWeighten, Errors) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   vars_weighten(&X, 1);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
   vars_weighten(&X, 1);
   delete(MockProxy);
 }
@@ -269,9 +276,12 @@ TEST(VarsFree, Basic) {
   EXPECT_NE((struct var_t *)NULL, _vars);
   EXPECT_EQ(1, _var_count);
 
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(_vars)).Times(1);
   vars_free();
   EXPECT_EQ((struct var_t *)NULL, _vars);
   EXPECT_EQ(0, _var_count);
+  delete(MockProxy);
 }
 
 TEST(VarsSort, Basic) {
@@ -288,6 +298,9 @@ TEST(EnvGenerate, Basic) {
   vars_add("k1", &v1);
   struct val_t v2;
   vars_add("k2", &v2);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(_vars)).Times(1);
   struct env_t *env = env_generate();
   EXPECT_STREQ("k1", env[0].key);
   EXPECT_EQ(&v1, env[0].val);
@@ -303,6 +316,29 @@ TEST(EnvGenerate, Basic) {
   EXPECT_NE((struct solve_step_t *)NULL, env[1].step);
   EXPECT_EQ((struct var_t *)NULL, _vars);
   EXPECT_EQ(0, _var_count);
+  delete(MockProxy);
+}
+
+TEST(EnvFree, Basic) {
+  struct env_t env[3];
+
+  struct val_t a = INTERVAL(1, 27);
+  struct solve_step_t sA;
+  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
+  struct val_t b = INTERVAL(3, 17);
+  struct solve_step_t sB;
+  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
+  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free((void *)env[0].key));
+  EXPECT_CALL(*MockProxy, free((void *)env[0].step));
+  EXPECT_CALL(*MockProxy, free((void *)env[1].key));
+  EXPECT_CALL(*MockProxy, free((void *)env[1].step));
+  EXPECT_CALL(*MockProxy, free((void *)env[2].step));
+  EXPECT_CALL(*MockProxy, free((void *)&env[0]));
+  env_free(env);
+  delete(MockProxy);
 }
 
 TEST(ExprListAppend, Basic) {
@@ -317,6 +353,22 @@ TEST(ExprListAppend, Basic) {
   EXPECT_NE((struct expr_list_t *)NULL, l2);
   EXPECT_EQ(l1, l2->next);
   EXPECT_EQ(&e2, l2->expr);
+}
+
+TEST(ExprListFree, Basic) {
+  struct constr_t e1;
+  struct expr_list_t *l1 = expr_list_append(NULL, &e1);
+  struct constr_t e2;
+  struct expr_list_t *l2 = expr_list_append(l1, &e2);
+  struct constr_t e3;
+  struct expr_list_t *l3 = expr_list_append(l2, &e3);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(l1)).Times(1);
+  EXPECT_CALL(*MockProxy, free(l2)).Times(1);
+  EXPECT_CALL(*MockProxy, free(l3)).Times(1);
+  expr_list_free(l3);
+  delete(MockProxy);
 }
 
 }

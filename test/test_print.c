@@ -2,12 +2,17 @@
 #include <gmock/gmock.h>
 
 namespace print {
+
+void mock_exit(int code);
+#define exit mock_exit
+
 #include "../src/print.c"
 
 class Mock {
  public:
   MOCK_METHOD0(objective_best, domain_t(void));
   MOCK_METHOD0(main_name, const char *(void));
+  MOCK_METHOD1(exit, void(int));
 };
 
 Mock *MockProxy;
@@ -18,6 +23,10 @@ domain_t objective_best(void) {
 
 const char *main_name(void) {
   return MockProxy->main_name();
+}
+
+void exit(int code) {
+  return MockProxy->exit(code);
 }
 
 TEST(PrintValue, Basic) {
@@ -192,10 +201,8 @@ TEST(PrintSolution, Basic) {
 
 TEST(PrintError, Basic) {
   std::string output;
-  struct constr_t X;
 
   MockProxy = new Mock();
-  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
   EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<name>"));
   testing::internal::CaptureStderr();
   print_error(ERROR_MSG_NULL_BIND);
@@ -204,12 +211,24 @@ TEST(PrintError, Basic) {
   delete(MockProxy);
 
   MockProxy = new Mock();
-  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
   EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<other>"));
   testing::internal::CaptureStderr();
   print_error(ERROR_MSG_OUT_OF_MEMORY);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "<other>: error: " ERROR_MSG_OUT_OF_MEMORY "\n");
+  delete(MockProxy);
+}
+
+TEST(PrintFatal, Basic) {
+  std::string output;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<name>"));
+  EXPECT_CALL(*MockProxy, exit(EXIT_FAILURE)).Times(1);
+  testing::internal::CaptureStderr();
+  print_fatal(ERROR_MSG_OUT_OF_MEMORY);
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(output, "<name>: error: " ERROR_MSG_OUT_OF_MEMORY "\n");
   delete(MockProxy);
 }
 

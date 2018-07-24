@@ -41,8 +41,7 @@ void alloc_init(size_t size) {
 
   _alloc_stack = (char *)malloc(_alloc_stack_size);
   if (_alloc_stack == 0) {
-    print_error("%s", strerror(errno));
-    exit(EXIT_FAILURE);
+    print_fatal("%s", strerror(errno));
   }
 }
 
@@ -64,9 +63,9 @@ void *alloc(size_t size) {
     }
     return retval;
   } else {
-    print_error(ERROR_MSG_OUT_OF_MEMORY);
-    return NULL;
+    print_fatal(ERROR_MSG_OUT_OF_MEMORY);
   }
+  return NULL;
 }
 
 void dealloc(void *elem) {
@@ -75,7 +74,7 @@ void dealloc(void *elem) {
       pointer >= 0 && pointer <= _alloc_stack_pointer) {
     _alloc_stack_pointer = pointer;
   } else {
-    print_error(ERROR_MSG_WRONG_DEALLOC);
+    print_fatal(ERROR_MSG_WRONG_DEALLOC);
   }
 }
 
@@ -90,8 +89,7 @@ void bind_init(size_t size) {
 
   _bind_stack = (struct binding_t *)malloc(sizeof(struct binding_t) * _bind_stack_size);
   if (_bind_stack == 0) {
-    print_error("%s", strerror(errno));
-    exit(EXIT_FAILURE);
+    print_fatal("%s", strerror(errno));
   }
 }
 
@@ -110,13 +108,12 @@ size_t bind(struct val_t *loc, const struct val_t val) {
       eval_cache_invalidate();
       return _bind_depth++;
     } else {
-      print_error(ERROR_MSG_TOO_MANY_BINDS);
-      return _bind_stack_size;
+      print_fatal(ERROR_MSG_TOO_MANY_BINDS);
     }
   } else {
-    print_error(ERROR_MSG_NULL_BIND);
-    return _bind_stack_size;
+    print_fatal(ERROR_MSG_NULL_BIND);
   }
+  return _bind_stack_size;
 }
 
 void unbind(size_t depth) {
@@ -165,23 +162,20 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
 void sema_init(sem_t *sema) {
   int status = sem_init(sema, 1, 1);
   if (status == -1) {
-    print_error("%s", strerror(errno));
-    exit(EXIT_FAILURE);
+    print_fatal("%s", strerror(errno));
   }
 }
 
 void sema_wait(sem_t *sema) {
   int status = sem_wait(sema);
   if (status == -1) {
-    print_error("%s", strerror(errno));
-    exit(EXIT_FAILURE);
+    print_fatal("%s", strerror(errno));
   }
 }
 
 void sema_post(sem_t *sema) {
   int status = sem_post(sema);
   if (status == -1) {
-    print_error("%s", strerror(errno));
-    exit(EXIT_FAILURE);
+    print_fatal("%s", strerror(errno));
   }
 }

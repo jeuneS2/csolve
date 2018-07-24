@@ -41,7 +41,7 @@ void objective_init(enum objective_t o, volatile domain_t *best) {
     *_objective_best = DOMAIN_MIN;
     break;
   default:
-    print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
+    print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
 }
 
@@ -67,7 +67,7 @@ bool objective_better(struct constr_t *obj) {
     }
     break;
   default:
-    print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
+    print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
   return true;
 }
@@ -76,7 +76,7 @@ void objective_update(struct val_t obj) {
   if (is_value(obj)) {
     *_objective_best = obj.value.val;
   } else {
-    print_error(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL);
+    print_fatal(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL);
   }
 }
 
@@ -99,7 +99,7 @@ struct constr_t *objective_optimize(struct constr_t *obj) {
     retval = retval != NULL ? normalize(retval) : retval;
     break;
   default:
-    print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
+    print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
   return retval;
 }

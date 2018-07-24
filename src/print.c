@@ -64,13 +64,23 @@ void print_solution(FILE *file, struct env_t *env) {
   fprintf(file, "BEST: %d\n", objective_best());
 }
 
-void print_error(const char *fmt, ...) {
+static void vprint_error(const char *fmt, va_list ap) {
     fprintf(stderr, "%s: error: ", main_name());
+    vfprintf(stderr, fmt, ap);
+    fprintf(stderr, "\n");
+}
 
+void print_error(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
+    vprint_error(fmt, args);
     va_end(args);
+}
 
-    fprintf(stderr, "\n");
+void print_fatal(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vprint_error(fmt, args);
+    va_end(args);
+    exit(EXIT_FAILURE);
 }

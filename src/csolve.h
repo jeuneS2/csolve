@@ -322,6 +322,8 @@ void print_stats(FILE *file);
 void print_solution(FILE *file, struct env_t *env);
 /** Print an error message */
 void print_error(const char *fmt, ...);
+/** Print an error message and die */
+void print_fatal(const char *fmt, ...);
 
 /** Get the name of the program */
 const char *main_name(void);

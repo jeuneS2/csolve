@@ -12,15 +12,15 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 
 class Mock {
  public:
-  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_fatal, void (const char *, va_list));
 };
 
 Mock *MockProxy;
 
-void print_error(const char *fmt, ...) {
+void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
+  MockProxy->print_fatal(fmt, args);
   va_end(args);
 }
 
@@ -122,6 +122,7 @@ TEST(EvalEq, Basic) {
   EXPECT_EQ(VALUE(0), eval_eq(INTERVAL(-3, 1), INTERVAL(2, 4)));
   EXPECT_EQ(INTERVAL(0, 1), eval_eq(VALUE(2), INTERVAL(-3, 4)));
   EXPECT_EQ(INTERVAL(0, 1), eval_eq(INTERVAL(1, 4), INTERVAL(-3, 2)));
+  EXPECT_EQ(INTERVAL(0, 1), eval_eq(INTERVAL(7, 8), INTERVAL(7, 8)));
 }
 
 TEST(EvalEq, MinMax) {
@@ -258,14 +259,14 @@ TEST(Eval, Errors) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
-  EXPECT_EQ(VALUE(0), eval(&X));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
+  eval(&X);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
-  EXPECT_EQ(VALUE(0), eval(&X));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
+  eval(&X);
   delete(MockProxy);
 }
 

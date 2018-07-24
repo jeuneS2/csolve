@@ -15,7 +15,7 @@ class Mock {
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *constr));
   MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *constr, struct val_t val));
-  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_fatal, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -32,10 +32,10 @@ struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
   return MockProxy->propagate(constr, val);
 }
 
-void print_error(const char *fmt, ...) {
+void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
+  MockProxy->print_fatal(fmt, args);
   va_end(args);
 }
 
@@ -65,7 +65,7 @@ TEST(ObjectiveInit, Basic) {
 
 TEST(ObjectiveInit, Errors) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
   objective_init((objective_t)-1, NULL);
   delete(MockProxy);
 }
@@ -208,7 +208,7 @@ TEST(ObjectiveBetter, Max) {
 
 TEST(ObjectiveBetter, Errors) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
   _objective = (objective_t)-1;
   objective_better(NULL);
   delete(MockProxy);
@@ -225,7 +225,7 @@ TEST(ObjectiveUpdate, Basic) {
 
 TEST(ObjectiveUpdate, Errors) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL, testing::_)).Times(1);
   objective_update(INTERVAL(0, 1));
   delete(MockProxy);
 }
@@ -311,6 +311,48 @@ TEST(ObjectiveOptimize, Max) {
   delete(MockProxy);
 }
 
+TEST(ObjectiveOptimize, MinInfeas) {
+  domain_t best;
+
+  struct val_t a = VALUE(17);
+  struct val_t b = VALUE(23);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  MockProxy = new Mock();
+  objective_init(OBJ_MIN, &best);
+  objective_update(VALUE(17));
+  EXPECT_CALL(*MockProxy, propagate(&X, INTERVAL(DOMAIN_MIN, 16)))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return((struct constr_t *)NULL));
+  EXPECT_EQ(NULL, objective_optimize(&X));
+  delete(MockProxy);
+}
+
+TEST(ObjectiveOptimize, MaxInfeas) {
+  domain_t best;
+
+  struct val_t a = VALUE(17);
+  struct val_t b = VALUE(23);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t X;
+
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  MockProxy = new Mock();
+  objective_init(OBJ_MAX, &best);
+  objective_update(VALUE(17));
+  EXPECT_CALL(*MockProxy, propagate(&X, INTERVAL(18, DOMAIN_MAX)))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return((struct constr_t *)NULL));
+  EXPECT_EQ(NULL, objective_optimize(&X));
+  delete(MockProxy);
+}
+
 TEST(ObjectiveOptimize, Error) {
   struct val_t a = VALUE(17);
   struct val_t b = VALUE(23);
@@ -321,10 +363,10 @@ TEST(ObjectiveOptimize, Error) {
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
   _objective = (enum objective_t)-1;
   objective_update(VALUE(17));
-  EXPECT_EQ(&X, objective_optimize(&X));
+  objective_optimize(&X);
   delete(MockProxy);
 }
 

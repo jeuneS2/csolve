@@ -16,7 +16,7 @@ class Mock {
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
   MOCK_METHOD3(update_expr, struct constr_t *(struct constr_t *, struct constr_t *, struct constr_t *));
   MOCK_METHOD2(update_unary_expr, struct constr_t *(struct constr_t *, struct constr_t *));
-  MOCK_METHOD2(print_error, void (const char *, va_list));
+  MOCK_METHOD2(print_fatal, void (const char *, va_list));
 };
 
 Mock *MockProxy;
@@ -33,10 +33,10 @@ struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) 
   return MockProxy->update_unary_expr(constr, l);
 }
 
-void print_error(const char *fmt, ...) {
+void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
+  MockProxy->print_fatal(fmt, args);
   va_end(args);
 }
 
@@ -796,14 +796,14 @@ TEST(Propagate, Errors) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
+  prop(&X, c);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
+  prop(&X, c);
   delete(MockProxy);
 }
 

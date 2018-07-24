@@ -331,6 +331,124 @@ TEST(SwapEnv, NoSwap) {
   delete(MockProxy);
 }
 
+TEST(UpdateSolution, FalseConstr) {
+  struct val_t c = VALUE(0);
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct val_t o = VALUE(0);
+  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
+  struct env_t env[1];
+  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, eval(&C))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(VALUE(0)));
+  EXPECT_EQ(false, update_solution(env, &O, &C));
+  delete(MockProxy);
+}
+
+TEST(UpdateSolution, AnySolution) {
+  struct val_t c = VALUE(0);
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct val_t o = VALUE(0);
+  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
+  struct env_t env[1];
+  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  struct shared_t s;
+  s.solutions = 1;
+  _shared = &s;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, eval(&C))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(VALUE(1)));
+  EXPECT_CALL(*MockProxy, sema_wait(&s.semaphore))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, sema_post(&s.semaphore))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, objective())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(OBJ_ANY));
+  EXPECT_EQ(false, update_solution(env, &O, &C));
+  delete(MockProxy);
+}
+
+TEST(UpdateSolution, NotBetter) {
+  struct val_t c = VALUE(0);
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct val_t o = VALUE(0);
+  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
+  struct env_t env[1];
+  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  struct shared_t s;
+  s.solutions = 0;
+  _shared = &s;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, eval(&C))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(VALUE(1)));
+  EXPECT_CALL(*MockProxy, sema_wait(&s.semaphore))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, sema_post(&s.semaphore))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, objective())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(OBJ_ALL));
+  EXPECT_CALL(*MockProxy, objective_better(&O))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(false));
+  EXPECT_EQ(false, update_solution(env, &O, &C));
+  delete(MockProxy);
+}
+
+TEST(UpdateSolution, Better) {
+  struct val_t c = VALUE(0);
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct val_t o = VALUE(0);
+  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
+  struct env_t env[1];
+  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+
+  struct shared_t s;
+  s.solutions = 0;
+  _shared = &s;
+
+  _worker_id = 17;
+
+  std::string output;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, eval(&C))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(VALUE(1)));
+  EXPECT_CALL(*MockProxy, sema_wait(&s.semaphore))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, sema_post(&s.semaphore))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, objective())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(OBJ_ANY));
+  EXPECT_CALL(*MockProxy, objective_better(&O))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(true));
+  EXPECT_CALL(*MockProxy, eval(&O))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(VALUE(23)));
+  EXPECT_CALL(*MockProxy, objective_update(VALUE(23)))
+    .Times(::testing::AtLeast(1));
+  EXPECT_CALL(*MockProxy, print_solution(stderr, env))
+    .Times(1);
+  testing::internal::CaptureStderr();
+  EXPECT_EQ(true, update_solution(env, &O, &C));
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ("#17: ", output);
+  EXPECT_EQ(1, s.solutions);
+  delete(MockProxy);
+}
+
 TEST(CheckAssignment, NotBetter) {
   struct env_t env[3];
 

@@ -228,7 +228,7 @@ struct constr_t *normal(struct constr_t *constr) {
     case OP_AND: return normal_and(constr);
     case OP_OR : return normal_or(constr);
     default:
-      print_error(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
   }
 

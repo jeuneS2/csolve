@@ -81,8 +81,7 @@ int strategy_pick_var_cmp(struct env_t *env, size_t depth1, size_t depth2) {
     cmp = 0;
     break;
   default:
-    print_error(ERROR_MSG_INVALID_STRATEGY_ORDER, _order);
-    return 0;
+    print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER, _order);
   }
 
   if (strategy_prefer_failing() && cmp == 0) {
