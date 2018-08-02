@@ -88,7 +88,7 @@ fuzz: fuzz/csolve
 	fi
 
 doxygen:
-	doxygen doxygen.config
+	mkdir -p doc; doxygen doxygen.config
 
 doc: doxygen
 
