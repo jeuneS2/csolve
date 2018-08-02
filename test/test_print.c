@@ -131,6 +131,23 @@ TEST(PrintConstr, Basic) {
   EXPECT_EQ(output, " (| [23;42] 17)");
 }
 
+TEST(PrintConstr, Wand) {
+  std::string output;
+
+  struct val_t a = VALUE(17);
+  struct val_t b = INTERVAL(23,42);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t *E [2] = { &A, &B };
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+
+  testing::internal::CaptureStderr();
+  print_constr(stderr, &X);
+  output = testing::internal::GetCapturedStderr();
+  EXPECT_EQ(output, " 17; [23;42];");
+}
+
 TEST(PrintConstr, Error) {
   std::string output;
   struct constr_t X;

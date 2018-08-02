@@ -162,6 +162,27 @@ const struct val_t eval_expr(const struct constr_t *constr) {
   return VALUE(0);
 }
 
+const struct val_t eval_wand(const struct constr_t *constr) {
+  bool all_true = true;
+
+  for (size_t i = 0; i < constr->constr.wand.length; i++) {
+    struct val_t val = eval(constr->constr.wand.elems[i]);
+
+    if (is_false(val)) {
+      return VALUE(0);
+    }
+    if (!is_true(val)) {
+      all_true = false;
+    }
+  }
+
+  if (all_true) {
+    return VALUE(1);
+  }
+
+  return INTERVAL(0, 1);
+}
+
 const struct val_t eval(const struct constr_t *constr) {
   if (constr->type == CONSTR_TERM) {
     return *constr->constr.term;
@@ -171,7 +192,12 @@ const struct val_t eval(const struct constr_t *constr) {
     return constr->eval_cache.val;
   }
 
-  struct val_t retval = eval_expr(constr);
+  struct val_t retval;
+  if (constr->type == CONSTR_EXPR) {
+    retval = eval_expr(constr);
+  } else {
+    retval = eval_wand(constr);
+  }
   ((struct constr_t *)constr)->eval_cache.val = retval;
   ((struct constr_t *)constr)->eval_cache.tag = _eval_cache_tag;
   return retval;

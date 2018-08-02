@@ -133,6 +133,32 @@ TEST(UpdateUnaryExpr, Basic) {
   delete(MockProxy);
 }
 
+TEST(UpdateWand, Basic) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t *E [2] = { &A, &B };
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+  struct constr_t Y;
+  struct constr_t *Z[2];
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&Y));
+  EXPECT_CALL(*MockProxy, alloc(2 * sizeof(struct constr_t *)))
+    .Times(1)
+    .WillOnce(::testing::Return(&Z));
+  EXPECT_EQ(&Y, update_wand(&X, 1));
+  EXPECT_EQ(CONSTR_WAND, Y.type);
+  EXPECT_EQ(2, Y.constr.wand.length);
+  EXPECT_EQ(Z, Y.constr.wand.elems);
+  EXPECT_EQ(&A, Y.constr.wand.elems[0]);
+  delete(MockProxy);
+}
+
 TEST(NormalizeEval, Basic) {
   struct val_t a = VALUE(1);
   struct val_t b = VALUE(2);
@@ -665,6 +691,60 @@ TEST(NormalizeOr, HalfNot) {
   delete(MockProxy);
 }
 
+TEST(NormalizeWand, Basic) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t *E [2] = { &A, &B };
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+
+  MockProxy = new Mock();
+  EXPECT_EQ(&X, normal_wand(&X));
+  delete(MockProxy);
+}
+
+TEST(NormalizeWand, Copy) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+  struct val_t c = INTERVAL(0, 1);
+  struct val_t x;
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X = CONSTRAINT_EXPR(OP_OR, &A, &B);
+  struct constr_t *E [5] = { &A, &X, &B, &C, &X };
+  struct constr_t Y = { .type = CONSTR_WAND, .constr = { .wand = { .length = 5, .elems = E } } };
+  struct constr_t Z, V, W;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct val_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&x))
+    .WillOnce(::testing::Return(&x));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(3)
+    .WillOnce(::testing::Return(&W))
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&V));
+  EXPECT_CALL(*MockProxy, alloc(5 * sizeof(struct constr_t *)))
+    .Times(1)
+    .WillOnce(::testing::Return(&E));
+  EXPECT_CALL(*MockProxy, eval(&X))
+    .Times(2)
+    .WillOnce(::testing::Return(VALUE(1)))
+    .WillOnce(::testing::Return(VALUE(1)));
+  EXPECT_EQ(&Z, normal_wand(&Y));
+  EXPECT_EQ(3, Z.constr.wand.length);
+  EXPECT_EQ(E, Z.constr.wand.elems);
+  EXPECT_EQ(&A, Z.constr.wand.elems[0]);
+  EXPECT_EQ(&B, Z.constr.wand.elems[1]);
+  EXPECT_EQ(&C, Z.constr.wand.elems[2]);
+  delete(MockProxy);
+}
+
 TEST(Normalize, Basic) {
   struct val_t a = INTERVAL(-17,23);
   struct val_t b = INTERVAL(-42,77);
@@ -752,6 +832,14 @@ TEST(Normalize, Basic) {
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 }
+
+TEST(Normalize, Wand) {
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 0, .elems = NULL } } };
+
+  MockProxy = new Mock();
+  EXPECT_EQ(&X, normal(&X));
+  delete(MockProxy);
+ }
 
 TEST(Normalize, Errors) {
   struct constr_t X;

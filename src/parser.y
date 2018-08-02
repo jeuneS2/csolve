@@ -102,11 +102,17 @@ Objective : ANY ';'
 ;
 
 Constraints : Constraints Constraint
-            { $$ = alloc(sizeof(struct constr_t));
-              *$$ = CONSTRAINT_EXPR(OP_AND, $1, $2);
+            { $$->constr.wand.length = $1->constr.wand.length + 1;
+              const size_t size = $$->constr.wand.length * sizeof(struct constr_t *);
+              $$->constr.wand.elems = realloc($1->constr.wand.elems, size);
+              $$->constr.wand.elems[$$->constr.wand.length-1] = $2;
             }
             | Constraint
-            { $$ = $1;
+            { $$ = alloc(sizeof(struct constr_t));
+              $$->type = CONSTR_WAND;
+              $$->constr.wand.length = 1;
+              $$->constr.wand.elems = malloc(sizeof(struct constr_t *));
+              $$->constr.wand.elems[0] = $1;
             }
 ;
 

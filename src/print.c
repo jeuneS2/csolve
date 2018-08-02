@@ -45,6 +45,12 @@ void print_constr(FILE *file, const struct constr_t *constr) {
     }
     fprintf(file, ")");
     break;
+  case CONSTR_WAND:
+    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+      print_constr(file, constr->constr.wand.elems[i]);
+      fprintf(file, ";");
+    }
+    break;
   default:
     print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }

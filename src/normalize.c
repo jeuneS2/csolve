@@ -48,6 +48,17 @@ static struct constr_t *update_unary_expr(struct constr_t *constr, struct constr
   return constr;
 }
 
+static struct constr_t *update_wand(struct constr_t *constr, size_t copy) {
+  struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
+  retval->type = constr->type;
+  retval->constr.wand.length = constr->constr.wand.length;
+  size_t size = retval->constr.wand.length * sizeof(struct constr_t *);
+  retval->constr.wand.elems = (struct constr_t **)alloc(size);
+  memcpy(retval->constr.wand.elems, constr->constr.wand.elems,
+         copy * sizeof(struct constr_t *));
+  return retval;
+}
+
 struct constr_t *normal(struct constr_t *constr);
 
 struct constr_t *normal_eval(struct constr_t *constr) {
@@ -235,6 +246,36 @@ struct constr_t *normal_or(struct constr_t *constr) {
   return update_expr(constr, l, r);
 }
 
+struct constr_t *normal_wand(struct constr_t *constr) {
+  struct constr_t *retval = constr;
+
+  size_t l = 0;
+  bool copied = false;
+
+  for (size_t i = 0; i < constr->constr.wand.length; i++) {
+    struct constr_t *c = normal(constr->constr.wand.elems[i]);
+
+    if (c != constr->constr.wand.elems[i]) {
+      if (!copied) {
+        retval = update_wand(constr, i);
+        copied = true;
+        l = i;
+      }
+
+      if (!(is_term(c) && is_true(*c->constr.term))) {
+        retval->constr.wand.elems[l++] = c;
+      }
+    } else if (copied) {
+      retval->constr.wand.elems[l++] = c;
+    }
+  }
+  if (copied) {
+    retval->constr.wand.length = l;
+  }
+
+  return retval;
+}
+
 struct constr_t *normal(struct constr_t *constr) {
   if (constr->type == CONSTR_EXPR) {
     // merge constant values into new terminal node
@@ -256,6 +297,8 @@ struct constr_t *normal(struct constr_t *constr) {
     default:
       print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
+  } else if (constr->type == CONSTR_WAND) {
+    return normal_wand(constr);
   }
 
   return constr;

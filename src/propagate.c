@@ -220,6 +220,18 @@ struct constr_t *propagate_or(struct constr_t *constr, struct val_t val) {
   return update_expr(constr, l, r);
 }
 
+struct constr_t *propagate_wand(struct constr_t *constr, struct val_t val) {
+  if (is_true(val)) {
+    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+      struct constr_t *p = prop(constr->constr.wand.elems[i], val);
+      if (p == NULL) {
+        return NULL;
+      }
+    }
+  }
+  return constr;
+}
+
 struct constr_t *prop(struct constr_t *constr, struct val_t val) {
   switch (constr->type) {
   case CONSTR_TERM:
@@ -238,6 +250,8 @@ struct constr_t *prop(struct constr_t *constr, struct val_t val) {
       print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
+  case CONSTR_WAND:
+    return propagate_wand(constr, val);
   default:
     print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }

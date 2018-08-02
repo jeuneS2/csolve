@@ -585,6 +585,24 @@ TEST(PropagateOr, Interval) {
   delete(MockProxy);
 }
 
+TEST(PropagateWand, Basic) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t *E [2] = { &A, &B };
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+
+  MockProxy = new Mock();
+  EXPECT_EQ(&X, propagate_wand(&X, VALUE(0)));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(NULL, propagate_wand(&X, VALUE(1)));
+  delete(MockProxy);
+}
+
 TEST(Propagate, Basic) {
   struct val_t a = VALUE(0);
   struct val_t b = VALUE(1);
@@ -632,6 +650,24 @@ TEST(Propagate, Basic) {
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
   EXPECT_EQ(&X, prop(&X, c));
+  delete(MockProxy);
+}
+
+TEST(Propagate, Wand) {
+  struct val_t a = VALUE(0);
+  struct val_t b = VALUE(1);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t *E [2] = { &A, &B };
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+
+  MockProxy = new Mock();
+  EXPECT_EQ(&X, prop(&X, VALUE(0)));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(NULL, prop(&X, VALUE(1)));
   delete(MockProxy);
 }
 

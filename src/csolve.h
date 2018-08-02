@@ -99,7 +99,8 @@ struct binding_t {
 /** Constraint node types */
 enum constr_type_t {
   CONSTR_TERM, ///< Terminal node
-  CONSTR_EXPR  ///< Expression node
+  CONSTR_EXPR, ///< Expression node
+  CONSTR_WAND  ///< Wide-and node
 };
 
 /** Supported operators */
@@ -129,6 +130,11 @@ struct constr_t {
       struct constr_t *l; ///< Left child of expression
       struct constr_t *r; ///< Right child of expression, NULL for unary operators
     } expr; ///< Expression node
+    /** Wide-and node type */
+    struct wand_t {
+      size_t length; ///< Number of sub-expressions
+      struct constr_t **elems; ///< Sub-expressions
+    } wand; ///< Wide-and node
   } constr; ///< Constraint
   /** Cache entry for evaluation results */
   struct eval_cache_t {
