@@ -133,12 +133,12 @@ struct constr_t *propagate_mul_lr(struct constr_t *p, struct constr_t *c, struct
   if (get_lo(val) != DOMAIN_MIN && get_hi(val) != DOMAIN_MIN) {
     struct val_t cval = eval(c);
     if (is_value(cval)) {
-      if (((get_lo(val) > 0 || get_hi(val) < 0) && cval.value.val == 0) ||
-          (is_value(val) && cval.value.val != 0 && (val.value.val % cval.value.val) != 0)) {
+      if (((get_lo(val) > 0 || get_hi(val) < 0) && get_lo(cval) == 0) ||
+          (is_value(val) && get_lo(cval) != 0 && (get_lo(val) % get_lo(cval)) != 0)) {
         return NULL;
-      } else if (cval.value.val != 0) {
-        domain_t lo = val.value.ivl.lo / cval.value.val;
-        domain_t hi = val.value.ivl.hi / cval.value.val;
+      } else if (get_lo(cval) != 0) {
+        domain_t lo = get_lo(val) / get_lo(cval);
+        domain_t hi = get_hi(val) / get_lo(cval);
         return prop(p, INTERVAL(min(lo, hi), max(lo, hi)));
       }
     }

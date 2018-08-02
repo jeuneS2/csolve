@@ -7,7 +7,7 @@ namespace normalize {
 #include "../src/normalize.c"
 
 bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
-  return lhs.type == rhs.type && memcmp(&lhs.value, &rhs.value, sizeof(lhs.value)) == 0;
+  return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
 }
 
 bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
@@ -846,7 +846,9 @@ TEST(Normalize, Errors) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  EXPECT_CALL(*MockProxy, eval(&X)).Times(1);
+  EXPECT_CALL(*MockProxy, eval(&X))
+    .Times(1)
+    .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   normal(&X);
   delete(MockProxy);

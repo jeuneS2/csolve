@@ -26,9 +26,9 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 void print_val(FILE *file, const struct val_t val) {
   if (is_value(val)) {
-    fprintf(file, " %d", val.value.val);
+    fprintf(file, " %d", get_lo(val));
   } else {
-    fprintf(file, " [%d;%d]", val.value.ivl.lo, val.value.ivl.hi);
+    fprintf(file, " [%d;%d]", get_lo(val), get_hi(val));
   }
 }
 

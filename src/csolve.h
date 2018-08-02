@@ -38,37 +38,23 @@ typedef uint32_t udomain_t;
 /** Double-width type corresponding to domain type, used for arithmetic */
 typedef int64_t ddomain_t;
 
-/** Type of a value */
-enum val_type_t {
-  VAL_INTERVAL, ///< Value is an interval
-  VAL_VALUE     ///< Value is a single value
-};
-
-/** Type representing a value, either a single value or an interval */
+/** Type representing a value (an interval) */
 struct val_t {
-  enum val_type_t type; ///< Type of this value
-  /** Union to hold either single value or interval */
-  union value_union_t {
-    /** Interval type */
-    struct interval_t {
-      domain_t lo; ///< Lower bound of interval
-      domain_t hi; ///< Upper bound of interval
-    } ivl; ///< Interval
-    domain_t val; ///< Single value
-  } value; ///< Value
+  domain_t lo; ///< Lower bound of interval
+  domain_t hi; ///< Upper bound of interval
 };
 
-/** Checks whether value contains a single value */
-static inline bool is_value(struct val_t v) {
-  return v.type == VAL_VALUE;
-}
 /** Get the lower bound of an interval or the single value */
 static inline domain_t get_lo(struct val_t v) {
-  return is_value(v) ? v.value.val : v.value.ivl.lo;
+  return v.lo;
 }
 /** Get the upper bound of an interval or the single value */
 static inline domain_t get_hi(struct val_t v) {
-  return is_value(v) ? v.value.val : v.value.ivl.hi;
+  return v.hi;
+}
+/** Checks whether value contains a single value */
+static inline bool is_value(struct val_t v) {
+  return get_lo(v) == get_hi(v);
 }
 /** Checks whether value represents a boolean "true" */
 static inline bool is_true(struct val_t v) {
@@ -76,17 +62,11 @@ static inline bool is_true(struct val_t v) {
 }
 /** Checks whether value represents a boolean "false" */
 static inline bool is_false(struct val_t v) {
-  return is_value(v) && v.value.val == 0;
+  return is_value(v) && get_lo(v) == 0;
 }
 
-#define VALUE(V)                                    \
-  ((struct val_t){                                  \
-    .type = VAL_VALUE,                              \
-      .value = { .val = V } })
-#define INTERVAL(L,H)                               \
-  ((struct val_t){                                  \
-    .type = VAL_INTERVAL,                           \
-      .value = { .ivl = { .lo = L, .hi = H } } })
+#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H) })
+#define VALUE(V) INTERVAL(V,V)
 
 
 /** Binding entry */

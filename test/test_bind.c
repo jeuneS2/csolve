@@ -6,7 +6,7 @@ namespace bind {
 #include "../src/util.c"
 
 bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
-  return lhs.type == rhs.type && memcmp(&lhs.value, &rhs.value, sizeof(lhs.value)) == 0;
+  return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
 }
 
 class Mock {

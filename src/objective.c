@@ -74,7 +74,7 @@ bool objective_better(struct constr_t *obj) {
 
 void objective_update(struct val_t obj) {
   if (is_value(obj)) {
-    *_objective_best = obj.value.val;
+    *_objective_best = get_lo(obj);
   } else {
     print_fatal(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL);
   }

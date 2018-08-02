@@ -144,7 +144,7 @@ struct constr_t *normal_add(struct constr_t *constr) {
     return update_expr(constr, r, l);
   }
 
-  if (is_const(r) && r->constr.term->value.val == 0) {
+  if (is_const(r) && get_lo(*r->constr.term) == 0) {
     return l;
   }
 
@@ -171,7 +171,7 @@ struct constr_t *normal_mul(struct constr_t *constr) {
     return update_expr(constr, r, l);
   }
 
-  if (is_const(r) && r->constr.term->value.val == 1) {
+  if (is_const(r) && get_lo(*r->constr.term) == 1) {
     return l;
   }
 
