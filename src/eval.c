@@ -163,20 +163,16 @@ const struct val_t eval_expr(const struct constr_t *constr) {
 }
 
 const struct val_t eval(const struct constr_t *constr) {
-  switch (constr->type) {
-  case CONSTR_TERM:
+  if (constr->type == CONSTR_TERM) {
     return *constr->constr.term;
-  case CONSTR_EXPR: {
-    if (constr->eval_cache.tag == _eval_cache_tag) {
-      return constr->eval_cache.val;
-    }
-    struct val_t retval = eval_expr(constr);
-    ((struct constr_t *)constr)->eval_cache.val = retval;
-    ((struct constr_t *)constr)->eval_cache.tag = _eval_cache_tag;
-    return retval;
   }
-  default:
-    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+
+  if (constr->eval_cache.tag == _eval_cache_tag) {
+    return constr->eval_cache.val;
   }
-  return VALUE(0);
+
+  struct val_t retval = eval_expr(constr);
+  ((struct constr_t *)constr)->eval_cache.val = retval;
+  ((struct constr_t *)constr)->eval_cache.tag = _eval_cache_tag;
+  return retval;
 }

@@ -10,12 +10,29 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
   return lhs.type == rhs.type && memcmp(&lhs.value, &rhs.value, sizeof(lhs.value)) == 0;
 }
 
+bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
+  if (lhs.type != rhs.type) {
+    return false;
+  }
+  if (lhs.type == CONSTR_TERM) {
+    if (lhs.constr.term != rhs.constr.term) {
+      return false;
+    }
+  }
+  if (lhs.type == CONSTR_EXPR) {
+    if (lhs.constr.expr.op != rhs.constr.expr.op ||
+        lhs.constr.expr.l != rhs.constr.expr.l ||
+        lhs.constr.expr.r != rhs.constr.expr.r) {
+      return false;
+    }
+  }
+  return true;
+}
+
 class Mock {
  public:
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(alloc, void *(size_t));
-  MOCK_METHOD3(update_expr, struct constr_t *(struct constr_t *, struct constr_t *, struct constr_t *));
-  MOCK_METHOD2(update_unary_expr, struct constr_t *(struct constr_t *, struct constr_t *));
   MOCK_METHOD2(print_fatal, void (const char *, va_list));
 };
 
@@ -29,19 +46,91 @@ void *alloc(size_t size) {
   return MockProxy->alloc(size);
 }
 
-struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct constr_t *r) {
-  return MockProxy->update_expr(constr, l, r);
-}
-
-struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) {
-  return MockProxy->update_unary_expr(constr, l);
-}
-
 void print_fatal(const char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
   MockProxy->print_fatal(fmt, args);
   va_end(args);
+}
+
+TEST(UpdateExpr, Basic) {
+  struct val_t a = VALUE(17);
+  struct val_t b = VALUE(23);
+  struct val_t c = VALUE(42);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X;
+
+  struct constr_t P, Q, R;
+
+  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(&X, update_expr(&X, &A, &B));
+  EXPECT_EQ(X, CONSTRAINT_EXPR(OP_EQ, &A, &B));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&P));
+  EXPECT_EQ(&P, update_expr(&X, &C, &B));
+  EXPECT_EQ(P, CONSTRAINT_EXPR(OP_EQ, &C, &B));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&Q));
+  EXPECT_EQ(&Q, update_expr(&P, &C, &C));
+  EXPECT_EQ(Q, CONSTRAINT_EXPR(OP_EQ, &C, &C));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&R));
+  EXPECT_EQ(&R, update_expr(&Q, &A, &B));
+  EXPECT_EQ(R, CONSTRAINT_EXPR(OP_EQ, &A, &B));
+  delete(MockProxy);
+}
+
+TEST(UpdateUnaryExpr, Basic) {
+  struct val_t a = VALUE(17);
+  struct val_t b = VALUE(23);
+  struct val_t c = VALUE(42);
+
+  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
+  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t X;
+
+  struct constr_t P, Q;
+
+  X = CONSTRAINT_EXPR(OP_EQ, &A, NULL);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(&X, update_unary_expr(&X, &A));
+  EXPECT_EQ(X, CONSTRAINT_EXPR(OP_EQ, &A, NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&P));
+  EXPECT_EQ(&P, update_unary_expr(&X, &B));
+  EXPECT_EQ(P, CONSTRAINT_EXPR(OP_EQ, &B, NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(1)
+    .WillOnce(::testing::Return(&Q));
+  EXPECT_EQ(&Q, update_unary_expr(&P, &C));
+  EXPECT_EQ(Q, CONSTRAINT_EXPR(OP_EQ, &C, NULL));
+  delete(MockProxy);
 }
 
 TEST(NormalizeEval, Basic) {
@@ -90,9 +179,6 @@ TEST(NormalizeEq, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_eq(&X));
   delete(MockProxy);
 }
@@ -107,9 +193,6 @@ TEST(NormalizeLt, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_lt(&X));
   delete(MockProxy);
 }
@@ -120,7 +203,7 @@ TEST(NormalizeLt, Neg) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t X, Y, Z;
+  struct constr_t X, Y, Z, W;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
@@ -129,19 +212,13 @@ TEST(NormalizeLt, Neg) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(a));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_CALL(*MockProxy, eval(&Y))
     .Times(1)
     .WillOnce(::testing::Return(b));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&Y, &B))
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
     .Times(1)
-    .WillOnce(::testing::Return(&Y));
-  EXPECT_CALL(*MockProxy, update_expr(&Z, &B, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&Z));
-  EXPECT_EQ(&Z, normal_lt(&Z));
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_lt(&Z));
   delete(MockProxy);
 }
 
@@ -151,7 +228,7 @@ TEST(NormalizeLt, LeftConstNeg) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t X, Y, Z;
+  struct constr_t X, Y, Z, W;
 
   X = CONSTRAINT_EXPR(OP_NEG, &B, NULL);
   Y = CONSTRAINT_EXPR(OP_LT, &A, &X);
@@ -160,16 +237,14 @@ TEST(NormalizeLt, LeftConstNeg) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(b));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &B))
+  EXPECT_CALL(*MockProxy, eval(&Z))
     .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&Z));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &B, &Z))
-    .Times(1)
-    .WillOnce(::testing::Return(&Z));
-  EXPECT_EQ(&Z, normal_lt(&Y));
+    .WillOnce(::testing::Return(b));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_lt(&Y));
   delete(MockProxy);
 }
 
@@ -179,7 +254,7 @@ TEST(NormalizeLt, RightConstNeg) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t X, Y, Z;
+  struct constr_t X, Y, Z, W;
 
   X = CONSTRAINT_EXPR(OP_NEG, &B, NULL);
   Y = CONSTRAINT_EXPR(OP_LT, &X, &A);
@@ -188,16 +263,14 @@ TEST(NormalizeLt, RightConstNeg) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(b));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &B))
+  EXPECT_CALL(*MockProxy, eval(&Z))
     .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&Z));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &Z, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&Z));
-  EXPECT_EQ(&Z, normal_lt(&Y));
+    .WillOnce(::testing::Return(b));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_lt(&Y));
   delete(MockProxy);
 }
 
@@ -209,9 +282,6 @@ TEST(NormalizeNeg, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_neg(&X));
   delete(MockProxy);
 
@@ -221,9 +291,6 @@ TEST(NormalizeNeg, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(INTERVAL(-18,-17)));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&A, normal_neg(&Y));
   delete(MockProxy);
 }
@@ -236,22 +303,19 @@ TEST(NormalizeAdd, Basic) {
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct constr_t X;
+  struct constr_t X, Y;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_add(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &B, &A);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
     .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_EQ(&X, normal_add(&X));
+    .WillOnce(::testing::Return(&Y));
+  EXPECT_EQ(&Y, normal_add(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -268,7 +332,7 @@ TEST(NormalizeAdd, Pattern) {
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct constr_t X, Y;
+  struct constr_t X, Y, Z, W;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &C);
@@ -276,16 +340,11 @@ TEST(NormalizeAdd, Pattern) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(1, 18)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &X, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
-  EXPECT_EQ(&Y, normal_add(&Y));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_add(&Y));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -294,16 +353,11 @@ TEST(NormalizeAdd, Pattern) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(1, 18)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &A, &X))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
-  EXPECT_EQ(&Y, normal_add(&Y));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_add(&Y));
   delete(MockProxy);
 }
 
@@ -315,22 +369,19 @@ TEST(NormalizeMul, Basic) {
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct constr_t X;
+  struct constr_t X, Y;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_mul(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &B, &A);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
     .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_EQ(&X, normal_mul(&X));
+    .WillOnce(::testing::Return(&Y));
+  EXPECT_EQ(&Y, normal_mul(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -347,7 +398,7 @@ TEST(NormalizeMul, Pattern) {
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct constr_t X, Y;
+  struct constr_t X, Y, Z, W;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &C);
@@ -355,16 +406,11 @@ TEST(NormalizeMul, Pattern) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(1, 18)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &X, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
-  EXPECT_EQ(&Y, normal_mul(&Y));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_mul(&Y));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -373,16 +419,11 @@ TEST(NormalizeMul, Pattern) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(1, 18)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &A, &X))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
-  EXPECT_EQ(&Y, normal_mul(&Y));
+  EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
+    .Times(2)
+    .WillOnce(::testing::Return(&Z))
+    .WillOnce(::testing::Return(&W));
+  EXPECT_EQ(&W, normal_mul(&Y));
   delete(MockProxy);
 }
 
@@ -394,9 +435,6 @@ TEST(NormalizeNot, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_not(&X));
   delete(MockProxy);
 }
@@ -410,9 +448,6 @@ TEST(NormalizeNot, NotNot) {
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
   Y = CONSTRAINT_EXPR(OP_NOT, &X, NULL);
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(a));
@@ -457,17 +492,11 @@ TEST(NormalizeAnd, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &B, &C);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_and(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &C, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &C, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_and(&X));
   delete(MockProxy);
 }
@@ -478,9 +507,7 @@ TEST(NormalizeAnd, DeMorgan) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t C;
-  struct constr_t D;
-  struct constr_t X, Y, Z;
+  struct constr_t X, Y, Z, V, W;
 
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
   Y = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
@@ -493,24 +520,16 @@ TEST(NormalizeAnd, DeMorgan) {
   EXPECT_CALL(*MockProxy, eval(&Y))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(b));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&Y, &B))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&Y));
 
   EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
-    .Times(1)
-    .WillOnce(::testing::Return(&C));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&D));
-  EXPECT_EQ(&D, normal_and(&Z));
-  EXPECT_EQ(CONSTR_EXPR, C.type);
-  EXPECT_EQ(OP_OR, C.constr.expr.op);
-  EXPECT_EQ(&A, C.constr.expr.l);
-  EXPECT_EQ(&B, C.constr.expr.r);
+    .Times(2)
+    .WillOnce(::testing::Return(&W))
+    .WillOnce(::testing::Return(&V));
+  EXPECT_EQ(&V, normal_and(&Z));
+  EXPECT_EQ(CONSTR_EXPR, W.type);
+  EXPECT_EQ(OP_OR, W.constr.expr.op);
+  EXPECT_EQ(&A, W.constr.expr.l);
+  EXPECT_EQ(&B, W.constr.expr.r);
   delete(MockProxy);
 }
 
@@ -528,12 +547,6 @@ TEST(NormalizeAnd, HalfNot) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(a));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &X, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
   EXPECT_EQ(&Y, normal_and(&Y));
   delete(MockProxy);
 
@@ -543,12 +556,6 @@ TEST(NormalizeAnd, HalfNot) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(a));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &B, &X))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
   EXPECT_EQ(&Y, normal_and(&Y));
   delete(MockProxy);
 }
@@ -590,17 +597,11 @@ TEST(NormalizeOr, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &B, &C);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &B, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_or(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &C, &B);
-  EXPECT_CALL(*MockProxy, update_expr(&X, &C, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal_or(&X));
   delete(MockProxy);
 }
@@ -611,9 +612,7 @@ TEST(NormalizeOr, DeMorgan) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t C;
-  struct constr_t D;
-  struct constr_t X, Y, Z;
+  struct constr_t X, Y, Z, V, W;
 
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
   Y = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
@@ -626,24 +625,16 @@ TEST(NormalizeOr, DeMorgan) {
   EXPECT_CALL(*MockProxy, eval(&Y))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(b));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&Y, &B))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&Y));
 
   EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
-    .Times(1)
-    .WillOnce(::testing::Return(&C));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &C))
-    .Times(1)
-    .WillOnce(::testing::Return(&D));
-  EXPECT_EQ(&D, normal_or(&Z));
-  EXPECT_EQ(CONSTR_EXPR, C.type);
-  EXPECT_EQ(OP_AND, C.constr.expr.op);
-  EXPECT_EQ(&A, C.constr.expr.l);
-  EXPECT_EQ(&B, C.constr.expr.r);
+    .Times(2)
+    .WillOnce(::testing::Return(&W))
+    .WillOnce(::testing::Return(&V));
+  EXPECT_EQ(&V, normal_or(&Z));
+  EXPECT_EQ(CONSTR_EXPR, W.type);
+  EXPECT_EQ(OP_AND, W.constr.expr.op);
+  EXPECT_EQ(&A, W.constr.expr.l);
+  EXPECT_EQ(&B, W.constr.expr.r);
   delete(MockProxy);
 }
 
@@ -661,12 +652,6 @@ TEST(NormalizeOr, HalfNot) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(a));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &X, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
   EXPECT_EQ(&Y, normal_or(&Y));
   delete(MockProxy);
 
@@ -676,12 +661,6 @@ TEST(NormalizeOr, HalfNot) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(a));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(&X));
-  EXPECT_CALL(*MockProxy, update_expr(&Y, &B, &X))
-    .Times(1)
-    .WillOnce(::testing::Return(&Y));
   EXPECT_EQ(&Y, normal_or(&Y));
   delete(MockProxy);
 }
@@ -714,9 +693,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -725,9 +701,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -736,9 +709,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -747,9 +717,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -758,9 +725,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -769,9 +733,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_unary_expr(&X, &A))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -780,9 +741,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 
@@ -791,9 +749,6 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, update_expr(&X, &A, &B))
-    .Times(1)
-    .WillOnce(::testing::Return(&X));
   EXPECT_EQ(&X, normal(&X));
   delete(MockProxy);
 }

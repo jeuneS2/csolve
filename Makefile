@@ -45,8 +45,7 @@ TESTS= \
 	test/test_print.c \
 	test/test_propagate.c \
 	test/test_sema.c \
-	test/test_strategy.c \
-	test/test_update_expr.c
+	test/test_strategy.c
 
 all: csolve test coverage doc
 

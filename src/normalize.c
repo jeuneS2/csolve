@@ -22,6 +22,32 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
+static struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct constr_t *r) {
+  if (l != constr->constr.expr.l || r != constr->constr.expr.r) {
+    struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
+    retval->type = constr->type;
+    retval->constr.expr.op = constr->constr.expr.op;
+    retval->constr.expr.l = l;
+    retval->constr.expr.r = r;
+    retval->eval_cache.tag = 0;
+    return retval;
+  }
+  return constr;
+}
+
+static struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) {
+  if (l != constr->constr.expr.l) {
+    struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
+    retval->type = constr->type;
+    retval->constr.expr.op = constr->constr.expr.op;
+    retval->constr.expr.l = l;
+    retval->constr.expr.r = NULL;
+    retval->eval_cache.tag = 0;
+    return retval;
+  }
+  return constr;
+}
+
 struct constr_t *normal(struct constr_t *constr);
 
 struct constr_t *normal_eval(struct constr_t *constr) {

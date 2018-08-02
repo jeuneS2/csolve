@@ -245,11 +245,6 @@ struct constr_t *normalize(struct constr_t *constr);
 /** Propagate a result value to the terminal nodes of the constraint */
 struct constr_t *propagate(struct constr_t *constr, struct val_t val);
 
-/** Update children of constraint, possibly allocating a new node */
-struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct constr_t *r);
-/** Update child of constraint with unary operator, possibly allocating a new node */
-struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l);
-
 /** Invalidate the eval cache */
 void eval_cache_invalidate(void);
 

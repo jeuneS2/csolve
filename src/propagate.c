@@ -26,6 +26,20 @@ static int32_t _prop_count = 0;
 
 struct constr_t *prop(struct constr_t *constr, struct val_t val);
 
+static inline struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct constr_t *r) {
+  if (l == NULL || r == NULL) {
+    return NULL;
+  }
+  return constr;
+}
+
+static inline struct constr_t *update_unary_expr(struct constr_t *constr, struct constr_t *l) {
+  if (l == NULL) {
+    return NULL;
+  }
+  return constr;
+}
+
 struct constr_t *propagate_term(struct constr_t *constr, struct val_t val) {
   struct val_t *term = constr->constr.term;
 
@@ -49,11 +63,11 @@ struct constr_t *propagate_eq(struct constr_t *constr, struct val_t val) {
   struct constr_t *r = constr->constr.expr.r;
 
   if (is_true(val)) {
-    struct val_t lval = eval(constr->constr.expr.l);
-    r = prop(constr->constr.expr.r, lval);
+    struct val_t lval = eval(l);
+    r = prop(r, lval);
     if (r != NULL) {
-      struct val_t rval = eval(constr->constr.expr.r);
-      l = prop(constr->constr.expr.l, rval);
+      struct val_t rval = eval(r);
+      l = prop(l, rval);
     }
   }
 
@@ -65,20 +79,18 @@ struct constr_t *propagate_lt(struct constr_t *constr, struct val_t val) {
   struct constr_t *r = constr->constr.expr.r;
 
   if (is_true(val)) {
-    struct val_t lval = eval(constr->constr.expr.l);
-    r = prop(constr->constr.expr.r, INTERVAL(add(get_lo(lval), 1), DOMAIN_MAX));
+    struct val_t lval = eval(l);
+    r = prop(r, INTERVAL(add(get_lo(lval), 1), DOMAIN_MAX));
     if (r != NULL) {
-      struct val_t rval = eval(constr->constr.expr.r);
-      l = prop(constr->constr.expr.l, INTERVAL(DOMAIN_MIN, add(get_hi(rval), neg(1))));
+      struct val_t rval = eval(r);
+      l = prop(l, INTERVAL(DOMAIN_MIN, add(get_hi(rval), neg(1))));
     }
-  }
-
-  if (is_false(val)) {
-    struct val_t lval = eval(constr->constr.expr.l);
-    r = prop(constr->constr.expr.r, INTERVAL(DOMAIN_MIN, get_hi(lval)));
+  } else if (is_false(val)) {
+    struct val_t lval = eval(l);
+    r = prop(r, INTERVAL(DOMAIN_MIN, get_hi(lval)));
     if (r != NULL) {
-      struct val_t rval = eval(constr->constr.expr.r);
-      l = prop(constr->constr.expr.l, INTERVAL(get_lo(rval), DOMAIN_MAX));
+      struct val_t rval = eval(r);
+      l = prop(l, INTERVAL(get_lo(rval), DOMAIN_MAX));
     }
   }
 
@@ -91,7 +103,7 @@ struct constr_t *propagate_neg(struct constr_t *constr, struct val_t val) {
   domain_t lo = neg(get_hi(val));
   domain_t hi = neg(get_lo(val));
   struct val_t v = (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
-  l = prop(constr->constr.expr.l, v);
+  l = prop(l, v);
 
   return update_unary_expr(constr, l);
 }
@@ -100,18 +112,18 @@ struct constr_t *propagate_add(struct constr_t *constr, struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
-  struct val_t lval = eval(constr->constr.expr.l);
+  struct val_t lval = eval(l);
   domain_t rlo = add(get_lo(val), neg(get_hi(lval)));
   domain_t rhi = add(get_hi(val), neg(get_lo(lval)));
   struct val_t rv = (rlo == rhi) ? VALUE(rlo) : INTERVAL(rlo, rhi);
-  r = prop(constr->constr.expr.r, rv);
+  r = prop(r, rv);
 
   if (r != NULL) {
-    struct val_t rval = eval(constr->constr.expr.r);
+    struct val_t rval = eval(r);
     domain_t llo = add(get_lo(val), neg(get_hi(rval)));
     domain_t lhi = add(get_hi(val), neg(get_lo(rval)));
     struct val_t lv = (llo == lhi) ? VALUE(llo) : INTERVAL(llo, lhi);
-    l = prop(constr->constr.expr.l, lv);
+    l = prop(l, lv);
   }
 
   return update_expr(constr, l, r);
@@ -138,9 +150,9 @@ struct constr_t *propagate_mul(struct constr_t *constr, struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
-  r = propagate_mul_lr(r, constr->constr.expr.l, val);
+  r = propagate_mul_lr(r, l, val);
   if (r != NULL) {
-    l = propagate_mul_lr(l, constr->constr.expr.r, val);
+    l = propagate_mul_lr(l, r, val);
   }
 
   return update_expr(constr, l, r);
@@ -150,11 +162,9 @@ struct constr_t *propagate_not(struct constr_t *constr, struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
 
   if (is_true(val)) {
-    l = prop(constr->constr.expr.l, VALUE(0));
-  }
-
-  if (is_false(val)) {
-    l = prop(constr->constr.expr.l, VALUE(1));
+    l = prop(l, VALUE(0));
+  } else if (is_false(val)) {
+    l = prop(l, VALUE(1));
   }
 
   return update_unary_expr(constr, l);
@@ -165,21 +175,19 @@ struct constr_t *propagate_and(struct constr_t *constr, struct val_t val) {
   struct constr_t *r = constr->constr.expr.r;
 
   if (is_true(val)) {
-    r = prop(constr->constr.expr.r, val);
+    r = prop(r, val);
     if (r != NULL) {
-      l = prop(constr->constr.expr.l, val);
+      l = prop(l, val);
     }
-  }
-
-  if (is_false(val)) {
-    struct val_t lval = eval(constr->constr.expr.l);
+  } else if (is_false(val)) {
+    struct val_t lval = eval(l);
     if (is_true(lval)) {
-      r = prop(constr->constr.expr.r, val);
+      r = prop(r, val);
     }
     if (r != NULL) {
-      struct val_t rval = eval(constr->constr.expr.r);
+      struct val_t rval = eval(r);
       if (is_true(rval)) {
-        l = prop(constr->constr.expr.l, val);
+        l = prop(l, val);
       }
     }
   }
@@ -192,21 +200,19 @@ struct constr_t *propagate_or(struct constr_t *constr, struct val_t val) {
   struct constr_t *r = constr->constr.expr.r;
 
   if (is_false(val)) {
-    r = prop(constr->constr.expr.r, val);
+    r = prop(r, val);
     if (r != NULL) {
-      l = prop(constr->constr.expr.l, val);
+      l = prop(l, val);
     }
-  }
-
-  if (is_true(val)) {
-    struct val_t lval = eval(constr->constr.expr.l);
+  } else if (is_true(val)) {
+    struct val_t lval = eval(l);
     if (is_false(lval)) {
-      r = prop(constr->constr.expr.r, val);
+      r = prop(r, val);
     }
     if (r != NULL) {
-      struct val_t rval = eval(constr->constr.expr.r);
+      struct val_t rval = eval(r);
       if (is_false(rval)) {
-        l = prop(constr->constr.expr.l, val);
+        l = prop(l, val);
       }
     }
   }

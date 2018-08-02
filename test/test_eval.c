@@ -262,12 +262,6 @@ TEST(Eval, Errors) {
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
   eval(&X);
   delete(MockProxy);
-
-  MockProxy = new Mock();
-  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
-  eval(&X);
-  delete(MockProxy);
 }
 
 TEST(EvalCacheInval, Basic) {
