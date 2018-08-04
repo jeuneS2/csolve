@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <stdarg.h>
 
 namespace propagate {
 #include "../src/arith.c"
@@ -32,7 +31,7 @@ bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -42,10 +41,7 @@ size_t bind(struct val_t *loc, const struct val_t val) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(UpdateExpr, NonNull) {
@@ -678,13 +674,13 @@ TEST(Propagate, Errors) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION)).Times(1);
   prop(&X, c);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE)).Times(1);
   prop(&X, c);
   delete(MockProxy);
 }

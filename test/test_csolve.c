@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <stdarg.h>
 
 namespace csolve {
 #include "../src/csolve.c"
@@ -30,7 +29,7 @@ class Mock {
   MOCK_METHOD1(objective_optimize, struct constr_t *(struct constr_t *));
   MOCK_METHOD0(strategy_restart_frequency, uint64_t(void));
   MOCK_METHOD2(strategy_pick_var, void(struct env_t *, size_t));
-  MOCK_METHOD2(print_error, void(const char *, va_list));
+  MOCK_METHOD1(print_error, void(const char *));
   MOCK_METHOD2(print_solution, void(FILE *, struct env_t *));
 };
 
@@ -103,10 +102,7 @@ struct constr_t *objective_optimize(struct constr_t *obj) {
 }
 
 void print_error(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_error(fmt, args);
-  va_end(args);
+  MockProxy->print_error(fmt);
 }
 
 void print_solution(FILE *file, struct env_t *env) {

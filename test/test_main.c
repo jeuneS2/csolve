@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <stdarg.h>
 
 namespace _main {
 #include "../src/main.c"
@@ -18,7 +17,7 @@ class Mock {
   MOCK_METHOD1(strategy_compute_weights_init, void(bool));
   MOCK_METHOD1(strategy_restart_frequency_init, void(uint64_t));
   MOCK_METHOD1(strategy_order_init, void(enum order_t));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -68,10 +67,7 @@ void strategy_order_init(enum order_t order) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(MainName, Basic) {
@@ -179,7 +175,7 @@ TEST(ParseOptions, InvalidOption) {
   const char *argv [argc] = { "<xxx>", "-X" };
   optind = 1;
   EXPECT_DEATH(parse_options(argc, (char **)argv),
-               "<xxx>: invalid option .*\nUsage: .*\n");
+               ".*: .* option .*\nUsage: .*\n");
 }
 
 TEST(ParseOptions, MoreFiles) {
@@ -238,7 +234,7 @@ TEST(ParseOptions, NonExistentFile) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
-  EXPECT_CALL(*MockProxy, print_fatal("%s: %s", testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal("%s: %s")).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
 }
@@ -408,7 +404,7 @@ TEST(ParseBool, Basic) {
 
 TEST(ParseBool, Error) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_BOOL_ARG, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_BOOL_ARG)).Times(1);
   parse_bool("abc");
   delete(MockProxy);
 }
@@ -421,7 +417,7 @@ TEST(ParseInt, Basic) {
 
 TEST(ParseInt, Error) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_INT_ARG, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_INT_ARG)).Times(1);
   parse_int("abc");
   delete(MockProxy);
 }
@@ -436,7 +432,7 @@ TEST(ParseOrder, Basic) {
 
 TEST(ParseOrder, Error) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_ORDER_ARG, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_ORDER_ARG)).Times(1);
   parse_order("abc");
   delete(MockProxy);
 }
@@ -453,15 +449,15 @@ TEST(ParseSize, Basic) {
 
 TEST(ParseSize, Error) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_SIZE_ARG, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_SIZE_ARG)).Times(1);
   parse_size("10kx");
   delete(MockProxy);
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_SIZE_ARG, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_SIZE_ARG)).Times(1);
   parse_size("13Mx");
   delete(MockProxy);
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_SIZE_ARG, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_SIZE_ARG)).Times(1);
   parse_size("7Gx");
   delete(MockProxy);
 }

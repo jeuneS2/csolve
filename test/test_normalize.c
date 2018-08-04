@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <stdarg.h>
 
 namespace normalize {
 #include "../src/arith.c"
@@ -33,7 +32,7 @@ class Mock {
  public:
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(alloc, void *(size_t));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -47,10 +46,7 @@ void *alloc(size_t size) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(UpdateExpr, Basic) {
@@ -849,7 +845,7 @@ TEST(Normalize, Errors) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION)).Times(1);
   normal(&X);
   delete(MockProxy);
 

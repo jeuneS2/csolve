@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -16,7 +15,7 @@ int mock_sem_post(sem_t *sem);
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
   MOCK_METHOD3(sem_init, int(sem_t *, int, unsigned int));
   MOCK_METHOD1(sem_wait, int(sem_t *));
   MOCK_METHOD1(sem_post, int(sem_t *));
@@ -29,10 +28,7 @@ void eval_cache_invalidate(void) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 int sem_init(sem_t *sem, int pshared, unsigned int value) {
@@ -59,7 +55,7 @@ TEST(SemaInit, Error) {
   sem_t sema;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, sem_init(&sema, 1, 1)).Times(1).WillOnce(::testing::Return(-1));
-  EXPECT_CALL(*MockProxy, print_fatal("%s", testing::_));
+  EXPECT_CALL(*MockProxy, print_fatal("%s"));
   sema_init(&sema);
   delete(MockProxy);
 }
@@ -76,7 +72,7 @@ TEST(SemaWait, Error) {
   sem_t sema;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, sem_wait(&sema)).Times(1).WillOnce(::testing::Return(-1));
-  EXPECT_CALL(*MockProxy, print_fatal("%s", testing::_));
+  EXPECT_CALL(*MockProxy, print_fatal("%s"));
   sema_wait(&sema);
   delete(MockProxy);
 }
@@ -93,7 +89,7 @@ TEST(SemaPost, Error) {
   sem_t sema;
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, sem_post(&sema)).Times(1).WillOnce(::testing::Return(-1));
-  EXPECT_CALL(*MockProxy, print_fatal("%s", testing::_));
+  EXPECT_CALL(*MockProxy, print_fatal("%s"));
   sema_post(&sema);
   delete(MockProxy);
 }

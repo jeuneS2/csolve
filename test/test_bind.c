@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -12,7 +11,7 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -22,10 +21,7 @@ void eval_cache_invalidate(void) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(Bind, Init) {
@@ -71,13 +67,13 @@ TEST(Bind, Fail) {
 
   MockProxy = new Mock();
   _bind_depth = 23;
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_NULL_BIND, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_NULL_BIND)).Times(1);
   bind(NULL, VALUE(17));
   delete(MockProxy);
 
   MockProxy = new Mock();
   _bind_depth = _bind_stack_size;
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_TOO_MANY_BINDS, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_TOO_MANY_BINDS)).Times(1);
   bind(&loc, VALUE(17));
   delete(MockProxy);
 }

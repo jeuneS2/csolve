@@ -1,4 +1,3 @@
-#include <stdarg.h>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
@@ -9,7 +8,7 @@ namespace strategy {
 class Mock {
  public:
   MOCK_METHOD3(swap_env, void(struct env_t *, size_t, size_t));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -19,10 +18,7 @@ void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(PreferFailing, Init) {
@@ -249,7 +245,7 @@ TEST(PickVarCmp, Error) {
   env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER)).Times(1);
   strategy_pick_var_cmp(env, 2, 1);
   delete(MockProxy);
 }

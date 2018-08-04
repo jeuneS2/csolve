@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <stdarg.h>
 
 namespace alloc {
 #include "../src/util.c"
@@ -8,7 +7,7 @@ namespace alloc {
 class Mock {
  public:
   MOCK_METHOD0(eval_cache_invalidate, void(void));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -18,10 +17,7 @@ void eval_cache_invalidate(void) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(Alloc, Init) {
@@ -66,7 +62,7 @@ TEST(Alloc, Fail) {
   MockProxy = new Mock();
   alloc_init(1024);
   _alloc_stack_pointer = 32;
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_OUT_OF_MEMORY, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_OUT_OF_MEMORY)).Times(1);
   alloc(_alloc_stack_size);
   delete(MockProxy);
 }
@@ -83,17 +79,17 @@ TEST(Dealloc, Fail) {
   _alloc_stack_pointer = 64;
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_WRONG_DEALLOC, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_WRONG_DEALLOC)).Times(1);
   dealloc(&_alloc_stack[ALLOC_ALIGNMENT-1]);
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_WRONG_DEALLOC, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_WRONG_DEALLOC)).Times(1);
   dealloc(&_alloc_stack[128]);
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_WRONG_DEALLOC, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_WRONG_DEALLOC)).Times(1);
   dealloc(NULL);
   delete(MockProxy);
 }

@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <stdarg.h>
 
 namespace objective {
 #include "../src/arith.c"
@@ -15,7 +14,7 @@ class Mock {
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *constr));
   MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *constr, struct val_t val));
-  MOCK_METHOD2(print_fatal, void (const char *, va_list));
+  MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
@@ -33,10 +32,7 @@ struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
 }
 
 void print_fatal(const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  MockProxy->print_fatal(fmt, args);
-  va_end(args);
+  MockProxy->print_fatal(fmt);
 }
 
 TEST(ObjectiveInit, Basic) {
@@ -65,7 +61,7 @@ TEST(ObjectiveInit, Basic) {
 
 TEST(ObjectiveInit, Errors) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE)).Times(1);
   objective_init((objective_t)-1, NULL);
   delete(MockProxy);
 }
@@ -208,7 +204,7 @@ TEST(ObjectiveBetter, Max) {
 
 TEST(ObjectiveBetter, Errors) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE)).Times(1);
   _objective = (objective_t)-1;
   objective_better(NULL);
   delete(MockProxy);
@@ -225,7 +221,7 @@ TEST(ObjectiveUpdate, Basic) {
 
 TEST(ObjectiveUpdate, Errors) {
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL)).Times(1);
   objective_update(INTERVAL(0, 1));
   delete(MockProxy);
 }
@@ -363,7 +359,7 @@ TEST(ObjectiveOptimize, Error) {
 
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, testing::_)).Times(1);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE)).Times(1);
   _objective = (enum objective_t)-1;
   objective_update(VALUE(17));
   objective_optimize(&X);
