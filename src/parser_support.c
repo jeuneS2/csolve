@@ -114,6 +114,36 @@ void vars_weighten(struct constr_t *constr, int32_t weight) {
   }
 }
 
+cache_tag_t vars_hash(struct constr_t *constr) {
+  switch (constr->type) {
+  case CONSTR_TERM:
+    if (is_value(*constr->constr.term)) {
+      return 0;
+    } else {
+      return hash_var(constr->constr.term);
+    }
+  case CONSTR_EXPR:
+    switch (constr->constr.expr.op) {
+    case OP_EQ:
+    case OP_LT:
+    case OP_ADD:
+    case OP_MUL:
+    case OP_AND:
+    case OP_OR:
+      return vars_hash(constr->constr.expr.l) | vars_hash(constr->constr.expr.r);
+    case OP_NEG:
+    case OP_NOT:
+      return vars_hash(constr->constr.expr.l);
+    default:
+      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+    }
+    break;
+  default:
+    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+  }
+  return 0;
+}
+
 int vars_compare(const void *a, const void *b) {
   const struct var_t *x = (const struct var_t *)a;
   const struct var_t *y = (const struct var_t *)b;

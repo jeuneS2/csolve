@@ -254,6 +254,8 @@ static bool check_assignment(struct env_t *env, size_t depth) {
     cut_depth += depth;
   }
 
+  cache_clean();
+  
   return failed;
 }
 

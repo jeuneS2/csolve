@@ -30,11 +30,16 @@ bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
 
 class Mock {
  public:
+  MOCK_METHOD1(cache_is_dirty, bool(cache_tag_t));
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
+
+bool cache_is_dirty(cache_tag_t tag) {
+  return MockProxy->cache_is_dirty(tag);
+}
 
 size_t bind(struct val_t *loc, const struct val_t val) {
   return MockProxy->bind(loc, val);
@@ -587,7 +592,7 @@ TEST(PropagateWand, Basic) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t *E [2] = { &A, &B };
+  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();
@@ -595,6 +600,9 @@ TEST(PropagateWand, Basic) {
   delete(MockProxy);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(true));
   EXPECT_EQ(NULL, propagate_wand(&X, VALUE(1)));
   delete(MockProxy);
 }
@@ -655,7 +663,7 @@ TEST(Propagate, Wand) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t *E [2] = { &A, &B };
+  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();
@@ -663,6 +671,9 @@ TEST(Propagate, Wand) {
   delete(MockProxy);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(true));
   EXPECT_EQ(NULL, prop(&X, VALUE(1)));
   delete(MockProxy);
 }

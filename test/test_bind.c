@@ -52,8 +52,6 @@ TEST(Bind, Success) {
 
   MockProxy = new Mock();
   _bind_depth = 23;
-  EXPECT_CALL(*MockProxy, eval_cache_invalidate())
-    .Times(1);
   EXPECT_EQ(23, bind(&loc, VALUE(17)));
   EXPECT_EQ(24, _bind_depth);
   EXPECT_EQ(loc, VALUE(17));
@@ -86,15 +84,11 @@ TEST(Unbind, Sucess) {
 
   _bind_depth = 17;
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval_cache_invalidate())
-    .Times(2);
   bind(&loc1, VALUE(42));
   bind(&loc2, VALUE(23));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval_cache_invalidate())
-    .Times(2);
   unbind(17);
   EXPECT_EQ(loc1, INTERVAL(0, 100));
   EXPECT_EQ(loc2, INTERVAL(17, 23));

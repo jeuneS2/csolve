@@ -81,7 +81,6 @@ Objective : ANY ';'
             $$->type = CONSTR_TERM;
             $$->constr.term = alloc(sizeof(struct val_t));
             *$$->constr.term = VALUE(0);
-            $$->eval_cache.tag = 0;
           }
           | ALL ';'
           { objective_init(OBJ_ALL, &shared()->objective_best);
@@ -89,7 +88,6 @@ Objective : ANY ';'
             $$->type = CONSTR_TERM;
             $$->constr.term = alloc(sizeof(struct val_t));
             *$$->constr.term = VALUE(0);
-            $$->eval_cache.tag = 0;
           }
           | MIN Expr ';'
           { objective_init(OBJ_MIN, &shared()->objective_best);
@@ -103,17 +101,19 @@ Objective : ANY ';'
 
 Constraints : Constraints Constraint
             { $$->constr.wand.length = $1->constr.wand.length + 1;
-              const size_t size = $$->constr.wand.length * sizeof(struct constr_t *);
+              const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
               $$->constr.wand.elems = realloc($1->constr.wand.elems, size);
-              $$->constr.wand.elems[$$->constr.wand.length-1] = $2;
-            }
+              $$->constr.wand.elems[$$->constr.wand.length-1].constr = $2;
+              $$->constr.wand.elems[$$->constr.wand.length-1].cache_tag = vars_hash($2);
+	    }
             | Constraint
             { $$ = alloc(sizeof(struct constr_t));
               $$->type = CONSTR_WAND;
               $$->constr.wand.length = 1;
-              $$->constr.wand.elems = malloc(sizeof(struct constr_t *));
-              $$->constr.wand.elems[0] = $1;
-            }
+              $$->constr.wand.elems = malloc(sizeof(struct wand_expr_t));
+              $$->constr.wand.elems[0].constr = $1;
+              $$->constr.wand.elems[0].cache_tag = vars_hash($1);
+	    }
 ;
 
 Constraint: Expr ';';
@@ -123,7 +123,6 @@ PrimaryExpr : NUM
               $$->type = CONSTR_TERM;
               $$->constr.term = alloc(sizeof(struct val_t));
               *$$->constr.term = VALUE($1);
-              $$->eval_cache.tag = 0;
             }
             | IDENT
             { $$ = alloc(sizeof(struct constr_t));
@@ -136,7 +135,6 @@ PrimaryExpr : NUM
                 *$$->constr.term = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
                 vars_add($1, $$->constr.term);
               }
-              $$->eval_cache.tag = 0;
             }
             | '(' Expr ')'
             { $$ = $2;
@@ -159,7 +157,6 @@ UnaryExpr : PrimaryExpr
             $$->type = CONSTR_TERM;
             $$->constr.term = alloc(sizeof(struct val_t));
             *$$->constr.term = VALUE(1);
-            $$->eval_cache.tag = 0;
             // add != constraints for all pairs
             for (struct expr_list_t *l = $3; l != NULL; l = l->next) {
               for (struct expr_list_t *k = l->next; k != NULL; k = k->next) {
@@ -226,7 +223,6 @@ RelatExpr : AddExpr
             v->type = CONSTR_TERM;
             v->constr.term = alloc(sizeof(struct val_t));
             *v->constr.term = VALUE(1);
-            v->eval_cache.tag = 0;
             struct constr_t *c = alloc(sizeof(struct constr_t));
             *c = CONSTRAINT_EXPR(OP_ADD, $3, v);
             $$ = alloc(sizeof(struct constr_t));
@@ -240,7 +236,6 @@ RelatExpr : AddExpr
             v->type = CONSTR_TERM;
             v->constr.term = alloc(sizeof(struct val_t));
             *v->constr.term = VALUE(1);
-            v->eval_cache.tag = 0;
             struct constr_t *c = alloc(sizeof(struct constr_t));
             *c = CONSTRAINT_EXPR(OP_ADD, $1, v);
             $$ = alloc(sizeof(struct constr_t));

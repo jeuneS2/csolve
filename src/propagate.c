@@ -49,7 +49,7 @@ struct constr_t *propagate_term(struct constr_t *constr, struct val_t val) {
     domain_t lo = max(get_lo(*term), get_lo(val));
     domain_t hi = min(get_hi(*term), get_hi(val));
     if (lo != get_lo(*term) || hi != get_hi(*term)) {
-      struct val_t v = (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+      struct val_t v = INTERVAL(lo, hi);
       bind(term, v);
       _prop_count++;
     }
@@ -102,7 +102,7 @@ struct constr_t *propagate_neg(struct constr_t *constr, struct val_t val) {
 
   domain_t lo = neg(get_hi(val));
   domain_t hi = neg(get_lo(val));
-  struct val_t v = (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+  struct val_t v = INTERVAL(lo, hi);
   l = prop(l, v);
 
   return update_unary_expr(constr, l);
@@ -115,14 +115,14 @@ struct constr_t *propagate_add(struct constr_t *constr, struct val_t val) {
   struct val_t lval = eval(l);
   domain_t rlo = add(get_lo(val), neg(get_hi(lval)));
   domain_t rhi = add(get_hi(val), neg(get_lo(lval)));
-  struct val_t rv = (rlo == rhi) ? VALUE(rlo) : INTERVAL(rlo, rhi);
+  struct val_t rv = INTERVAL(rlo, rhi);
   r = prop(r, rv);
 
   if (r != NULL) {
     struct val_t rval = eval(r);
     domain_t llo = add(get_lo(val), neg(get_hi(rval)));
     domain_t lhi = add(get_hi(val), neg(get_lo(rval)));
-    struct val_t lv = (llo == lhi) ? VALUE(llo) : INTERVAL(llo, lhi);
+    struct val_t lv = INTERVAL(llo, lhi);
     l = prop(l, lv);
   }
 
@@ -223,7 +223,10 @@ struct constr_t *propagate_or(struct constr_t *constr, struct val_t val) {
 struct constr_t *propagate_wand(struct constr_t *constr, struct val_t val) {
   if (is_true(val)) {
     for (size_t i = 0; i < constr->constr.wand.length; i++) {
-      struct constr_t *p = prop(constr->constr.wand.elems[i], val);
+      if (!cache_is_dirty(constr->constr.wand.elems[i].cache_tag)) {
+        continue;
+      }
+      struct constr_t *p = prop(constr->constr.wand.elems[i].constr, val);
       if (p == NULL) {
         return NULL;
       }

@@ -15,6 +15,7 @@ class Mock {
  public:
   MOCK_METHOD1(alloc, void *(size_t));
   MOCK_METHOD1(dealloc, void(void *));
+  MOCK_METHOD0(cache_clean, void(void));
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
   MOCK_METHOD1(unbind, void(size_t));
   MOCK_METHOD1(sema_init, void(sem_t *));
@@ -43,6 +44,10 @@ void *alloc(size_t size) {
 
 void dealloc(void *elem) {
   MockProxy->dealloc(elem);
+}
+
+void cache_clean(void) {
+  MockProxy->cache_clean();
 }
 
 size_t bind(struct val_t *loc, const struct val_t val) {
@@ -468,6 +473,7 @@ TEST(CheckAssignment, NotBetter) {
   EXPECT_CALL(*MockProxy, objective_better(&oA))
     .Times(1)
     .WillOnce(::testing::Return(false));
+  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
   EXPECT_EQ(true, check_assignment(env, 0));
   EXPECT_EQ(1, cuts_bound);
   delete(MockProxy);
@@ -499,6 +505,7 @@ TEST(CheckAssignment, InfeasibleObj) {
   EXPECT_CALL(*MockProxy, objective_optimize(&oA))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
+  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
   EXPECT_EQ(true, check_assignment(env, 0));
   EXPECT_EQ(1, cuts_obj);
   delete(MockProxy);
@@ -537,6 +544,7 @@ TEST(CheckAssignment, Infeasible) {
   EXPECT_CALL(*MockProxy, propagate(&cA, VALUE(1)))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
+  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
   EXPECT_EQ(true, check_assignment(env, 0));
   EXPECT_EQ(1, cuts_prop);
   delete(MockProxy);
@@ -578,6 +586,7 @@ TEST(CheckAssignment, Feasible) {
   EXPECT_CALL(*MockProxy, normalize(&cA))
     .Times(1)
     .WillOnce(::testing::Return(&cA));
+  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
   EXPECT_EQ(false, check_assignment(env, 0));
   EXPECT_EQ(env[1].step->obj, &oA);
   EXPECT_EQ(env[1].step->constr, &cA);

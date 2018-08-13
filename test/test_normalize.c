@@ -32,6 +32,7 @@ class Mock {
  public:
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(alloc, void *(size_t));
+  MOCK_METHOD1(cache_is_dirty, bool(cache_tag_t));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
@@ -43,6 +44,10 @@ const struct val_t eval(const struct constr_t *constr) {
 
 void *alloc(size_t size) {
   return MockProxy->alloc(size);
+}
+
+bool cache_is_dirty(cache_tag_t tag) {
+  return MockProxy->cache_is_dirty(tag);
 }
 
 void print_fatal(const char *fmt, ...) {
@@ -135,23 +140,23 @@ TEST(UpdateWand, Basic) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t *E [2] = { &A, &B };
-  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+  struct wand_expr_t E [3] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 3, .elems = E } } };
   struct constr_t Y;
-  struct constr_t *Z[2];
+  struct wand_expr_t Z[3];
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, alloc(sizeof(struct constr_t)))
     .Times(1)
     .WillOnce(::testing::Return(&Y));
-  EXPECT_CALL(*MockProxy, alloc(2 * sizeof(struct constr_t *)))
+  EXPECT_CALL(*MockProxy, alloc(3 * sizeof(struct wand_expr_t)))
     .Times(1)
     .WillOnce(::testing::Return(&Z));
   EXPECT_EQ(&Y, update_wand(&X, 1));
   EXPECT_EQ(CONSTR_WAND, Y.type);
-  EXPECT_EQ(2, Y.constr.wand.length);
+  EXPECT_EQ(3, Y.constr.wand.length);
   EXPECT_EQ(Z, Y.constr.wand.elems);
-  EXPECT_EQ(&A, Y.constr.wand.elems[0]);
+  EXPECT_EQ(&A, Y.constr.wand.elems[0].constr);
   delete(MockProxy);
 }
 
@@ -693,10 +698,13 @@ TEST(NormalizeWand, Basic) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t *E [2] = { &A, &B };
+  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(true));
   EXPECT_EQ(&X, normal_wand(&X));
   delete(MockProxy);
 }
@@ -711,7 +719,11 @@ TEST(NormalizeWand, Copy) {
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct constr_t X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  struct constr_t *E [5] = { &A, &X, &B, &C, &X };
+  struct wand_expr_t E [5] = { { .constr = &A, .cache_tag = 0 },
+                               { .constr = &X, .cache_tag = 0 },
+                               { .constr = &B, .cache_tag = 0 },
+                               { .constr = &C, .cache_tag = 0 },
+                               { .constr = &X, .cache_tag = 0 } };
   struct constr_t Y = { .type = CONSTR_WAND, .constr = { .wand = { .length = 5, .elems = E } } };
   struct constr_t Z, V, W;
 
@@ -725,19 +737,22 @@ TEST(NormalizeWand, Copy) {
     .WillOnce(::testing::Return(&W))
     .WillOnce(::testing::Return(&Z))
     .WillOnce(::testing::Return(&V));
-  EXPECT_CALL(*MockProxy, alloc(5 * sizeof(struct constr_t *)))
+  EXPECT_CALL(*MockProxy, alloc(5 * sizeof(struct wand_expr_t)))
     .Times(1)
     .WillOnce(::testing::Return(&E));
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(2)
     .WillOnce(::testing::Return(VALUE(1)))
     .WillOnce(::testing::Return(VALUE(1)));
+  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(true));
   EXPECT_EQ(&Z, normal_wand(&Y));
   EXPECT_EQ(3, Z.constr.wand.length);
   EXPECT_EQ(E, Z.constr.wand.elems);
-  EXPECT_EQ(&A, Z.constr.wand.elems[0]);
-  EXPECT_EQ(&B, Z.constr.wand.elems[1]);
-  EXPECT_EQ(&C, Z.constr.wand.elems[2]);
+  EXPECT_EQ(&A, Z.constr.wand.elems[0].constr);
+  EXPECT_EQ(&B, Z.constr.wand.elems[1].constr);
+  EXPECT_EQ(&C, Z.constr.wand.elems[2].constr);
   delete(MockProxy);
 }
 

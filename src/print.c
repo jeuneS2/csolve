@@ -47,7 +47,7 @@ void print_constr(FILE *file, const struct constr_t *constr) {
     break;
   case CONSTR_WAND:
     for (size_t i = 0; i < constr->constr.wand.length; i++) {
-      print_constr(file, constr->constr.wand.elems[i]);
+      print_constr(file, constr->constr.wand.elems[i].constr);
       fprintf(file, ";");
     }
     break;

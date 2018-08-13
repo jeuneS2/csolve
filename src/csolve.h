@@ -68,7 +68,6 @@ static inline bool is_false(struct val_t v) {
 #define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H) })
 #define VALUE(V) INTERVAL(V,V)
 
-
 /** Binding entry */
 struct binding_t {
   struct val_t *loc; ///< Location of bound value
@@ -95,8 +94,14 @@ enum operator_t {
   OP_OR  = '|', ///< Logical or
 };
 
-/** The type to use for the evaliation cache tag */
-typedef int64_t cache_tag_t;
+/** Type for tagging cache entries */
+typedef uint64_t cache_tag_t;
+
+/** Type for a wide-and element, including a cache tag */
+struct wand_expr_t {
+  struct constr_t *constr; ///< The constraint
+  cache_tag_t cache_tag; ///< The cache tag
+};
 
 /** Type representing a constraint */
 struct constr_t {
@@ -113,14 +118,9 @@ struct constr_t {
     /** Wide-and node type */
     struct wand_t {
       size_t length; ///< Number of sub-expressions
-      struct constr_t **elems; ///< Sub-expressions
+      struct wand_expr_t *elems; ///< Sub-expressions
     } wand; ///< Wide-and node
   } constr; ///< Constraint
-  /** Cache entry for evaluation results */
-  struct eval_cache_t {
-    cache_tag_t tag; ///< Cache tag
-    struct val_t val; ///< Cached value
-  } eval_cache; ///< Evaluation result cache
 };
 
 /** Checks whether constraint is a terminal node */
@@ -135,8 +135,7 @@ static inline bool is_const(struct constr_t *c) {
 #define CONSTRAINT_EXPR(O, L, R)                         \
   ((struct constr_t){                                    \
     .type = CONSTR_EXPR,                                 \
-      .constr = { .expr = { .op = O, .l = L, .r = R } }, \
-      .eval_cache = { .tag = 0, .val = VALUE(0) } })
+      .constr = { .expr = { .op = O, .l = L, .r = R } } } )
 
 /** Type holding information for a solving step */
 struct solve_step_t {
@@ -206,6 +205,16 @@ void *alloc(size_t size);
 /** Deallocate memory on the allocation stack */
 void dealloc(void *elem);
 
+/** Hash value of a variable */
+cache_tag_t hash_var(const struct val_t *var);
+
+/** Mark a variable as dirty */
+void cache_dirty(cache_tag_t tag);
+/** Mark all variables as clean */
+void cache_clean(void);
+/** Check if a variable is marked dirty */
+bool cache_is_dirty(cache_tag_t tag);
+
 /** Default size of bind stack */
 #define BIND_STACK_SIZE_DEFAULT (1024)
 /** Initialize the binding structures */
@@ -230,9 +239,6 @@ const struct val_t eval(const struct constr_t *constr);
 struct constr_t *normalize(struct constr_t *constr);
 /** Propagate a result value to the terminal nodes of the constraint */
 struct constr_t *propagate(struct constr_t *constr, struct val_t val);
-
-/** Invalidate the eval cache */
-void eval_cache_invalidate(void);
 
 /** Initialize objective function type */
 void objective_init(enum objective_t o, volatile domain_t *best);

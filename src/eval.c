@@ -22,12 +22,6 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
-static cache_tag_t _eval_cache_tag = 1;
-
-void eval_cache_invalidate(void) {
-  _eval_cache_tag++;
-}
-
 const struct val_t eval_eq(const struct val_t a, const struct val_t b) {
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
@@ -71,7 +65,7 @@ const struct val_t eval_neg(const struct val_t a) {
   domain_t a_hi = get_hi(a);
   domain_t lo = neg(a_hi);
   domain_t hi = neg(a_lo);
-  return (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+  return INTERVAL(lo, hi);
 }
 
 const struct val_t eval_add(const struct val_t a, const struct val_t b) {
@@ -81,7 +75,7 @@ const struct val_t eval_add(const struct val_t a, const struct val_t b) {
   domain_t b_hi = get_hi(b);
   domain_t lo = add(a_lo, b_lo);
   domain_t hi = add(a_hi, b_hi);
-  return (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+  return INTERVAL(lo, hi);
 }
 
 const struct val_t eval_mul(const struct val_t a, const struct val_t b) {
@@ -95,7 +89,7 @@ const struct val_t eval_mul(const struct val_t a, const struct val_t b) {
   domain_t hh = mul(a_hi, b_hi);
   domain_t lo = min(min(ll, lh), min(hl, hh));
   domain_t hi = max(max(ll, lh), max(hl, hh));
-  return (lo == hi) ? VALUE(lo) : INTERVAL(lo, hi);
+  return INTERVAL(lo, hi);
 }
 
 const struct val_t eval_not(const struct val_t a) {
@@ -166,8 +160,7 @@ const struct val_t eval_wand(const struct constr_t *constr) {
   bool all_true = true;
 
   for (size_t i = 0; i < constr->constr.wand.length; i++) {
-    struct val_t val = eval(constr->constr.wand.elems[i]);
-
+    struct val_t val = eval(constr->constr.wand.elems[i].constr);
     if (is_false(val)) {
       return VALUE(0);
     }
@@ -184,21 +177,12 @@ const struct val_t eval_wand(const struct constr_t *constr) {
 }
 
 const struct val_t eval(const struct constr_t *constr) {
-  if (constr->type == CONSTR_TERM) {
-    return *constr->constr.term;
+  switch (constr->type) {
+  case CONSTR_TERM: return *constr->constr.term;
+  case CONSTR_EXPR: return eval_expr(constr);
+  case CONSTR_WAND: return eval_wand(constr);
+  default:
+    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
-
-  if (constr->eval_cache.tag == _eval_cache_tag) {
-    return constr->eval_cache.val;
-  }
-
-  struct val_t retval;
-  if (constr->type == CONSTR_EXPR) {
-    retval = eval_expr(constr);
-  } else {
-    retval = eval_wand(constr);
-  }
-  ((struct constr_t *)constr)->eval_cache.val = retval;
-  ((struct constr_t *)constr)->eval_cache.tag = _eval_cache_tag;
-  return retval;
+  return INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
 }

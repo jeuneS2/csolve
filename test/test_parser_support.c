@@ -16,6 +16,7 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 
 class Mock {
  public:
+  MOCK_METHOD1(hash_var, cache_tag_t(const struct val_t *));
   MOCK_METHOD0(objective_best, domain_t(void));
   MOCK_METHOD1(print_fatal, void (const char *));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
@@ -24,6 +25,10 @@ class Mock {
 };
 
 Mock *MockProxy;
+
+cache_tag_t hash_var(const struct val_t *var) {
+  return MockProxy->hash_var(var);
+}
 
 domain_t objective_best(void) {
   return MockProxy->objective_best();

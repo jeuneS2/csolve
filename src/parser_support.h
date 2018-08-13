@@ -41,6 +41,8 @@ void vars_add(const char *key, struct val_t *val);
 int32_t vars_count(struct constr_t *constr);
 /** Weighten the variables in a constraint */
 void vars_weighten(struct constr_t *constr, int32_t weight);
+/** Compute hash of variables in a constraint */
+cache_tag_t vars_hash(struct constr_t *constr);
 
 /** Sort variables according to their weight */
 void vars_sort(void);

@@ -29,7 +29,6 @@ static struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l,
     retval->constr.expr.op = constr->constr.expr.op;
     retval->constr.expr.l = l;
     retval->constr.expr.r = r;
-    retval->eval_cache.tag = 0;
     return retval;
   }
   return constr;
@@ -42,7 +41,6 @@ static struct constr_t *update_unary_expr(struct constr_t *constr, struct constr
     retval->constr.expr.op = constr->constr.expr.op;
     retval->constr.expr.l = l;
     retval->constr.expr.r = NULL;
-    retval->eval_cache.tag = 0;
     return retval;
   }
   return constr;
@@ -52,10 +50,10 @@ static struct constr_t *update_wand(struct constr_t *constr, size_t copy) {
   struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
   retval->type = constr->type;
   retval->constr.wand.length = constr->constr.wand.length;
-  size_t size = retval->constr.wand.length * sizeof(struct constr_t *);
-  retval->constr.wand.elems = (struct constr_t **)alloc(size);
+  size_t size = retval->constr.wand.length * sizeof(struct wand_expr_t);
+  retval->constr.wand.elems = (struct wand_expr_t *)alloc(size);
   memcpy(retval->constr.wand.elems, constr->constr.wand.elems,
-         copy * sizeof(struct constr_t *));
+         copy * sizeof(struct wand_expr_t));
   return retval;
 }
 
@@ -68,7 +66,6 @@ struct constr_t *normal_eval(struct constr_t *constr) {
     retval->type = CONSTR_TERM;
     retval->constr.term = (struct val_t *)alloc(sizeof(struct val_t));
     *retval->constr.term = val;
-    retval->eval_cache.tag = 0;
     return retval;
   }
   return constr;
@@ -248,14 +245,20 @@ struct constr_t *normal_or(struct constr_t *constr) {
 
 struct constr_t *normal_wand(struct constr_t *constr) {
   struct constr_t *retval = constr;
-
+  
   size_t l = 0;
   bool copied = false;
 
   for (size_t i = 0; i < constr->constr.wand.length; i++) {
-    struct constr_t *c = normal(constr->constr.wand.elems[i]);
+    if (!cache_is_dirty(constr->constr.wand.elems[i].cache_tag)) {
+      if (copied) {
+        retval->constr.wand.elems[l++] = constr->constr.wand.elems[i];
+      }
+      continue;
+    }
 
-    if (c != constr->constr.wand.elems[i]) {
+    struct constr_t *c = normal(constr->constr.wand.elems[i].constr);
+    if (c != constr->constr.wand.elems[i].constr) {
       if (!copied) {
         retval = update_wand(constr, i);
         copied = true;
@@ -263,10 +266,12 @@ struct constr_t *normal_wand(struct constr_t *constr) {
       }
 
       if (!(is_term(c) && is_true(*c->constr.term))) {
-        retval->constr.wand.elems[l++] = c;
-      }
+        retval->constr.wand.elems[l].constr = c;
+        retval->constr.wand.elems[l].cache_tag = constr->constr.wand.elems[i].cache_tag;
+        l++;
+     }
     } else if (copied) {
-      retval->constr.wand.elems[l++] = c;
+      retval->constr.wand.elems[l++] = constr->constr.wand.elems[i];
     }
   }
   if (copied) {
@@ -283,7 +288,6 @@ struct constr_t *normal(struct constr_t *constr) {
     if (e != constr) {
       return e;
     }
-
     // handle operation-specific normalization
     switch (constr->constr.expr.op) {
     case OP_EQ:  return normal_eq(constr);
@@ -304,7 +308,7 @@ struct constr_t *normal(struct constr_t *constr) {
   return constr;
 }
 
-struct constr_t *normalize(struct constr_t *constr) {
+struct constr_t *normalize(struct constr_t *constr) {  
   struct constr_t *prev = constr;
   struct constr_t *norm = normal(prev);
   while (norm != prev) {
