@@ -138,6 +138,8 @@ cache_tag_t vars_hash(struct constr_t *constr) {
       print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
     }
     break;
+  case CONSTR_WAND:
+    return -1;
   default:
     print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }

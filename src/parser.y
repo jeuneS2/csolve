@@ -163,9 +163,9 @@ UnaryExpr : PrimaryExpr
           {
             // start with TRUE
             $$ = alloc(sizeof(struct constr_t));
-            $$->type = CONSTR_TERM;
-            $$->constr.term = alloc(sizeof(struct val_t));
-            *$$->constr.term = VALUE(1);
+            $$->type = CONSTR_WAND;
+            $$->constr.wand.length = 0;
+            $$->constr.wand.elems = NULL;
             // add != constraints for all pairs
             for (struct expr_list_t *l = $3; l != NULL; l = l->next) {
               for (struct expr_list_t *k = l->next; k != NULL; k = k->next) {
@@ -175,9 +175,12 @@ UnaryExpr : PrimaryExpr
                 *b = CONSTRAINT_EXPR(OP_LT, k->expr, l->expr);
                 struct constr_t *c = alloc(sizeof(struct constr_t));
                 *c = CONSTRAINT_EXPR(OP_OR, a, b);
-                struct constr_t *d = alloc(sizeof(struct constr_t));
-                *d = CONSTRAINT_EXPR(OP_AND, $$, c);
-                $$ = d;
+
+                $$->constr.wand.length++;
+                const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
+                $$->constr.wand.elems = realloc($$->constr.wand.elems, size);
+                $$->constr.wand.elems[$$->constr.wand.length-1].constr = c;
+                $$->constr.wand.elems[$$->constr.wand.length-1].cache_tag = vars_hash(c);
               }
             }
             expr_list_free($3);
