@@ -48,9 +48,7 @@ static uint64_t _fail_threshold_counter = 1;
 #define STATS_FREQUENCY 10000
 
 uint64_t calls;
-uint64_t cuts_prop;
-uint64_t cuts_bound;
-uint64_t cuts_obj;
+uint64_t cuts;
 uint64_t cut_depth;
 uint64_t restarts;
 size_t depth_min;
@@ -59,9 +57,7 @@ extern size_t alloc_max;
 
 void stats_init(void) {
   calls = 0;
-  cuts_prop = 0;
-  cuts_bound = 0;
-  cuts_obj = 0;
+  cuts = 0;
   cut_depth = 0;
   restarts = 0;
   depth_min = SIZE_MAX;
@@ -83,12 +79,11 @@ void stats_update(size_t depth) {
 }
 
 void print_stats(FILE *file) {
-  fprintf(file, "#%d: CALLS: %lu, CUTS: %lu/%lu, BOUND: %lu, RESTARTS: %lu, DEPTH: %lu/%lu, AVG DEPTH: %f, MEMORY: %lu, SOLUTIONS: %lu\n",
+  fprintf(file, "#%d: CALLS: %lu, CUTS: %lu, RESTARTS: %lu, DEPTH: %lu/%lu, AVG DEPTH: %f, MEMORY: %lu, SOLUTIONS: %lu\n",
           _worker_id,
-          calls, cuts_prop, cuts_obj, cuts_bound,
-          restarts,
+          calls, cuts, restarts,
           depth_min, depth_max,
-          (double)cut_depth / (cuts_prop + cuts_obj + cuts_bound),
+          (double)cut_depth / cuts,
           alloc_max, shared()->solutions);
   fflush(file);
   depth_min = SIZE_MAX;
@@ -201,16 +196,23 @@ void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
   }
 }
 
-static bool update_solution(struct env_t *env, struct constr_t *obj, struct constr_t *constr) {
+static inline bool found_any(void) {
+  return objective() == OBJ_ANY && shared()->solutions > 0;
+}
+
+static inline bool is_restartable(void) {
+  return objective() == OBJ_ANY && strategy_restart_frequency() > 0;
+}
+
+static bool update_solution(struct env_t *env, struct constr_t *constr) {
   bool updated = false;
 
   if (is_true(eval(constr))) {
     sema_wait(&shared()->semaphore);
 
-    if (!(objective() == OBJ_ANY && shared()->solutions > 0)
-        && objective_better(obj)) {
+    if (!found_any() && objective_better()) {
 
-      objective_update(eval(obj));
+      objective_update_best();
       fprintf(stderr, "#%d: ", _worker_id);
       print_solution(stderr, env);
       shared()->solutions++;
@@ -227,30 +229,16 @@ static bool update_solution(struct env_t *env, struct constr_t *obj, struct cons
 static bool check_assignment(struct env_t *env, size_t depth) {
   bool failed = true;
 
-  // check if better objective value is possible
-  bool better = objective_better(env[depth].step->obj);
-  if (better) {
-    // optimize objective function
-    env[depth+1].step->obj = objective_optimize(env[depth].step->obj);
-    // check if objective function is feasible
-    if (env[depth+1].step->obj != NULL) {
-      // optimize constraints
-      struct constr_t *prop = propagate(env[depth].step->constr, VALUE(1));
-      // check if still feasible
-      if (prop != NULL) {
-        env[depth+1].step->constr = normalize(prop);
-        // proceed with next variable
-        failed = false;
-      } else {
-        cuts_prop++;
-        cut_depth += depth;
-      }
-    } else {
-      cuts_obj++;
-      cut_depth += depth;
-    }
+  // propagate values
+  struct constr_t *prop = propagate(env[depth].step->constr, VALUE(1));
+  // check if still feasible
+  if (prop != NULL) {
+    // normalize constraints
+    env[depth+1].step->constr = normalize(prop);
+    // proceed with next variable
+    failed = false;
   } else {
-    cuts_bound++;
+    cuts++;
     cut_depth += depth;
   }
 
@@ -259,9 +247,11 @@ static bool check_assignment(struct env_t *env, size_t depth) {
   return failed;
 }
 
+
+
 static bool check_restart(void) {
   // check whether search should restart
-  if (strategy_restart_frequency() > 0 && objective() == OBJ_ANY) {
+  if (is_restartable()) {
     _fail_count++;
 
     if (_fail_count > _fail_threshold * strategy_restart_frequency()) {
@@ -279,7 +269,7 @@ static void step_activate(struct env_t *env, size_t depth) {
   env[depth].step->active = true;
   env[depth].step->bounds = *env[depth].val;
   env[depth].step->iter = 0;
-  env[depth].step->seed = strategy_restart_frequency() > 0 ? rand() : 0;
+  env[depth].step->seed = is_restartable() ? rand() : 0;
 }
 
 static void step_deactivate(struct env_t *env, size_t depth) {
@@ -342,8 +332,8 @@ static void unwind(struct env_t *env, size_t depth, size_t stop) {
 // restart the search
 #define RESTART()                               \
   {                                             \
-    unwind(env, depth, 0);                      \
-    depth = 0;                                  \
+    unwind(env, depth, _worker_min_depth);      \
+    depth = _worker_min_depth;                  \
     continue;                                   \
   }
 
@@ -353,9 +343,8 @@ static void unwind(struct env_t *env, size_t depth, size_t stop) {
     break;                                      \
   }
 
-void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t x) {
+void solve(struct env_t *env, struct constr_t *constr) {
   size_t depth = 0;
-  env[depth].step->obj = obj;
   env[depth].step->constr = constr;
 
   while (true) {
@@ -364,22 +353,19 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
     }
 
     // stop searching if a solution is found and we just need any solution
-    if (objective() == OBJ_ANY && shared()->solutions > 0) {
+    if (found_any()) {
       EXIT();
     }
 
     // check if a better feasible solution is reached
     if (env[depth].key == NULL) {
-      bool updated = update_solution(env, env[depth].step->obj, env[depth].step->constr);
-      if (updated) {
-        if (objective() == OBJ_ANY) {
-          EXIT();
-        } else {
-          depth--;
-          RESTART();
-        }
+      bool update = update_solution(env, env[depth].step->constr);
+      if (update) {
+        depth--;
+        RESTART();
+      } else {
+        BACKTRACK();
       }
-      BACKTRACK();
     }
 
     if (!env[depth].step->active) {
@@ -402,6 +388,9 @@ void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, siz
 
     // try next value
     step_enter(env, depth, step_val(env, depth));
+
+    // update objective value
+    objective_update_val();
 
     stats_update(depth);
 

@@ -146,7 +146,6 @@ struct solve_step_t {
   udomain_t seed; ///< Iteration random seed
   struct val_t bounds; ///< Iteration bounds
   struct constr_t *constr; ///< Normalized constraint after binding variable
-  struct constr_t *obj; ///< Normalized objective function after binding variable
 };
 
 /** Variable environment entry */
@@ -245,16 +244,18 @@ void objective_init(enum objective_t o, volatile domain_t *best);
 /** Get objective function type */
 enum objective_t objective(void);
 /** Check whether the objective value can be possibly better */
-bool objective_better(struct constr_t *obj);
-/** Update the objective value */
-void objective_update(struct val_t obj);
+bool objective_better(void);
 /** Get the current best objective value */
 domain_t objective_best(void);
-/** Optimize objective function */
-struct constr_t *objective_optimize(struct constr_t *obj);
+/** Get a pointer to the objective value variable */
+struct val_t *objective_val(void);
+/** Update the current best objective value */
+void objective_update_best(void);
+/** Update the objective value variable */
+void objective_update_val(void);
 
 /** Find solutions */
-void solve(struct env_t *env, struct constr_t *obj, struct constr_t *constr, size_t depth);
+void solve(struct env_t *env, struct constr_t *constr);
 
 /** Swap two environment entries (keeping step) */
 void swap_env(struct env_t *env, size_t depth1, size_t depth2);
@@ -335,8 +336,6 @@ const char *main_name(void);
 #define ERROR_MSG_INVALID_VARIABLE_TYPE     "invalid variable type: %02x"
 /** Error message when encountering an invalid objective function type */
 #define ERROR_MSG_INVALID_OBJ_FUNC_TYPE     "invalid objective function type: %02x"
-/** Error message when trying to update the best value with an interval */
-#define ERROR_MSG_UPDATE_BEST_WITH_INTERVAL "trying to update best value with interval"
 /** Error message when encountering invalid boolean arguments on the command line */
 #define ERROR_MSG_INVALID_BOOL_ARG          "invalid boolean argument: %s"
 /** Error message when encountering invalid integer arguments on the command line */

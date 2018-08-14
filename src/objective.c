@@ -24,10 +24,12 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 static enum objective_t _objective;
+static struct val_t _objective_val;
 static volatile domain_t *_objective_best;
 
 void objective_init(enum objective_t o, volatile domain_t *best) {
   _objective = o;
+  _objective_val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   _objective_best = best;
   switch (o) {
   case OBJ_ANY:
@@ -49,57 +51,67 @@ enum objective_t objective(void) {
   return _objective;
 }
 
-bool objective_better(struct constr_t *obj) {
+bool objective_better(void) {
   switch (_objective) {
   case OBJ_ANY:
   case OBJ_ALL:
     return true;
   case OBJ_MIN:
-    if (objective_best() != DOMAIN_MAX) {
-      struct val_t o = eval(obj);
-      return get_lo(o) < objective_best();
-    }
-    break;
+    return get_lo(_objective_val) < objective_best();
   case OBJ_MAX:
-    if (objective_best() != DOMAIN_MIN) {
-      struct val_t o = eval(obj);
-      return get_hi(o) > objective_best();
-    }
-    break;
+    return get_hi(_objective_val) > objective_best();
   default:
     print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
   return true;
 }
 
-void objective_update(struct val_t obj) {
-  if (is_value(obj)) {
-    *_objective_best = get_lo(obj);
-  } else {
-    print_fatal(ERROR_MSG_UPDATE_BEST_WITH_INTERVAL);
-  }
-}
-
-domain_t objective_best(void) {
-  return *_objective_best;
-}
-
-struct constr_t *objective_optimize(struct constr_t *obj) {
-  struct constr_t *retval = obj;
+void objective_update_best(void) {
   switch (_objective) {
   case OBJ_ANY:
   case OBJ_ALL:
     break;
   case OBJ_MIN:
-    retval = propagate(retval, INTERVAL(DOMAIN_MIN, add(objective_best(), neg(1))));
-    retval = retval != NULL ? normalize(retval) : retval;
+    *_objective_best = get_lo(_objective_val);
     break;
   case OBJ_MAX:
-    retval = propagate(retval, INTERVAL(add(objective_best(), 1), DOMAIN_MAX));
-    retval = retval != NULL ? normalize(retval) : retval;
+    *_objective_best = get_hi(_objective_val);
     break;
   default:
     print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
-  return retval;
+}
+
+void objective_update_val(void) {
+  switch (_objective) {
+  case OBJ_ANY:
+  case OBJ_ALL:
+    break;
+  case OBJ_MIN: {
+    domain_t best = objective_best();
+    if (get_hi(_objective_val) > add(best, neg(1))) {
+      _objective_val.hi = add(best, neg(1));
+      cache_dirty(hash_var(&_objective_val));
+    }
+    break;
+  }
+  case OBJ_MAX: {
+    domain_t best = objective_best();
+    if (get_lo(_objective_val) < add(best, 1)) {
+      _objective_val.lo = add(best, 1);
+      cache_dirty(hash_var(&_objective_val));
+    }
+    break;
+  }
+  default:
+    print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
+  }
+}
+
+struct val_t *objective_val(void) {
+  return &_objective_val;
+}
+
+domain_t objective_best(void) {
+  return *_objective_best;
 }

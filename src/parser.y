@@ -25,7 +25,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 int yylex(void);
 void yyerror(const char *);
-
+ 
 %}
 
 %union {
@@ -51,11 +51,11 @@ void yyerror(const char *);
 
 %%
 
-Input : Objective Constraints
+Input : Constraints
       {
         vars_sort();
 
-        struct constr_t *prop = propagate($2, VALUE(1));
+        struct constr_t *prop = propagate($1, VALUE(1));
 
         if (prop != NULL) {
           struct constr_t *norm = prop;
@@ -69,35 +69,10 @@ Input : Objective Constraints
 
         if (prop != NULL) {
           struct env_t *env = env_generate();
-          struct constr_t *obj = objective_optimize($1);
-          solve(env, obj, prop, 0);
+          solve(env, prop);
           env_free(env);
         }
       }
-
-Objective : ANY ';'
-          { objective_init(OBJ_ANY, &shared()->objective_best);
-            $$ = alloc(sizeof(struct constr_t));
-            $$->type = CONSTR_TERM;
-            $$->constr.term = alloc(sizeof(struct val_t));
-            *$$->constr.term = VALUE(0);
-          }
-          | ALL ';'
-          { objective_init(OBJ_ALL, &shared()->objective_best);
-            $$ = alloc(sizeof(struct constr_t));
-            $$->type = CONSTR_TERM;
-            $$->constr.term = alloc(sizeof(struct val_t));
-            *$$->constr.term = VALUE(0);
-          }
-          | MIN Expr ';'
-          { objective_init(OBJ_MIN, &shared()->objective_best);
-            $$ = $2;
-          }
-          | MAX Expr ';'
-          { objective_init(OBJ_MAX, &shared()->objective_best);
-            $$ = $2;
-          }
-;
 
 Constraints : Constraints Constraint
             { $$->constr.wand.length = $1->constr.wand.length + 1;
@@ -106,7 +81,7 @@ Constraints : Constraints Constraint
               $$->constr.wand.elems[$$->constr.wand.length-1].constr = $2;
               $$->constr.wand.elems[$$->constr.wand.length-1].cache_tag = vars_hash($2);
 	    }
-            | Constraint
+            | Objective
             { $$ = alloc(sizeof(struct constr_t));
               $$->type = CONSTR_WAND;
               $$->constr.wand.length = 1;
@@ -114,6 +89,40 @@ Constraints : Constraints Constraint
               $$->constr.wand.elems[0].constr = $1;
               $$->constr.wand.elems[0].cache_tag = vars_hash($1);
 	    }
+;
+
+Objective : ANY ';'
+          { objective_init(OBJ_ANY, &shared()->objective_best);
+            $$ = alloc(sizeof(struct constr_t));
+            $$->type = CONSTR_TERM;
+            $$->constr.term = alloc(sizeof(struct val_t));
+            *$$->constr.term = VALUE(1);
+          }
+          | ALL ';'
+          { objective_init(OBJ_ALL, &shared()->objective_best);
+            $$ = alloc(sizeof(struct constr_t));
+            $$->type = CONSTR_TERM;
+            $$->constr.term = alloc(sizeof(struct val_t));
+            *$$->constr.term = VALUE(1);
+          }
+          | MIN Expr ';'
+          { objective_init(OBJ_MIN, &shared()->objective_best);
+            struct constr_t *v = alloc(sizeof(struct constr_t));
+            v->type = CONSTR_TERM;
+            v->constr.term = objective_val();
+            vars_add("<obj>", objective_val());
+            $$ = alloc(sizeof(struct constr_t));
+            *$$ = CONSTRAINT_EXPR(OP_EQ, $2, v);
+          }
+          | MAX Expr ';'
+          { objective_init(OBJ_MAX, &shared()->objective_best);
+            struct constr_t *v = alloc(sizeof(struct constr_t));
+            v->type = CONSTR_TERM;
+            v->constr.term = objective_val();
+            vars_add("<obj>", objective_val());
+            $$ = alloc(sizeof(struct constr_t));
+            *$$ = CONSTRAINT_EXPR(OP_EQ, v, $2);
+          }
 ;
 
 Constraint: Expr ';';

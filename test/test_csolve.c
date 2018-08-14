@@ -25,8 +25,9 @@ class Mock {
   MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *));
   MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *, struct val_t));
   MOCK_METHOD0(objective, enum objective_t(void));
-  MOCK_METHOD1(objective_better, bool(struct constr_t *));
-  MOCK_METHOD1(objective_update, void(struct val_t));
+  MOCK_METHOD0(objective_better, bool(void));
+  MOCK_METHOD0(objective_update_best, void(void));
+  MOCK_METHOD0(objective_update_val, void(void));
   MOCK_METHOD1(objective_optimize, struct constr_t *(struct constr_t *));
   MOCK_METHOD0(strategy_restart_frequency, uint64_t(void));
   MOCK_METHOD2(strategy_pick_var, void(struct env_t *, size_t));
@@ -94,12 +95,16 @@ void strategy_pick_var(struct env_t *env, size_t depth) {
   return MockProxy->strategy_pick_var(env, depth);
 }
 
-bool objective_better(struct constr_t *obj) {
-  return MockProxy->objective_better(obj);
+bool objective_better() {
+  return MockProxy->objective_better();
 }
 
-void objective_update(struct val_t obj) {
-  MockProxy->objective_update(obj);
+void objective_update_best() {
+  MockProxy->objective_update_best();
+}
+
+void objective_update_val() {
+  MockProxy->objective_update_val();
 }
 
 struct constr_t *objective_optimize(struct constr_t *obj) {
@@ -117,9 +122,7 @@ void print_solution(FILE *file, struct env_t *env) {
 TEST(Stats, Init) {
   stats_init();
   EXPECT_EQ(0, calls);
-  EXPECT_EQ(0, cuts_prop);
-  EXPECT_EQ(0, cuts_bound);
-  EXPECT_EQ(0, cuts_obj);
+  EXPECT_EQ(0, cuts);
   EXPECT_EQ(0, cut_depth);
   EXPECT_EQ(0, restarts);
   EXPECT_EQ(SIZE_MAX, depth_min);
@@ -149,9 +152,7 @@ TEST(Stats, Print) {
 
   _worker_id = 1;
   calls = STATS_FREQUENCY-1;
-  cuts_prop = 3;
-  cuts_obj = 4;
-  cuts_bound = 5;
+  cuts = 3;
   restarts = 6;
   depth_min = 7;
   depth_max = 8;
@@ -163,7 +164,7 @@ TEST(Stats, Print) {
   testing::internal::CaptureStdout();
   stats_update(7);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3/4, BOUND: 5, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 0.750000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
   EXPECT_EQ(SIZE_MAX, depth_min);
   EXPECT_EQ(0, depth_max);
 }
@@ -174,9 +175,7 @@ TEST(PrintStats, Stdout) {
 
   _worker_id = 1;
   calls = 2;
-  cuts_prop = 3;
-  cuts_obj = 4;
-  cuts_bound = 5;
+  cuts = 3;
   restarts = 6;
   depth_min = 7;
   depth_max = 8;
@@ -188,7 +187,7 @@ TEST(PrintStats, Stdout) {
   testing::internal::CaptureStdout();
   print_stats(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3/4, BOUND: 5, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 0.750000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
   EXPECT_EQ(SIZE_MAX, depth_min);
   EXPECT_EQ(0, depth_max);
 }
@@ -199,9 +198,7 @@ TEST(PrintStats, Stderr) {
 
   _worker_id = 1;
   calls = 2;
-  cuts_prop = 3;
-  cuts_obj = 4;
-  cuts_bound = 5;
+  cuts = 3;
   restarts = 6;
   depth_min = 7;
   depth_max = 8;
@@ -213,7 +210,7 @@ TEST(PrintStats, Stderr) {
   testing::internal::CaptureStderr();
   print_stats(stderr);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3/4, BOUND: 5, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 0.750000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
   EXPECT_EQ(SIZE_MAX, depth_min);
   EXPECT_EQ(0, depth_max);
 }
@@ -335,8 +332,6 @@ TEST(SwapEnv, NoSwap) {
 TEST(UpdateSolution, FalseConstr) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct val_t o = VALUE(0);
-  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
   struct env_t env[1];
   env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
@@ -344,15 +339,13 @@ TEST(UpdateSolution, FalseConstr) {
   EXPECT_CALL(*MockProxy, eval(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(VALUE(0)));
-  EXPECT_EQ(false, update_solution(env, &O, &C));
+  EXPECT_EQ(false, update_solution(env, &C));
   delete(MockProxy);
 }
 
 TEST(UpdateSolution, AnySolution) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct val_t o = VALUE(0);
-  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
   struct env_t env[1];
   env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
@@ -371,15 +364,13 @@ TEST(UpdateSolution, AnySolution) {
   EXPECT_CALL(*MockProxy, objective())
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(OBJ_ANY));
-  EXPECT_EQ(false, update_solution(env, &O, &C));
+  EXPECT_EQ(false, update_solution(env, &C));
   delete(MockProxy);
 }
 
 TEST(UpdateSolution, NotBetter) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct val_t o = VALUE(0);
-  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
   struct env_t env[1];
   env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
@@ -398,18 +389,16 @@ TEST(UpdateSolution, NotBetter) {
   EXPECT_CALL(*MockProxy, objective())
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(OBJ_ALL));
-  EXPECT_CALL(*MockProxy, objective_better(&O))
+  EXPECT_CALL(*MockProxy, objective_better())
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(false));
-  EXPECT_EQ(false, update_solution(env, &O, &C));
+  EXPECT_EQ(false, update_solution(env, &C));
   delete(MockProxy);
 }
 
 TEST(UpdateSolution, Better) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
-  struct val_t o = VALUE(0);
-  struct constr_t O = { .type = CONSTR_TERM, .constr = { .term = &o } };
   struct env_t env[1];
   env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
@@ -432,82 +421,18 @@ TEST(UpdateSolution, Better) {
   EXPECT_CALL(*MockProxy, objective())
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(OBJ_ANY));
-  EXPECT_CALL(*MockProxy, objective_better(&O))
+  EXPECT_CALL(*MockProxy, objective_better())
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(true));
-  EXPECT_CALL(*MockProxy, eval(&O))
-    .Times(::testing::AtLeast(1))
-    .WillRepeatedly(::testing::Return(VALUE(23)));
-  EXPECT_CALL(*MockProxy, objective_update(VALUE(23)))
+  EXPECT_CALL(*MockProxy, objective_update_best())
     .Times(::testing::AtLeast(1));
   EXPECT_CALL(*MockProxy, print_solution(stderr, env))
     .Times(1);
   testing::internal::CaptureStderr();
-  EXPECT_EQ(true, update_solution(env, &O, &C));
+  EXPECT_EQ(true, update_solution(env, &C));
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ("#17: ", output);
   EXPECT_EQ(1, s.solutions);
-  delete(MockProxy);
-}
-
-TEST(CheckAssignment, NotBetter) {
-  struct env_t env[3];
-
-  struct val_t a = VALUE(1);
-  struct solve_step_t sA;
-  struct constr_t oA;
-  sA.obj = &oA;
-  env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
-
-  struct val_t b = INTERVAL(3, 4);
-  struct solve_step_t sB;
-  struct constr_t oB;
-  sB.obj = &oB;
-  env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
-
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
-
-  stats_init();
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, objective_better(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return(false));
-  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
-  EXPECT_EQ(true, check_assignment(env, 0));
-  EXPECT_EQ(1, cuts_bound);
-  delete(MockProxy);
-}
-
-TEST(CheckAssignment, InfeasibleObj) {
-  struct env_t env[3];
-
-  struct val_t a = VALUE(1);
-  struct solve_step_t sA;
-  struct constr_t oA;
-  sA.obj = &oA;
-  env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
-
-  struct val_t b = INTERVAL(3, 4);
-  struct solve_step_t sB;
-  struct constr_t oB;
-  sB.obj = &oB;
-  env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
-
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
-
-  stats_init();
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, objective_better(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return(true));
-  EXPECT_CALL(*MockProxy, objective_optimize(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return((struct constr_t *)NULL));
-  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
-  EXPECT_EQ(true, check_assignment(env, 0));
-  EXPECT_EQ(1, cuts_obj);
   delete(MockProxy);
 }
 
@@ -516,17 +441,13 @@ TEST(CheckAssignment, Infeasible) {
 
   struct val_t a = VALUE(1);
   struct solve_step_t sA;
-  struct constr_t oA;
   struct constr_t cA;
-  sA.obj = &oA;
   sA.constr = &cA;
   env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
 
   struct val_t b = INTERVAL(3, 4);
   struct solve_step_t sB;
-  struct constr_t oB;
   struct constr_t cB;
-  sB.obj = &oB;
   sB.constr = &cB;
   env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
 
@@ -535,18 +456,12 @@ TEST(CheckAssignment, Infeasible) {
   stats_init();
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, objective_better(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return(true));
-  EXPECT_CALL(*MockProxy, objective_optimize(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return(&oA));
   EXPECT_CALL(*MockProxy, propagate(&cA, VALUE(1)))
     .Times(1)
     .WillOnce(::testing::Return((struct constr_t *)NULL));
   EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
   EXPECT_EQ(true, check_assignment(env, 0));
-  EXPECT_EQ(1, cuts_prop);
+  EXPECT_EQ(1, cuts);
   delete(MockProxy);
 }
 
@@ -555,17 +470,13 @@ TEST(CheckAssignment, Feasible) {
 
   struct val_t a = VALUE(1);
   struct solve_step_t sA;
-  struct constr_t oA;
   struct constr_t cA;
-  sA.obj = &oA;
   sA.constr = &cA;
   env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
 
   struct val_t b = INTERVAL(3, 4);
   struct solve_step_t sB;
-  struct constr_t oB;
   struct constr_t cB;
-  sB.obj = &oB;
   sB.constr = &cB;
   env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
 
@@ -574,12 +485,6 @@ TEST(CheckAssignment, Feasible) {
   stats_init();
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, objective_better(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return(true));
-  EXPECT_CALL(*MockProxy, objective_optimize(&oA))
-    .Times(1)
-    .WillOnce(::testing::Return(&oA));
   EXPECT_CALL(*MockProxy, propagate(&cA, VALUE(1)))
     .Times(1)
     .WillOnce(::testing::Return(&cA));
@@ -588,7 +493,6 @@ TEST(CheckAssignment, Feasible) {
     .WillOnce(::testing::Return(&cA));
   EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
   EXPECT_EQ(false, check_assignment(env, 0));
-  EXPECT_EQ(env[1].step->obj, &oA);
   EXPECT_EQ(env[1].step->constr, &cA);
   delete(MockProxy);
 }
@@ -596,7 +500,7 @@ TEST(CheckAssignment, Feasible) {
 TEST(CheckRestart, WrongStrategy) {
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, strategy_restart_frequency())
-    .Times(::testing::AtLeast(1))
+    .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(0));
   EXPECT_CALL(*MockProxy, objective())
     .Times(::testing::AtLeast(0))
@@ -606,10 +510,10 @@ TEST(CheckRestart, WrongStrategy) {
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, strategy_restart_frequency())
-    .Times(::testing::AtLeast(1))
+    .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(1));
   EXPECT_CALL(*MockProxy, objective())
-    .Times(::testing::AtLeast(1))
+    .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(OBJ_ALL));
   EXPECT_EQ(false, check_restart());
   delete(MockProxy);
@@ -658,9 +562,12 @@ TEST(Step, Activate) {
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, strategy_restart_frequency())
-    .Times(1)
+    .Times(::testing::AtLeast(0))
     .WillOnce(::testing::Return(0));
-  env[1].step->active = false;
+   EXPECT_CALL(*MockProxy, objective())
+    .Times(::testing::AtLeast(0))
+    .WillRepeatedly(::testing::Return(OBJ_ANY));
+   env[1].step->active = false;
   step_activate(env, 1);
   EXPECT_EQ(true, env[1].step->active);
   EXPECT_EQ(*env[1].val, env[1].step->bounds);
