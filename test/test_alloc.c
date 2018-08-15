@@ -12,6 +12,8 @@ class Mock {
 
 Mock *MockProxy;
 
+size_t alloc_max;
+
 void eval_cache_invalidate(void) {
   MockProxy->eval_cache_invalidate();
 }

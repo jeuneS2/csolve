@@ -32,6 +32,7 @@ SRC= \
 	src/print.c \
 	src/propagate.c \
 	src/strategy.c \
+	src/stats.c \
 	src/util.c
 TESTS= \
 	test/test_alloc.c \

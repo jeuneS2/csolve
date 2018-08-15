@@ -37,6 +37,8 @@ class Mock {
 
 Mock *MockProxy;
 
+uint64_t props;
+
 bool cache_is_dirty(cache_tag_t tag) {
   return MockProxy->cache_is_dirty(tag);
 }

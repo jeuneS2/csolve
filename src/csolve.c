@@ -47,47 +47,22 @@ static uint64_t _fail_threshold_counter = 1;
 // statistics
 #define STATS_FREQUENCY 10000
 
-uint64_t calls;
-uint64_t cuts;
-uint64_t cut_depth;
-uint64_t restarts;
-size_t depth_min;
-size_t depth_max;
-extern size_t alloc_max;
-
-void stats_init(void) {
-  calls = 0;
-  cuts = 0;
-  cut_depth = 0;
-  restarts = 0;
-  depth_min = SIZE_MAX;
-  depth_max = 0;
-  alloc_max = 0;
+static void print_stats(FILE *file) {
+  fprintf(file, "#%d: ", _worker_id);
+  stats_print(file);
+  fprintf(file, ", SOLUTIONS: %lu\n", shared()->solutions);
+  fflush(file);
+  stat_reset_depth_min();
+  stat_reset_depth_max();
 }
 
-void stats_update(size_t depth) {
-  if (depth < depth_min) {
-    depth_min = depth;
-  }
-  if (depth > depth_max) {
-    depth_max = depth;
-  }
-  calls++;
-  if (calls % STATS_FREQUENCY == 0) {
+static void update_stats(size_t depth) {
+  stat_min_depth_min(depth);
+  stat_max_depth_max(depth);
+  stat_inc_calls();
+  if (stat_get_calls() % STATS_FREQUENCY == 0) {
     print_stats(stdout);
   }
-}
-
-void print_stats(FILE *file) {
-  fprintf(file, "#%d: CALLS: %lu, CUTS: %lu, RESTARTS: %lu, DEPTH: %lu/%lu, AVG DEPTH: %f, MEMORY: %lu, SOLUTIONS: %lu\n",
-          _worker_id,
-          calls, cuts, restarts,
-          depth_min, depth_max,
-          (double)cut_depth / cuts,
-          alloc_max, shared()->solutions);
-  fflush(file);
-  depth_min = SIZE_MAX;
-  depth_max = 0;
 }
 
 // calculate Luby sequence using algorithm by Knuth
@@ -152,8 +127,8 @@ void worker_spawn(struct env_t *env, size_t depth) {
       _worker_min_depth = depth;
       // reset stats for child
       stats_init();
-      depth_min = depth;
-      depth_max = depth;
+      stat_set_depth_min(depth);
+      stat_set_depth_max(depth);
     } else {
       // parent searches the lower half
       struct val_t v = (lo == mid) ? VALUE(lo) : INTERVAL(lo, mid);
@@ -179,11 +154,12 @@ void worker_die(void) {
 
   await_children();
 
-  if (calls > 0) {
+  if (stat_get_calls() > 0) {
     print_stats(stdout);
   }
 }
 
+// algorithm helper functions
 void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
   if (env[depth1].key != NULL && env[depth2].key != NULL && depth1 != depth2) {
     struct env_t t = env[depth2];
@@ -238,8 +214,8 @@ static bool check_assignment(struct env_t *env, size_t depth) {
     // proceed with next variable
     failed = false;
   } else {
-    cuts++;
-    cut_depth += depth;
+    stat_inc_cuts();
+    stat_add_cut_depth(depth);
   }
 
   cache_clean();
@@ -257,7 +233,7 @@ static bool check_restart(void) {
     if (_fail_count > _fail_threshold * strategy_restart_frequency()) {
       _fail_count = 0;
       _fail_threshold = fail_threshold_next();
-      restarts++;
+      stat_inc_restarts();
       return true;
     }
   }
@@ -343,6 +319,7 @@ static void unwind(struct env_t *env, size_t depth, size_t stop) {
     break;                                      \
   }
 
+// search algorithm core
 void solve(struct env_t *env, struct constr_t *constr) {
   size_t depth = 0;
   env[depth].step->constr = constr;
@@ -392,7 +369,7 @@ void solve(struct env_t *env, struct constr_t *constr) {
     // update objective value
     objective_update_val();
 
-    stats_update(depth);
+    update_stats(depth);
 
     // decide whether to move to next variable, stay at current one, or restart
     bool failed = check_assignment(env, depth);

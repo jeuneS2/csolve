@@ -29,15 +29,13 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 // memory allocation functions
 #define ALLOC_ALIGNMENT 8
 
-char *_alloc_stack;
-size_t _alloc_stack_size;
-size_t _alloc_stack_pointer;
-size_t alloc_max;
+static char *_alloc_stack;
+static size_t _alloc_stack_size;
+static size_t _alloc_stack_pointer;
 
 void alloc_init(size_t size) {
   _alloc_stack_size = size;
   _alloc_stack_pointer = 0;
-  alloc_max = 0;
 
   _alloc_stack = (char *)malloc(_alloc_stack_size);
   if (_alloc_stack == 0) {
@@ -58,9 +56,7 @@ void *alloc(size_t size) {
   if (_alloc_stack_pointer + sz < _alloc_stack_size) {
     void *retval = (void *)&_alloc_stack[_alloc_stack_pointer];
     _alloc_stack_pointer += sz;
-    if (_alloc_stack_pointer > alloc_max) {
-      alloc_max = _alloc_stack_pointer;
-    }
+    stat_max_alloc_max(_alloc_stack_pointer);
     return retval;
   } else {
     print_fatal(ERROR_MSG_OUT_OF_MEMORY);
@@ -100,9 +96,9 @@ bool cache_is_dirty(cache_tag_t tag) {
 }
 
 // functions to bind (and unbind) variables
-struct binding_t *_bind_stack;
-size_t _bind_stack_size;
-size_t _bind_depth;
+static struct binding_t *_bind_stack;
+static size_t _bind_stack_size;
+static size_t _bind_depth;
 
 void bind_init(size_t size) {
   _bind_stack_size = size;

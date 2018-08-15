@@ -295,17 +295,12 @@ void shared_init(int32_t workers_max);
 /** Return pointer to the shared data area */
 struct shared_t *shared(void);
 
-/** Reset statistics */
-void stats_init(void);
-
 /** Print value */
 void print_val(FILE *file, const struct val_t val);
 /** Print constraint */
 void print_constr(FILE *file, const struct constr_t *constr);
 /** Print variable environment/bindings */
 void print_env(FILE *file, struct env_t *env);
-/** Print statistics */
-void print_stats(FILE *file);
 /** Print a solution */
 void print_solution(FILE *file, struct env_t *env);
 /** Print an error message */
@@ -316,6 +311,42 @@ void print_fatal(const char *fmt, ...);
 /** Get the name of the program */
 const char *main_name(void);
 
+/** List of statistic counters */
+#define STAT_LIST(F)                                                    \
+    F(calls,     uint64_t, 0,        "CALLS: %lu, ")                    \
+    F(cuts,      uint64_t, 0,        "CUTS: %lu, ")                     \
+    F(props,     uint64_t, 0,        "PROPS: %lu, ")                    \
+    F(restarts,  uint64_t, 0,        "RESTARTS: %lu, ")                 \
+    F(depth_min, size_t,   SIZE_MAX, "DEPTH: %lu")                      \
+    F(depth_max, size_t,   0,        "/%lu, ")                          \
+    F(cut_depth, uint64_t, 0,        "AVG DEPTH: %f, ", (double)cut_depth/cuts) \
+    F(alloc_max, size_t,   0,        "MEMORY: %lu")
+
+/** Statistic counter variable */
+#define STAT_EXTVAR(NAME, TYPE, RESET_VAL, ...)    \
+  extern TYPE NAME;
+
+/** Declare statistic vounter variables for list of statistic counters */
+STAT_LIST(STAT_EXTVAR)
+
+/** Functions provided for a statistic counter */
+#define STAT_FUNCS(NAME, TYPE, RESET_VAL, ...)               \
+  static inline TYPE stat_get_ ## NAME(void) { return NAME; }              \
+  static inline void stat_set_ ## NAME(TYPE v) { NAME = v; }               \
+  static inline void stat_reset_ ## NAME(void) { NAME = RESET_VAL; }       \
+  static inline void stat_inc_ ## NAME(void)   { NAME++; }                 \
+  static inline void stat_add_ ## NAME(TYPE v) { NAME += v; }              \
+  static inline void stat_min_ ## NAME(TYPE v) { if (v < NAME) NAME = v; } \
+  static inline void stat_max_ ## NAME(TYPE v) { if (v > NAME) NAME = v; }
+
+/** Declare functions for list of statistic counters */
+STAT_LIST(STAT_FUNCS)
+
+/** Reset statistics */
+void stats_init(void);
+/** Print statistics */
+void stats_print(FILE *file);
+  
 /** Error message for errors in the lexer */
 #define ERROR_MSG_LEXER_ERROR               "invalid input `%c' in line %u"
 /** Error message for errors in the parser */

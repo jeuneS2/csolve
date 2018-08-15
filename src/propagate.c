@@ -51,6 +51,7 @@ struct constr_t *propagate_term(struct constr_t *constr, struct val_t val) {
     if (lo != get_lo(*term) || hi != get_hi(*term)) {
       struct val_t v = INTERVAL(lo, hi);
       bind(term, v);
+      stat_inc_props();
       _prop_count++;
     }
   }

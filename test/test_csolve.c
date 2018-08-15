@@ -2,6 +2,7 @@
 #include <gmock/gmock.h>
 
 namespace csolve {
+#include "../src/stats.c"
 #include "../src/csolve.c"
 
 #define STR(X) #X
@@ -36,8 +37,6 @@ class Mock {
 };
 
 Mock *MockProxy;
-
-size_t alloc_max;
 
 void *alloc(size_t size) {
   return MockProxy->alloc(size);
@@ -132,15 +131,15 @@ TEST(Stats, Init) {
 
 TEST(Stats, Update) {
   stats_init();
-  stats_update(17);
+  update_stats(17);
   EXPECT_EQ(depth_min, 17);
   EXPECT_EQ(depth_max, 17);
   EXPECT_EQ(calls, 1);
-  stats_update(16);
+  update_stats(16);
   EXPECT_EQ(depth_min, 16);
   EXPECT_EQ(depth_max, 17);
   EXPECT_EQ(calls, 2);
-  stats_update(18);
+  update_stats(18);
   EXPECT_EQ(depth_min, 16);
   EXPECT_EQ(depth_max, 18);
   EXPECT_EQ(calls, 3);
@@ -153,6 +152,7 @@ TEST(Stats, Print) {
   _worker_id = 1;
   calls = STATS_FREQUENCY-1;
   cuts = 3;
+  props = 4;
   restarts = 6;
   depth_min = 7;
   depth_max = 8;
@@ -162,9 +162,9 @@ TEST(Stats, Print) {
 
   std::string output;
   testing::internal::CaptureStdout();
-  stats_update(7);
+  update_stats(7);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
   EXPECT_EQ(SIZE_MAX, depth_min);
   EXPECT_EQ(0, depth_max);
 }
@@ -176,6 +176,7 @@ TEST(PrintStats, Stdout) {
   _worker_id = 1;
   calls = 2;
   cuts = 3;
+  props = 4;
   restarts = 6;
   depth_min = 7;
   depth_max = 8;
@@ -187,7 +188,7 @@ TEST(PrintStats, Stdout) {
   testing::internal::CaptureStdout();
   print_stats(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
   EXPECT_EQ(SIZE_MAX, depth_min);
   EXPECT_EQ(0, depth_max);
 }
@@ -199,6 +200,7 @@ TEST(PrintStats, Stderr) {
   _worker_id = 1;
   calls = 2;
   cuts = 3;
+  props = 4;
   restarts = 6;
   depth_min = 7;
   depth_max = 8;
@@ -210,7 +212,7 @@ TEST(PrintStats, Stderr) {
   testing::internal::CaptureStderr();
   print_stats(stderr);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
   EXPECT_EQ(SIZE_MAX, depth_min);
   EXPECT_EQ(0, depth_max);
 }
