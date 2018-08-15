@@ -282,7 +282,7 @@ void strategy_restart_frequency_init(uint64_t restart_frequency);
 uint64_t strategy_restart_frequency(void);
 
 /** Which ordering to use as default */
-#define STRATEGY_ORDER_DEFAULT ORDER_SMALLEST_DOMAIN
+#define STRATEGY_ORDER_DEFAULT ORDER_NONE
 /** Set the ordering to use when searching */
 void strategy_order_init(enum order_t order);
 /** Pick a variable according to the chosen strategy */
