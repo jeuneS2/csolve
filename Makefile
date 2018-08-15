@@ -5,8 +5,9 @@ LFLAGS=-8 -F
 YACC=bison
 YFLAGS=-y -W
 
+GTEST_HOME=/usr/src/googletest
 TEST_CXX=g++
-TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g
+TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -DGTEST_HAS_PTHREAD=1 -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
 
 FUZZ_CC=afl-gcc
 FUZZ_CFLAGS=-std=c99 -pedantic -Wall -O2
@@ -58,14 +59,14 @@ src/parser.c src/parser.h: src/parser.y
 csolve: ${SRC} ${HEADERS}
 	${CC} ${CFLAGS} -o $@ ${SRC} -lpthread
 
-googletest/googlemock/libgooglemock.a: /usr/src/googletest
-	mkdir -p googletest; cd googletest; cmake /usr/src/googletest; ${MAKE}
+googletest/googlemock/libgmock.a googletest/googlemock/gtest/libgtest.a: ${GTEST_HOME}
+	mkdir -p googletest; cd googletest; cmake ${GTEST_HOME}; ${MAKE}
 
-test/%.o: test/%.c ${SRC} ${HEADERS}
+test/%.o: test/%.c ${SRC} ${HEADERS} googletest/googlemock/libgmock.a googletest/googlemock/gtest/libgtest.a
 	${TEST_CXX} ${TEST_CXXFLAGS} -c -o $@ $<
 
-test/test: $(patsubst %.c,%.o,${TESTS}) googletest/googlemock/libgooglemock.a
-	${TEST_CXX} ${TEST_CXXFLAGS} -o $@ $(patsubst %.c,%.o,${TESTS}) -Lgoogletest/googlemock -lgmock -lpthread
+test/test: $(patsubst %.c,%.o,${TESTS}) googletest/googlemock/libgmock.a googletest/googlemock/gtest/libgtest.a
+	${TEST_CXX} ${TEST_CXXFLAGS} -o $@ $(patsubst %.c,%.o,${TESTS}) -Lgoogletest/googlemock -lgmock -Lgoogletest/googlemock/gtest -lgtest -lpthread
 
 test/xunit-report.xml: test/test
 	./$< --gtest_output=xml:$@
