@@ -31,13 +31,65 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #define STR(X) #X
 #define STRVAL(X) STR(X)
 
-#define MAX_OPTS 0x100
-
 #define KILO 1024
 #define MEGA (KILO * KILO)
 #define GIGA (KILO * KILO * KILO)
 
 void yyset_in(FILE *);
+
+#define OPTIONS_MAX 0x100
+
+#define OPTION_LIST(F)                                                  \
+  F('b', "binds", required_argument, "b:",                              \
+    { bind_init(parse_size(optarg)); },                                 \
+    { bind_init(BIND_STACK_SIZE_DEFAULT); },                            \
+    "-b --binds <size>           maximum number of binds (default: %d)\n", \
+    BIND_STACK_SIZE_DEFAULT)                                            \
+                                                                        \
+  F('h', "help", no_argument, "h",                                      \
+    { print_help(stdout); exit(EXIT_SUCCESS); }, ,                      \
+    "-h --help                   show this message and exit\n")         \
+                                                                        \
+  F('j', "jobs", required_argument, "j:",                               \
+    { shared_init(parse_int(optarg)); },                                \
+    { shared_init(WORKERS_MAX_DEFAULT); },                              \
+    "-j --jobs <int>             number of jobs to run simultaneously (default: %u)\n", \
+    WORKERS_MAX_DEFAULT)                                                \
+                                                                        \
+  F('m', "memory", required_argument, "m:",                             \
+    { alloc_init(parse_size(optarg)); },                                \
+    { alloc_init(ALLOC_STACK_SIZE_DEFAULT); },                          \
+    "-m --memory <size>          allocation stack size in bytes (default: %d)\n", \
+    ALLOC_STACK_SIZE_DEFAULT)                                           \
+                                                                        \
+  F('o', "order", required_argument, "o:",                              \
+    { strategy_order_init(parse_order(optarg)); },                      \
+    { strategy_order_init(STRATEGY_ORDER_DEFAULT); },                   \
+    "-o --order <order>          how to order variables during solving (default: %s)\n", \
+    STRVAL(STRATEGY_ORDER_DEFAULT))                                     \
+                                                                        \
+  F('p', "prefer-failing", required_argument, "p:",                     \
+    { strategy_prefer_failing_init(parse_bool(optarg)); },              \
+    { strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT); }, \
+    "-p --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", \
+    STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false))           \
+                                                                        \
+  F('r', "restart-freq", required_argument, "r:",                       \
+    { strategy_restart_frequency_init(parse_int(optarg)); },            \
+    { strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT); }, \
+    "-r --restart-freq <int>     restart frequency when looking for any solution (default: %u), set to 0 to disable\n", \
+    STRATEGY_RESTART_FREQUENCY_DEFAULT)                                 \
+                                                                        \
+  F('v', "version", no_argument, "v",                                   \
+    { print_version(stdout); exit(EXIT_SUCCESS); }, ,                   \
+    "-v --version                print version and exit\n")             \
+                                                                        \
+  F('w', "weighten", required_argument, "w:",                           \
+    { strategy_compute_weights_init(parse_bool(optarg)); },             \
+    { strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT); }, \
+    "-w --weighten <bool>        compute weights of variables for initial order (default: %s)\n", \
+    STRATEGY_COMPUTE_WEIGHTS_DEFAULT ? STR(true) : STR(false))          \
+
 
 static const char *_main_name;
 
@@ -56,18 +108,13 @@ void print_usage(FILE *file) {
   fprintf(file, "Usage: %s [<options>] [<file>]\n", _main_name);
 }
 
+#define OPTION_HELP(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...) \
+  fprintf(file, "  " __VA_ARGS__);
+  
 void print_help(FILE *file) {
   print_usage(file);
   fprintf(file, "Options:\n");
-  fprintf(file, "  -b --binds <size>           maximum number of binds (default: %d)\n", BIND_STACK_SIZE_DEFAULT);
-  fprintf(file, "  -h --help                   show this message and exit\n");
-  fprintf(file, "  -j --jobs <int>             number of jobs to run simultaneously (default: %u)\n", WORKERS_MAX_DEFAULT);
-  fprintf(file, "  -m --memory <size>          allocation stack size in bytes (default: %d)\n", ALLOC_STACK_SIZE_DEFAULT);
-  fprintf(file, "  -o --order <order>          how to order variables during solving (default: %s)\n", STRVAL(STRATEGY_ORDER_DEFAULT));
-  fprintf(file, "  -p --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false));
-  fprintf(file, "  -r --restart-freq <int>     restart frequency when looking for any solution (default: %u), set to 0 to disable\n", STRATEGY_RESTART_FREQUENCY_DEFAULT);
-  fprintf(file, "  -v --version                print version and exit\n");
-  fprintf(file, "  -w --weighten <bool>        compute weights of variables for initial order (default: %s)\n", STRATEGY_COMPUTE_WEIGHTS_DEFAULT ? STR(true) : STR(false));
+  OPTION_LIST(OPTION_HELP)
 }
 
 bool parse_bool(const char *str) {
@@ -126,63 +173,42 @@ size_t parse_size(const char *str) {
   return 0;
 }
 
+
+#define OPTION_SHORT(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)       \
+  SHORT
+
+#define OPTION_LONG(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)        \
+  { LONG, ARG, 0, VAL },
+
+#define OPTION_MATCH(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)       \
+  case VAL: { MATCH; } break;
+
+#define OPTION_DEFAULT(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)     \
+  if (!seen[VAL]) { DEFAULT; }
+
 void parse_options(int argc, char **argv) {
 
-  static const char *short_options = "b:hj:m:o:p:r:vw:";
+  static const char *short_options = OPTION_LIST(OPTION_SHORT);
   static struct option long_options[] = {
-    {"binds",          required_argument, 0, 'b' },
-    {"help",           no_argument,       0, 'h' },
-    {"jobs",           required_argument, 0, 'j' },
-    {"memory",         required_argument, 0, 'm' },
-    {"order",          required_argument, 0, 'o' },
-    {"prefer-failing", required_argument, 0, 'p' },
-    {"restart-freq",   required_argument, 0, 'r' },
-    {"version",        no_argument,       0, 'v' },
-    {"weighten",       required_argument, 0, 'w' },
-    {0,                0,                 0, 0   }
+    OPTION_LIST(OPTION_LONG)
+    {0, 0, 0, 0 }
   };
-
-  bool seen [MAX_OPTS];
+  
+  bool seen [OPTIONS_MAX];
   for (size_t i = 0; i < sizeof(seen)/sizeof(seen[0]); i++) {
     seen[i] = false;
   }
 
   int c;
   while ((c = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
-    if (seen[c % MAX_OPTS]) {
+    if (seen[c % OPTIONS_MAX]) {
       print_usage(stderr);
       exit(EXIT_FAILURE);
     }
-    seen[c % MAX_OPTS] = true;
+    seen[c % OPTIONS_MAX] = true;
 
     switch(c) {
-    case 'b':
-      bind_init(parse_size(optarg));
-      break;
-    case 'm':
-      alloc_init(parse_size(optarg));
-      break;
-    case 'j':
-      shared_init(parse_int(optarg));
-      break;
-    case 'o':
-      strategy_order_init(parse_order(optarg));
-      break;
-    case 'p':
-      strategy_prefer_failing_init(parse_bool(optarg));
-      break;
-    case 'r':
-      strategy_restart_frequency_init(parse_int(optarg));
-      break;
-    case 'w':
-      strategy_compute_weights_init(parse_bool(optarg));
-      break;
-    case 'h':
-      print_help(stdout);
-      exit(EXIT_SUCCESS);
-    case 'v':
-      print_version(stdout);
-      exit(EXIT_SUCCESS);
+      OPTION_LIST(OPTION_MATCH);
     default:
       print_usage(stderr);
       exit(EXIT_FAILURE);
@@ -194,27 +220,7 @@ void parse_options(int argc, char **argv) {
     exit(EXIT_FAILURE);
   }
 
-  if (!seen['b']) {
-    bind_init(BIND_STACK_SIZE_DEFAULT);
-  }
-  if (!seen['m']) {
-    alloc_init(ALLOC_STACK_SIZE_DEFAULT);
-  }
-  if (!seen['j']) {
-    shared_init(WORKERS_MAX_DEFAULT);
-  }
-  if (!seen['o']) {
-    strategy_order_init(STRATEGY_ORDER_DEFAULT);
-  }
-  if (!seen['p']) {
-    strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT);
-  }
-  if (!seen['r']) {
-    strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT);
-  }
-  if (!seen['w']) {
-    strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT);
-  }
+  OPTION_LIST(OPTION_DEFAULT);
 
   FILE *in = stdin;
 
