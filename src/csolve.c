@@ -210,7 +210,7 @@ static bool check_assignment(struct env_t *env, size_t depth) {
   // check if still feasible
   if (prop != NULL) {
     // normalize constraints
-    env[depth+1].step->constr = normalize(prop);
+    env[depth+1].step->constr = normal(prop);
     // proceed with next variable
     failed = false;
   } else {

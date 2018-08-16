@@ -23,7 +23,7 @@ class Mock {
   MOCK_METHOD1(sema_wait, void(sem_t *));
   MOCK_METHOD1(sema_post, void(sem_t *));
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
-  MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *));
+  MOCK_METHOD1(normal, struct constr_t *(struct constr_t *));
   MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *, struct val_t));
   MOCK_METHOD0(objective, enum objective_t(void));
   MOCK_METHOD0(objective_better, bool(void));
@@ -74,8 +74,8 @@ const struct val_t eval(const struct constr_t *constr) {
   return MockProxy->eval(constr);
 }
 
-struct constr_t *normalize(struct constr_t *constr) {
-  return MockProxy->normalize(constr);
+struct constr_t *normal(struct constr_t *constr) {
+  return MockProxy->normal(constr);
 }
 
 struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
@@ -490,7 +490,7 @@ TEST(CheckAssignment, Feasible) {
   EXPECT_CALL(*MockProxy, propagate(&cA, VALUE(1)))
     .Times(1)
     .WillOnce(::testing::Return(&cA));
-  EXPECT_CALL(*MockProxy, normalize(&cA))
+  EXPECT_CALL(*MockProxy, normal(&cA))
     .Times(1)
     .WillOnce(::testing::Return(&cA));
   EXPECT_CALL(*MockProxy, cache_clean()).Times(1);

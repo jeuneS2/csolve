@@ -234,8 +234,10 @@ void sema_post(sem_t *sema);
 
 /** Evaluate a constraint */
 const struct val_t eval(const struct constr_t *constr);
-/** Normalize a constraint */
+/** Fully normalize a constraint */
 struct constr_t *normalize(struct constr_t *constr);
+/** Perform a single normalizion step on a constraint */
+struct constr_t *normal(struct constr_t *constr);
 /** Propagate a result value to the terminal nodes of the constraint */
 struct constr_t *propagate(struct constr_t *constr, struct val_t val);
 
