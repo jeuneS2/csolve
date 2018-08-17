@@ -255,6 +255,8 @@ static void step_deactivate(struct env_t *env, size_t depth) {
 static void step_enter(struct env_t *env, size_t depth, domain_t val) {
   // mark how much memory is allocated
   env[depth].step->alloc_marker = alloc(0);
+  // mark patching depth
+  env[depth].step->patch_depth = patch(NULL, (struct wand_expr_t){ NULL, 0 });
   // bind variable
   env[depth].step->bind_depth = bind(env[depth].val, VALUE(val));
 }
@@ -262,6 +264,8 @@ static void step_enter(struct env_t *env, size_t depth, domain_t val) {
 static void step_leave(struct env_t *env, size_t depth) {
   // unbind variable
   unbind(env[depth].step->bind_depth);
+  // unbind wide-ands
+  unpatch(env[depth].step->patch_depth);
   // free up memory
   dealloc(env[depth].step->alloc_marker);
 }

@@ -46,6 +46,12 @@ void yyset_in(FILE *);
     "-b --binds <size>           maximum number of binds (default: %d)\n", \
     BIND_STACK_SIZE_DEFAULT)                                            \
                                                                         \
+  F('f', "prefer-failing", required_argument, "f:",                     \
+    { strategy_prefer_failing_init(parse_bool(optarg)); },              \
+    { strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT); }, \
+    "-f --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", \
+    STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false))           \
+                                                                        \
   F('h', "help", no_argument, "h",                                      \
     { print_help(stdout); exit(EXIT_SUCCESS); }, ,                      \
     "-h --help                   show this message and exit\n")         \
@@ -68,11 +74,11 @@ void yyset_in(FILE *);
     "-o --order <order>          how to order variables during solving (default: %s)\n", \
     STRVAL(STRATEGY_ORDER_DEFAULT))                                     \
                                                                         \
-  F('p', "prefer-failing", required_argument, "p:",                     \
-    { strategy_prefer_failing_init(parse_bool(optarg)); },              \
-    { strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT); }, \
-    "-p --prefer-failing <bool>  prefer failing variables when ordering (default: %s)\n", \
-    STRATEGY_PREFER_FAILING_DEFAULT ? STR(true) : STR(false))           \
+  F('p', "patches", required_argument, "p:",                            \
+    { patch_init(parse_size(optarg)); },                                \
+    { patch_init(PATCH_STACK_SIZE_DEFAULT); },                          \
+    "-p --patches <size>         maximum number of patches (default: %d)\n", \
+    PATCH_STACK_SIZE_DEFAULT)                                           \
                                                                         \
   F('r', "restart-freq", required_argument, "r:",                       \
     { strategy_restart_frequency_init(parse_int(optarg)); },            \
@@ -236,6 +242,7 @@ void parse_options(int argc, char **argv) {
 
 void cleanup() {
   bind_free();
+  patch_free();
   alloc_free();
 }
 

@@ -74,7 +74,6 @@ struct binding_t {
   struct val_t val; ///< Original value of bound value (for unbinding)
 };
 
-
 /** Constraint node types */
 enum constr_type_t {
   CONSTR_TERM, ///< Terminal node
@@ -137,10 +136,17 @@ static inline bool is_const(struct constr_t *c) {
     .type = CONSTR_EXPR,                                 \
       .constr = { .expr = { .op = O, .l = L, .r = R } } } )
 
+/** Patching entry */
+struct patching_t {
+  struct wand_expr_t *loc; ///< Location of patched sub-expressions
+  struct wand_expr_t expr; ///< Original value of patched sub-expressions (for unpatching)
+};
+
 /** Type holding information for a solving step */
 struct solve_step_t {
   size_t bind_depth; ///< Bind depth before binding variable
-  void *alloc_marker; ///< Allocation marker before normalization
+  size_t patch_depth; ///< Patch depth before propagation/normalization
+  void *alloc_marker; ///< Allocation marker before propagation/normalization
   bool active; ///< Iteration active
   udomain_t iter; ///< Iteration state
   udomain_t seed; ///< Iteration random seed
@@ -224,6 +230,17 @@ void bind_free(void);
 size_t bind(struct val_t *loc, const struct val_t val);
 /** Undo variable binds down to a given depth */
 void unbind(size_t depth);
+
+/** Default size of patch stack */
+#define PATCH_STACK_SIZE_DEFAULT (16*1024)
+/** Initialize the patching structures */
+void patch_init(size_t size);
+/** Deallocate memory occupied by the patch stack */
+void patch_free(void);
+/** Patch a wide-and sub-expression (at location loc) */
+size_t patch(struct wand_expr_t *loc, const struct wand_expr_t expr);
+/** Undo patches down to a given depth */
+void unpatch(size_t depth);
 
 /** Initialize a semaphore */
 void sema_init(sem_t *sema);
@@ -361,6 +378,8 @@ void stats_print(FILE *file);
 #define ERROR_MSG_TOO_MANY_BINDS            "exceeded maximum number of binds"
 /** Error message when trying to bind NULL */
 #define ERROR_MSG_NULL_BIND                 "cannot bind NULL"
+/** Error message when exceeding the maximum number of patches */
+#define ERROR_MSG_TOO_MANY_PATCHES          "exceeded maximum number of patches"
 /** Error message when encountering an invalid constraint type */
 #define ERROR_MSG_INVALID_CONSTRAINT_TYPE   "invalid constraint type: %02x"
 /** Error message when encountering an invalid operation */

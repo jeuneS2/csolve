@@ -22,6 +22,8 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
+static int32_t _patch_count = 0;
+
 static struct constr_t *update_expr(struct constr_t *constr, struct constr_t *l, struct constr_t *r) {
   if (l != constr->constr.expr.l || r != constr->constr.expr.r) {
     struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
@@ -44,17 +46,6 @@ static struct constr_t *update_unary_expr(struct constr_t *constr, struct constr
     return retval;
   }
   return constr;
-}
-
-static struct constr_t *update_wand(struct constr_t *constr, size_t copy) {
-  struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
-  retval->type = constr->type;
-  retval->constr.wand.length = constr->constr.wand.length;
-  size_t size = retval->constr.wand.length * sizeof(struct wand_expr_t);
-  retval->constr.wand.elems = (struct wand_expr_t *)alloc(size);
-  memcpy(retval->constr.wand.elems, constr->constr.wand.elems,
-         copy * sizeof(struct wand_expr_t));
-  return retval;
 }
 
 struct constr_t *normal(struct constr_t *constr);
@@ -246,36 +237,20 @@ struct constr_t *normal_or(struct constr_t *constr) {
 struct constr_t *normal_wand(struct constr_t *constr) {
   struct constr_t *retval = constr;
   
-  size_t l = 0;
-  bool copied = false;
-
   for (size_t i = 0; i < constr->constr.wand.length; i++) {
     if (!cache_is_dirty(constr->constr.wand.elems[i].cache_tag)) {
-      if (copied) {
-        retval->constr.wand.elems[l++] = constr->constr.wand.elems[i];
-      }
       continue;
     }
-
     struct constr_t *c = normal(constr->constr.wand.elems[i].constr);
     if (c != constr->constr.wand.elems[i].constr) {
-      if (!copied) {
-        retval = update_wand(constr, i);
-        copied = true;
-        l = i;
+      cache_tag_t t;
+      if (is_term(c)) {
+        t = 0;
+      } else {
+        t = constr->constr.wand.elems[i].cache_tag;
       }
-
-      if (!(is_term(c) && is_true(*c->constr.term))) {
-        retval->constr.wand.elems[l].constr = c;
-        retval->constr.wand.elems[l].cache_tag = constr->constr.wand.elems[i].cache_tag;
-        l++;
-     }
-    } else if (copied) {
-      retval->constr.wand.elems[l++] = constr->constr.wand.elems[i];
+      patch(&retval->constr.wand.elems[i], (struct wand_expr_t){ c, t });
     }
-  }
-  if (copied) {
-    retval->constr.wand.length = l;
   }
 
   return retval;
@@ -308,12 +283,13 @@ struct constr_t *normal(struct constr_t *constr) {
   return constr;
 }
 
-struct constr_t *normalize(struct constr_t *constr) {  
-  struct constr_t *prev = constr;
-  struct constr_t *norm = normal(prev);
-  while (norm != prev) {
-    prev = norm;
-    norm = normal(prev);
-  }
-  return norm;
+struct constr_t *normalize(struct constr_t *constr) {
+  struct constr_t *retval = constr;
+  struct constr_t *prev;
+  do {
+    _patch_count = 0;
+    prev = retval;
+    retval = normal(retval);    
+  } while (retval != prev || _patch_count > 0);
+  return retval;
 }

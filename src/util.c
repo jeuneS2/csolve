@@ -141,6 +141,51 @@ void unbind(size_t depth) {
   }
 }
 
+// functions to patch (and unpatch) wide-and sub-expressions
+static struct patching_t *_patch_stack;
+static size_t _patch_stack_size;
+static size_t _patch_depth;
+
+void patch_init(size_t size) {
+  _patch_stack_size = size;
+  _patch_depth = 0;
+
+  _patch_stack = (struct patching_t *)malloc(sizeof(struct patching_t) * _patch_stack_size);
+  if (_patch_stack == 0) {
+    print_fatal("%s", strerror(errno));
+  }
+}
+
+void patch_free(void) {
+  free(_patch_stack);
+  _patch_stack = NULL;
+  _patch_stack_size = 0;
+}
+
+size_t patch(struct wand_expr_t *loc, const struct wand_expr_t expr) {
+  if (loc != NULL) {
+    if (_patch_depth < _patch_stack_size) {
+      _patch_stack[_patch_depth].loc = loc;
+      _patch_stack[_patch_depth].expr = *loc;
+      *loc = expr;
+      return _patch_depth++;
+    } else {
+      print_fatal(ERROR_MSG_TOO_MANY_PATCHES);
+    }
+  } else {
+    return _patch_depth;
+  }
+  return _patch_stack_size;
+}
+
+void unpatch(size_t depth) {
+  while (_patch_depth > depth) {
+    --_patch_depth;
+    struct wand_expr_t *loc = _patch_stack[_patch_depth].loc;
+    *loc = _patch_stack[_patch_depth].expr;
+  }
+}
+
 // functions for semaphores
 void sema_init(sem_t *sema) {
   int status = sem_init(sema, 1, 1);

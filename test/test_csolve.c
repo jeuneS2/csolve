@@ -12,6 +12,10 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
   return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
 }
 
+bool operator==(const struct wand_expr_t& lhs, const struct wand_expr_t& rhs) {
+  return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+}
+
 class Mock {
  public:
   MOCK_METHOD1(alloc, void *(size_t));
@@ -19,6 +23,8 @@ class Mock {
   MOCK_METHOD0(cache_clean, void(void));
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
   MOCK_METHOD1(unbind, void(size_t));
+  MOCK_METHOD2(patch, size_t(struct wand_expr_t *, const struct wand_expr_t));
+  MOCK_METHOD1(unpatch, void(size_t));
   MOCK_METHOD1(sema_init, void(sem_t *));
   MOCK_METHOD1(sema_wait, void(sem_t *));
   MOCK_METHOD1(sema_post, void(sem_t *));
@@ -56,6 +62,14 @@ size_t bind(struct val_t *loc, const struct val_t val) {
 
 void unbind(size_t depth) {
   MockProxy->unbind(depth);
+}
+
+size_t patch(struct wand_expr_t *loc, const struct wand_expr_t val) {
+  return MockProxy->patch(loc, val);
+}
+
+void unpatch(size_t depth) {
+  MockProxy->unpatch(depth);
 }
 
 void sema_init(sem_t *sema) {
@@ -613,12 +627,16 @@ TEST(Step, Enter) {
   EXPECT_CALL(*MockProxy, alloc(0))
     .Times(1)
     .WillOnce(::testing::Return(&marker));
+  EXPECT_CALL(*MockProxy, patch(NULL, (struct wand_expr_t){ NULL, 0 }))
+    .Times(1)
+    .WillOnce(::testing::Return(17));
   EXPECT_CALL(*MockProxy, bind(env[1].val, VALUE(42)))
     .Times(1)
     .WillOnce(::testing::Return(23));
   step_enter(env, 1, 42);
   EXPECT_EQ(&marker, env[1].step->alloc_marker);
   EXPECT_EQ(23, env[1].step->bind_depth);
+  EXPECT_EQ(17, env[1].step->patch_depth);
   delete(MockProxy);
 }
 
@@ -636,10 +654,13 @@ TEST(Step, Leave) {
   char marker;
 
   env[1].step->bind_depth = 17;
+  env[1].step->patch_depth = 23;
   env[1].step->alloc_marker = &marker;
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, unbind(17))
+    .Times(1);
+  EXPECT_CALL(*MockProxy, unpatch(23))
     .Times(1);
   EXPECT_CALL(*MockProxy, dealloc(&marker))
     .Times(1);
