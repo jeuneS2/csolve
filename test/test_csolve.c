@@ -442,7 +442,7 @@ TEST(UpdateSolution, Better) {
     .WillRepeatedly(::testing::Return(true));
   EXPECT_CALL(*MockProxy, objective_update_best())
     .Times(::testing::AtLeast(1));
-  EXPECT_CALL(*MockProxy, print_solution(stderr, env))
+  EXPECT_CALL(*MockProxy, print_solution(stdout, env))
     .Times(1);
   testing::internal::CaptureStderr();
   EXPECT_EQ(true, update_solution(env, &C));

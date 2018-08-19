@@ -157,6 +157,10 @@ void worker_die(void) {
   if (stat_get_calls() > 0) {
     print_stats(stdout);
   }
+
+  if (_worker_id == 1 && shared()->solutions == 0) {
+    fprintf(stdout, "NO SOLUTION FOUND\n");
+  }
 }
 
 // algorithm helper functions
@@ -190,7 +194,7 @@ static bool update_solution(struct env_t *env, struct constr_t *constr) {
 
       objective_update_best();
       fprintf(stderr, "#%d: ", _worker_id);
-      print_solution(stderr, env);
+      print_solution(stdout, env);
       shared()->solutions++;
 
       updated = true;
