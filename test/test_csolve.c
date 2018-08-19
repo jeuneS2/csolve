@@ -30,12 +30,12 @@ class Mock {
   MOCK_METHOD1(sema_post, void(sem_t *));
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(normal, struct constr_t *(struct constr_t *));
-  MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *, struct val_t));
+  MOCK_METHOD1(propagate_clauses, prop_result_t(struct clause_list_t *));
   MOCK_METHOD0(objective, enum objective_t(void));
   MOCK_METHOD0(objective_better, bool(void));
   MOCK_METHOD0(objective_update_best, void(void));
   MOCK_METHOD0(objective_update_val, void(void));
-  MOCK_METHOD1(objective_optimize, struct constr_t *(struct constr_t *));
+  MOCK_METHOD0(objective_val, struct val_t*(void));
   MOCK_METHOD0(strategy_restart_frequency, uint64_t(void));
   MOCK_METHOD2(strategy_pick_var, void(struct env_t *, size_t));
   MOCK_METHOD1(print_error, void(const char *));
@@ -92,8 +92,8 @@ struct constr_t *normal(struct constr_t *constr) {
   return MockProxy->normal(constr);
 }
 
-struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
-  return MockProxy->propagate(constr, val);
+prop_result_t propagate_clauses(struct clause_list_t *clauses) {
+  return MockProxy->propagate_clauses(clauses);
 }
 
 enum objective_t objective(void) {
@@ -120,8 +120,8 @@ void objective_update_val() {
   MockProxy->objective_update_val();
 }
 
-struct constr_t *objective_optimize(struct constr_t *obj) {
-  return MockProxy->objective_optimize(obj);
+struct val_t *objective_val(void) {
+  return MockProxy->objective_val();
 }
 
 void print_error(const char *fmt, ...) {
@@ -457,14 +457,10 @@ TEST(CheckAssignment, Infeasible) {
 
   struct val_t a = VALUE(1);
   struct solve_step_t sA;
-  struct constr_t cA;
-  sA.constr = &cA;
   env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
 
   struct val_t b = INTERVAL(3, 4);
   struct solve_step_t sB;
-  struct constr_t cB;
-  sB.constr = &cB;
   env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
 
   env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
@@ -472,10 +468,9 @@ TEST(CheckAssignment, Infeasible) {
   stats_init();
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, propagate(&cA, VALUE(1)))
+  EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
     .Times(1)
-    .WillOnce(::testing::Return((struct constr_t *)NULL));
-  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
+    .WillOnce(::testing::Return(PROP_ERROR));
   EXPECT_EQ(true, check_assignment(env, 0));
   EXPECT_EQ(1, cuts);
   delete(MockProxy);
@@ -486,30 +481,26 @@ TEST(CheckAssignment, Feasible) {
 
   struct val_t a = VALUE(1);
   struct solve_step_t sA;
-  struct constr_t cA;
-  sA.constr = &cA;
   env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
 
   struct val_t b = INTERVAL(3, 4);
   struct solve_step_t sB;
-  struct constr_t cB;
-  sB.constr = &cB;
   env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
 
   env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
+  struct val_t obj = VALUE(0);
+  
   stats_init();
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, propagate(&cA, VALUE(1)))
+  EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(PROP_NONE));
+  EXPECT_CALL(*MockProxy, objective_val())
     .Times(1)
-    .WillOnce(::testing::Return(&cA));
-  EXPECT_CALL(*MockProxy, normal(&cA))
-    .Times(1)
-    .WillOnce(::testing::Return(&cA));
-  EXPECT_CALL(*MockProxy, cache_clean()).Times(1);
+    .WillOnce(::testing::Return(&obj));
   EXPECT_EQ(false, check_assignment(env, 0));
-  EXPECT_EQ(env[1].step->constr, &cA);
   delete(MockProxy);
 }
 

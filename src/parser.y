@@ -55,21 +55,25 @@ Input : Constraints
       {
         vars_sort();
 
-        struct constr_t *prop = propagate($1, VALUE(1));
+        prop_result_t prop = propagate($1, VALUE(1));
+        struct constr_t *norm = $1;
 
-        if (prop != NULL) {
-          struct constr_t *norm = prop;
+        if (prop != PROP_ERROR) {
+          struct constr_t *prev;
           do {
-            norm = normalize(prop);
+            prev = norm;
+            norm = normalize(norm);
             prop = propagate(norm, VALUE(1));
-          } while (norm != prop && prop != NULL);
+          } while (norm != prev && prop != PROP_ERROR);
         }
 
         stats_init();
 
-        if (prop != NULL) {
+        if (prop != PROP_ERROR) {
+          clauses_init(norm, NULL);
           struct env_t *env = env_generate();
-          solve(env, prop);
+
+          solve(env, norm);
           env_free(env);
         }
       }
@@ -79,7 +83,7 @@ Constraints : Constraints Constraint
               const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
               $$->constr.wand.elems = realloc($1->constr.wand.elems, size);
               $$->constr.wand.elems[$$->constr.wand.length-1].constr = $2;
-              $$->constr.wand.elems[$$->constr.wand.length-1].cache_tag = vars_hash($2);
+              $$->constr.wand.elems[$$->constr.wand.length-1].prop_tag = 0;
 	    }
             | Objective
             { $$ = alloc(sizeof(struct constr_t));
@@ -87,7 +91,7 @@ Constraints : Constraints Constraint
               $$->constr.wand.length = 1;
               $$->constr.wand.elems = malloc(sizeof(struct wand_expr_t));
               $$->constr.wand.elems[0].constr = $1;
-              $$->constr.wand.elems[0].cache_tag = vars_hash($1);
+              $$->constr.wand.elems[0].prop_tag = 0;
 	    }
 ;
 
@@ -180,7 +184,7 @@ UnaryExpr : PrimaryExpr
                 const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
                 $$->constr.wand.elems = realloc($$->constr.wand.elems, size);
                 $$->constr.wand.elems[$$->constr.wand.length-1].constr = c;
-                $$->constr.wand.elems[$$->constr.wand.length-1].cache_tag = vars_hash(c);
+                $$->constr.wand.elems[$$->constr.wand.length-1].prop_tag = 0;
               }
             }
             expr_list_free($3);

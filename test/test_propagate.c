@@ -30,8 +30,9 @@ bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
 
 class Mock {
  public:
-  MOCK_METHOD1(cache_is_dirty, bool(cache_tag_t));
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
+  MOCK_METHOD1(normalize_step, struct constr_t *(struct constr_t *));
+  MOCK_METHOD2(patch, size_t(struct wand_expr_t *, const struct wand_expr_t));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
@@ -39,62 +40,20 @@ Mock *MockProxy;
 
 uint64_t props;
 
-bool cache_is_dirty(cache_tag_t tag) {
-  return MockProxy->cache_is_dirty(tag);
-}
-
 size_t bind(struct val_t *loc, const struct val_t val) {
   return MockProxy->bind(loc, val);
 }
 
+struct constr_t *normalize_step(struct constr_t *constr) {
+  return MockProxy->normalize_step(constr);
+}
+ 
+size_t patch(struct wand_expr_t *loc, const struct wand_expr_t val) {
+  return MockProxy->patch(loc, val);
+}
+
 void print_fatal(const char *fmt, ...) {
   MockProxy->print_fatal(fmt);
-}
-
-TEST(UpdateExpr, NonNull) {
-  struct val_t a = VALUE(17);
-  struct val_t b = VALUE(23);
-
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t X;
-
-  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, update_expr(&X, &A, &B));
-}
-
-TEST(UpdateExpr, Null) {
-  struct val_t a = VALUE(17);
-  struct val_t b = VALUE(23);
-
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct constr_t X;
-
-  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(NULL, update_expr(&X, &A, NULL));
-  EXPECT_EQ(NULL, update_expr(&X, NULL, &B));
-  EXPECT_EQ(NULL, update_expr(&X, NULL, NULL));
-}
-
-TEST(UpdateUnaryExpr, NonNull) {
-  struct val_t a = VALUE(17);
-
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t X;
-
-  X = CONSTRAINT_EXPR(OP_EQ, &A, NULL);
-  EXPECT_EQ(&X, update_unary_expr(&X, &A));
-}
-
-TEST(UpdateUnaryExpr, Null) {
-  struct val_t a = VALUE(17);
-
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t X;
-
-  X = CONSTRAINT_EXPR(OP_EQ, &A, NULL);
-  EXPECT_EQ(NULL, update_unary_expr(&X, NULL));
 }
 
 TEST(PropagateTerm, Value) {
@@ -102,12 +61,12 @@ TEST(PropagateTerm, Value) {
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
 
   MockProxy = new Mock();
-  EXPECT_EQ(&A, propagate_term(&A, VALUE(23)));
-  EXPECT_EQ(NULL, propagate_term(&A, VALUE(17)));
-  EXPECT_EQ(NULL, propagate_term(&A, VALUE(42)));
-  EXPECT_EQ(&A, propagate_term(&A, INTERVAL(17, 42)));
-  EXPECT_EQ(NULL, propagate_term(&A, INTERVAL(0, 17)));
-  EXPECT_EQ(NULL, propagate_term(&A, INTERVAL(42, 100)));
+  EXPECT_EQ(PROP_NONE, propagate_term(&A, VALUE(23)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, VALUE(17)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, VALUE(42)));
+  EXPECT_EQ(PROP_NONE, propagate_term(&A, INTERVAL(17, 42)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, INTERVAL(0, 17)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, INTERVAL(42, 100)));
   delete(MockProxy);
 }
 
@@ -117,20 +76,20 @@ TEST(PropagateTerm, Interval) {
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
-  EXPECT_EQ(&A, propagate_term(&A, VALUE(23)));
+  EXPECT_EQ(1, propagate_term(&A, VALUE(23)));
   delete(MockProxy);
 
-  EXPECT_EQ(NULL, propagate_term(&A, VALUE(17)));
-  EXPECT_EQ(NULL, propagate_term(&A, VALUE(42)));
-  EXPECT_EQ(&A, propagate_term(&A, INTERVAL(17, 42)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, VALUE(17)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, VALUE(42)));
+  EXPECT_EQ(PROP_NONE, propagate_term(&A, INTERVAL(17, 42)));
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
-  EXPECT_EQ(&A, propagate_term(&A, INTERVAL(-1, 23)));
+  EXPECT_EQ(1, propagate_term(&A, INTERVAL(-1, 23)));
   delete(MockProxy);
 
-  EXPECT_EQ(NULL, propagate_term(&A, INTERVAL(0, 17)));
-  EXPECT_EQ(NULL, propagate_term(&A, INTERVAL(42, 100)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, INTERVAL(0, 17)));
+  EXPECT_EQ(PROP_ERROR, propagate_term(&A, INTERVAL(42, 100)));
 }
 
 TEST(PropagateEq, Value) {
@@ -143,17 +102,17 @@ TEST(PropagateEq, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, propagate_eq(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, propagate_eq(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(NULL, propagate_eq(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_eq(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -167,12 +126,12 @@ TEST(PropagateEq, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, propagate_eq(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, propagate_eq(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -181,7 +140,7 @@ TEST(PropagateEq, Interval) {
     .Times(1);
   EXPECT_CALL(*MockProxy, bind(B.constr.term, INTERVAL(17, 23)))
     .Times(1);
-  EXPECT_EQ(&X, propagate_eq(&X, VALUE(1)));
+  EXPECT_EQ(2, propagate_eq(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -195,17 +154,17 @@ TEST(PropagateLt, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(&X, propagate_lt(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(&X, propagate_lt(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(NULL, propagate_lt(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -223,17 +182,17 @@ TEST(PropagateLt, Interval) {
     .Times(1);
   EXPECT_CALL(*MockProxy, bind(B.constr.term, INTERVAL(17, 23)))
     .Times(1);
-  EXPECT_EQ(&X, propagate_lt(&X, VALUE(0)));
+  EXPECT_EQ(2, propagate_lt(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(&X, propagate_lt(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(&X, propagate_lt(&X, VALUE(1)));
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -242,7 +201,7 @@ TEST(PropagateLt, Interval) {
     .Times(1);
   EXPECT_CALL(*MockProxy, bind(B.constr.term, INTERVAL(17, 22)))
     .Times(1);
-  EXPECT_EQ(&X, propagate_lt(&X, VALUE(1)));
+  EXPECT_EQ(2, propagate_lt(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -254,22 +213,22 @@ TEST(PropagateNeg, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(&X, propagate_neg(&X, VALUE(-23)));
+  EXPECT_EQ(PROP_NONE, propagate_neg(&X, VALUE(-23)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(&X, propagate_neg(&X, INTERVAL(-100, 0)));
+  EXPECT_EQ(PROP_NONE, propagate_neg(&X, INTERVAL(-100, 0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(NULL, propagate_neg(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_neg(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(NULL, propagate_neg(&X, INTERVAL(0, 100)));
+  EXPECT_EQ(PROP_ERROR, propagate_neg(&X, INTERVAL(0, 100)));
   delete(MockProxy);
 }
 
@@ -282,22 +241,22 @@ TEST(PropagateNeg, Interval) {
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
   EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
-  EXPECT_EQ(&X, propagate_neg(&X, VALUE(-23)));
+  EXPECT_EQ(1, propagate_neg(&X, VALUE(-23)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(&X, propagate_neg(&X, INTERVAL(-100, 0)));
+  EXPECT_EQ(PROP_NONE, propagate_neg(&X, INTERVAL(-100, 0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(NULL, propagate_neg(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_neg(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(NULL, propagate_neg(&X, INTERVAL(0, 100)));
+  EXPECT_EQ(PROP_ERROR, propagate_neg(&X, INTERVAL(0, 100)));
   delete(MockProxy);
 }
 
@@ -311,22 +270,22 @@ TEST(PropagateAdd, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(&X, propagate_add(&X, VALUE(40)));
+  EXPECT_EQ(PROP_NONE, propagate_add(&X, VALUE(40)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(&X, propagate_add(&X, INTERVAL(20, 60)));
+  EXPECT_EQ(PROP_NONE, propagate_add(&X, INTERVAL(20, 60)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(NULL, propagate_add(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_add(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(NULL, propagate_add(&X, INTERVAL(-100, 0)));
+  EXPECT_EQ(PROP_ERROR, propagate_add(&X, INTERVAL(-100, 0)));
   delete(MockProxy);
 }
 
@@ -342,22 +301,22 @@ TEST(PropagateAdd, Interval) {
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
   EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
   EXPECT_CALL(*MockProxy, bind(B.constr.term, VALUE(17))).Times(1);
-  EXPECT_EQ(&X, propagate_add(&X, VALUE(40)));
+  EXPECT_EQ(2, propagate_add(&X, VALUE(40)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(&X, propagate_add(&X, INTERVAL(20, 60)));
+  EXPECT_EQ(PROP_NONE, propagate_add(&X, INTERVAL(20, 60)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(NULL, propagate_add(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_add(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(NULL, propagate_add(&X, INTERVAL(-100, 0)));
+  EXPECT_EQ(PROP_ERROR, propagate_add(&X, INTERVAL(-100, 0)));
   delete(MockProxy);
 }
 
@@ -373,37 +332,37 @@ TEST(PropagateMul, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, propagate_mul(&X, VALUE(21)));
+  EXPECT_EQ(PROP_NONE, propagate_mul(&X, VALUE(21)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(NULL, propagate_mul(&X, VALUE(0)));
+  EXPECT_EQ(PROP_ERROR, propagate_mul(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, propagate_mul(&X, INTERVAL(1, 30)));
+  EXPECT_EQ(PROP_NONE, propagate_mul(&X, INTERVAL(1, 30)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(NULL, propagate_mul(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_mul(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(NULL, propagate_mul(&X, INTERVAL(-100, 0)));
+  EXPECT_EQ(PROP_ERROR, propagate_mul(&X, INTERVAL(-100, 0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &Z);
-  EXPECT_EQ(NULL, propagate_mul(&X, INTERVAL(-100, -1)));
+  EXPECT_EQ(PROP_ERROR, propagate_mul(&X, INTERVAL(-100, -1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &Z, &B);
-  EXPECT_EQ(NULL, propagate_mul(&X, INTERVAL(1, 100)));
+  EXPECT_EQ(PROP_ERROR, propagate_mul(&X, INTERVAL(1, 100)));
   delete(MockProxy);
 }
 
@@ -417,22 +376,22 @@ TEST(PropagateMul, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, propagate_mul(&X, VALUE(21)));
+  EXPECT_EQ(PROP_NONE, propagate_mul(&X, VALUE(21)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, propagate_mul(&X, INTERVAL(14, 24)));
+  EXPECT_EQ(PROP_NONE, propagate_mul(&X, INTERVAL(14, 24)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, propagate_mul(&X, VALUE(1)));
+  EXPECT_EQ(PROP_NONE, propagate_mul(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, propagate_mul(&X, INTERVAL(-100, 0)));
+  EXPECT_EQ(PROP_NONE, propagate_mul(&X, INTERVAL(-100, 0)));
   delete(MockProxy);
 }
 
@@ -444,17 +403,17 @@ TEST(PropagateNot, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_EQ(&X, propagate_not(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_not(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_EQ(NULL, propagate_not(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_not(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_EQ(&X, propagate_not(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_not(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 }
 
@@ -467,18 +426,18 @@ TEST(PropagateNot, Interval) {
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
   EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(0))).Times(1);
-  EXPECT_EQ(&X, propagate_not(&X, VALUE(1)));
+  EXPECT_EQ(1, propagate_not(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_EQ(&X, propagate_not(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_not(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
   EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(1))).Times(1);
-  EXPECT_EQ(&X, propagate_not(&X, VALUE(0)));
+  EXPECT_EQ(1, propagate_not(&X, VALUE(0)));
   delete(MockProxy);
 }
 
@@ -492,22 +451,22 @@ TEST(PropagateAnd, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(&X, propagate_and(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &B, &A);
-  EXPECT_EQ(&X, propagate_and(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(&X, propagate_and(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(NULL, propagate_and(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -521,17 +480,17 @@ TEST(PropagateAnd, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(&X, propagate_and(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(&X, propagate_and(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(NULL, propagate_and(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -545,22 +504,22 @@ TEST(PropagateOr, Value) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(&X, propagate_or(&X, VALUE(1)));
+  EXPECT_EQ(PROP_NONE, propagate_or(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &B, &A);
-  EXPECT_EQ(&X, propagate_or(&X, VALUE(1)));
+  EXPECT_EQ(PROP_NONE, propagate_or(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(&X, propagate_or(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_or(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(NULL, propagate_or(&X, VALUE(0)));
+  EXPECT_EQ(PROP_ERROR, propagate_or(&X, VALUE(0)));
   delete(MockProxy);
 }
 
@@ -574,17 +533,17 @@ TEST(PropagateOr, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(&X, propagate_or(&X, VALUE(1)));
+  EXPECT_EQ(PROP_NONE, propagate_or(&X, VALUE(1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(&X, propagate_or(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate_or(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(NULL, propagate_or(&X, VALUE(0)));
+  EXPECT_EQ(PROP_ERROR, propagate_or(&X, VALUE(0)));
   delete(MockProxy);
 }
 
@@ -594,18 +553,15 @@ TEST(PropagateWand, Basic) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();
-  EXPECT_EQ(&X, propagate_wand(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, propagate_wand(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(true));
-  EXPECT_EQ(NULL, propagate_wand(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate_wand(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -620,42 +576,42 @@ TEST(Propagate, Basic) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_LT, &A, &B);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_ADD, &A, &B);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_MUL, &A, &B);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_NOT, &A, NULL);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_AND, &A, &B);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  EXPECT_EQ(&X, prop(&X, c));
+  EXPECT_EQ(PROP_NONE, prop(&X, c));
   delete(MockProxy);
 }
 
@@ -665,18 +621,15 @@ TEST(Propagate, Wand) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();
-  EXPECT_EQ(&X, prop(&X, VALUE(0)));
+  EXPECT_EQ(PROP_NONE, prop(&X, VALUE(0)));
   delete(MockProxy);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(true));
-  EXPECT_EQ(NULL, prop(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, prop(&X, VALUE(1)));
   delete(MockProxy);
 }
 
@@ -708,12 +661,12 @@ TEST(Propagate, Loop) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(&X, propagate(&X, INTERVAL(0, 1)));
+  EXPECT_EQ(PROP_NONE, propagate(&X, INTERVAL(0, 1)));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
-  EXPECT_EQ(NULL, propagate(&X, VALUE(1)));
+  EXPECT_EQ(PROP_ERROR, propagate(&X, VALUE(1)));
   delete(MockProxy);
 }
 

@@ -74,27 +74,6 @@ void dealloc(void *elem) {
   }
 }
 
-// caching functions
-cache_tag_t hash_var(const struct val_t *loc) {
-  const size_t size = (sizeof(struct val_t) + (ALLOC_ALIGNMENT-1)) & ~(ALLOC_ALIGNMENT-1);
-  const size_t mod = 8 * sizeof(cache_tag_t) - 1;
-  return 1ULL << ((((char *)loc - _alloc_stack) / size) & mod);
-}
-
-static cache_tag_t _cache_dirty = -1;
-
-void cache_dirty(cache_tag_t tag) {
-  _cache_dirty |= tag;
-}
-
-void cache_clean(void) {
-  _cache_dirty = 0;
-}
-
-bool cache_is_dirty(cache_tag_t tag) {
-  return (_cache_dirty & tag) != 0;
-}
-
 // functions to bind (and unbind) variables
 static struct binding_t *_bind_stack;
 static size_t _bind_stack_size;
@@ -121,8 +100,8 @@ size_t bind(struct val_t *loc, const struct val_t val) {
     if (_bind_depth < _bind_stack_size) {
       _bind_stack[_bind_depth].loc = loc;
       _bind_stack[_bind_depth].val = *loc;
-      *loc = val;
-      cache_dirty(hash_var(loc));
+      loc->lo = get_lo(val);
+      loc->hi = get_hi(val);
       return _bind_depth++;
     } else {
       print_fatal(ERROR_MSG_TOO_MANY_BINDS);
@@ -205,5 +184,26 @@ void sema_post(sem_t *sema) {
   int status = sem_post(sema);
   if (status == -1) {
     print_fatal("%s", strerror(errno));
+  }
+}
+
+// functions to manipulate clause lists
+bool clause_list_contains(struct clause_list_t *list, struct wand_expr_t *elem) {
+  for (struct clause_list_t *l = list; l != NULL; l = l->next) {
+    if (l->clause == elem) {
+      return true;
+    }
+  }
+  return false;
+}
+
+struct clause_list_t *clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem) {
+  if (!clause_list_contains(list, elem)) {
+    struct clause_list_t *retval = (struct clause_list_t *)alloc(sizeof(struct clause_list_t));
+    retval->clause = elem;
+    retval->next = list;
+    return retval;
+  } else {
+    return list;
   }
 }

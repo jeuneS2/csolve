@@ -37,7 +37,6 @@ class Mock {
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(alloc, void *(size_t));
   MOCK_METHOD2(patch, size_t(struct wand_expr_t *, const struct wand_expr_t));
-  MOCK_METHOD1(cache_is_dirty, bool(cache_tag_t));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
@@ -53,10 +52,6 @@ void *alloc(size_t size) {
 
 size_t patch(struct wand_expr_t *loc, const struct wand_expr_t val) {
   return MockProxy->patch(loc, val);
-}
-
-bool cache_is_dirty(cache_tag_t tag) {
-  return MockProxy->cache_is_dirty(tag);
 }
 
 void print_fatal(const char *fmt, ...) {
@@ -681,13 +676,10 @@ TEST(NormalizeWand, Basic) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(true));
   EXPECT_EQ(&X, normal_wand(&X));
   delete(MockProxy);
 }
@@ -702,11 +694,11 @@ TEST(NormalizeWand, Patch) {
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct constr_t X = CONSTRAINT_EXPR(OP_OR, &A, &B);
-  struct wand_expr_t E [5] = { { .constr = &A, .cache_tag = 0 },
-                               { .constr = &X, .cache_tag = 0 },
-                               { .constr = &B, .cache_tag = 0 },
-                               { .constr = &C, .cache_tag = 0 },
-                               { .constr = &X, .cache_tag = 0 } };
+  struct wand_expr_t E [5] = { { .constr = &A, .prop_tag = 0 },
+                               { .constr = &X, .prop_tag = 0 },
+                               { .constr = &B, .prop_tag = 0 },
+                               { .constr = &C, .prop_tag = 0 },
+                               { .constr = &X, .prop_tag = 0 } };
   struct constr_t Y = { .type = CONSTR_WAND, .constr = { .wand = { .length = 5, .elems = E } } };
   struct constr_t V, W;
 
@@ -727,9 +719,6 @@ TEST(NormalizeWand, Patch) {
     .Times(2)
     .WillOnce(::testing::Return(VALUE(1)))
     .WillOnce(::testing::Return(VALUE(1)));
-  EXPECT_CALL(*MockProxy, cache_is_dirty(0))
-    .Times(::testing::AtLeast(0))
-    .WillRepeatedly(::testing::Return(true));
   EXPECT_EQ(&Y, normal_wand(&Y));
   EXPECT_EQ(5, Y.constr.wand.length);
   EXPECT_EQ(E, Y.constr.wand.elems);
@@ -761,7 +750,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, alloc(sizeof(struct val_t)))
     .Times(1)
     .WillOnce(::testing::Return(&c));
-  EXPECT_EQ(&Y, normal(&X));
+  EXPECT_EQ(&Y, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -769,7 +758,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -777,7 +766,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -785,7 +774,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -793,7 +782,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -801,7 +790,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -809,7 +798,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -817,7 +806,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -825,7 +814,7 @@ TEST(Normalize, Basic) {
   EXPECT_CALL(*MockProxy, eval(&X))
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 }
 
@@ -833,7 +822,7 @@ TEST(Normalize, Wand) {
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 0, .elems = NULL } } };
 
   MockProxy = new Mock();
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
  }
 
@@ -846,12 +835,12 @@ TEST(Normalize, Errors) {
     .Times(1)
     .WillOnce(::testing::Return(INTERVAL(DOMAIN_MIN, DOMAIN_MAX)));
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION)).Times(1);
-  normal(&X);
+  normalize_step(&X);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_EQ(&X, normal(&X));
+  EXPECT_EQ(&X, normalize_step(&X));
   delete(MockProxy);
 }
 

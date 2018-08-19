@@ -205,39 +205,39 @@ TEST(EvalWand, Basic) {
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
 
-  struct wand_expr_t E1 [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &A, .cache_tag = 0 } };
+  struct wand_expr_t E1 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
   struct constr_t X1 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E1 } } };
   EXPECT_EQ(VALUE(0), eval_wand(&X1));
 
-  struct wand_expr_t E2 [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E2 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X2 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E2 } } };
   EXPECT_EQ(VALUE(0), eval_wand(&X2));
 
-  struct wand_expr_t E3 [2] = { { .constr = &B, .cache_tag = 0 }, { .constr = &A, .cache_tag = 0 } };
+  struct wand_expr_t E3 [2] = { { .constr = &B, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
   struct constr_t X3 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E3 } } };
   EXPECT_EQ(VALUE(0), eval_wand(&X3));
 
-  struct wand_expr_t E4 [2] = { { .constr = &B, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E4 [2] = { { .constr = &B, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X4 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E4 } } };
   EXPECT_EQ(VALUE(1), eval_wand(&X4));
 
-  struct wand_expr_t E5 [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &C, .cache_tag = 0 } };
+  struct wand_expr_t E5 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &C, .prop_tag = 0 } };
   struct constr_t X5 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E5 } } };
   EXPECT_EQ(VALUE(0), eval_wand(&X5));
 
-  struct wand_expr_t E6 [2] = { { .constr = &C, .cache_tag = 0 }, { .constr = &A, .cache_tag = 0 } };
+  struct wand_expr_t E6 [2] = { { .constr = &C, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
   struct constr_t X6 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E6 } } };
   EXPECT_EQ(VALUE(0), eval_wand(&X6));
 
-  struct wand_expr_t E7 [2] = { { .constr = &B, .cache_tag = 0 }, { .constr = &C, .cache_tag = 0 } };
+  struct wand_expr_t E7 [2] = { { .constr = &B, .prop_tag = 0 }, { .constr = &C, .prop_tag = 0 } };
   struct constr_t X7 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E7 } } };
   EXPECT_EQ(INTERVAL(0, 1), eval_wand(&X7));
 
-  struct wand_expr_t E8 [2] = { { .constr = &C, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E8 [2] = { { .constr = &C, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X8 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E8 } } };
   EXPECT_EQ(INTERVAL(0, 1), eval_wand(&X8));
 
-  struct wand_expr_t E9 [2] = { { .constr = &C, .cache_tag = 0 }, { .constr = &C, .cache_tag = 0 } };
+  struct wand_expr_t E9 [2] = { { .constr = &C, .prop_tag = 0 }, { .constr = &C, .prop_tag = 0 } };
   struct constr_t X9 = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E9 } } };
   EXPECT_EQ(INTERVAL(0, 1), eval_wand(&X9));
 }
@@ -290,7 +290,7 @@ TEST(Eval, Wand) {
 
   struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
   struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
-  struct wand_expr_t E [2] = { { .constr = &A, .cache_tag = 0 }, { .constr = &B, .cache_tag = 0 } };
+  struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
 
   MockProxy = new Mock();

@@ -11,23 +11,13 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 
 class Mock {
  public:
-  MOCK_METHOD1(hash_var, cache_tag_t(const struct val_t *));
-  MOCK_METHOD1(cache_dirty, void(cache_tag_t));
   MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *constr));
-  MOCK_METHOD2(propagate, struct constr_t *(struct constr_t *constr, struct val_t val));
+  MOCK_METHOD2(propagate, prop_result_t(struct constr_t *constr, struct val_t val));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
 Mock *MockProxy;
-
-cache_tag_t hash_var(const struct val_t *loc) {
-  return MockProxy->hash_var(loc);
-}
-
-void cache_dirty(cache_tag_t tag) {
-  return MockProxy->cache_dirty(tag);
-}
 
 const struct val_t eval(const struct constr_t *constr) {
   return MockProxy->eval(constr);
@@ -37,7 +27,7 @@ struct constr_t *normalize(struct constr_t *constr) {
   return MockProxy->normalize(constr);
 }
 
-struct constr_t *propagate(struct constr_t *constr, struct val_t val) {
+prop_result_t propagate(struct constr_t *constr, struct val_t val) {
   return MockProxy->propagate(constr, val);
 }
 

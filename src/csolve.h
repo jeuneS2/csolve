@@ -42,6 +42,7 @@ typedef int64_t ddomain_t;
 struct val_t {
   domain_t lo; ///< Lower bound of interval
   domain_t hi; ///< Upper bound of interval
+  struct clause_list_t *clauses; ///< Clauses affected by this value
 };
 
 /** Get the lower bound of an interval or the single value */
@@ -65,7 +66,7 @@ static inline bool is_false(struct val_t v) {
   return is_value(v) && get_lo(v) == 0;
 }
 
-#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H) })
+#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H), .clauses = NULL })
 #define VALUE(V) INTERVAL(V,V)
 
 /** Binding entry */
@@ -93,13 +94,26 @@ enum operator_t {
   OP_OR  = '|', ///< Logical or
 };
 
-/** Type for tagging cache entries */
-typedef uint64_t cache_tag_t;
+/** Propagation result type */
+typedef int32_t prop_result_t;
+/** Propagation failed */
+#define PROP_ERROR (-1)
+/** Propagation had no effect */
+#define PROP_NONE 0
 
-/** Type for a wide-and element, including a cache tag */
+/** Propagation tag type */
+typedef uint32_t prop_tag_t;
+
+/** Type for a wide-and element */
 struct wand_expr_t {
   struct constr_t *constr; ///< The constraint
-  cache_tag_t cache_tag; ///< The cache tag
+  prop_tag_t prop_tag; ///< Propagation tag
+};
+
+/** Type to represent a list of clauses for propagation */
+struct clause_list_t {
+  struct wand_expr_t *clause; ///< Clause
+  struct clause_list_t *next; ///< Next element of list
 };
 
 /** Type representing a constraint */
@@ -151,7 +165,6 @@ struct solve_step_t {
   udomain_t iter; ///< Iteration state
   udomain_t seed; ///< Iteration random seed
   struct val_t bounds; ///< Iteration bounds
-  struct constr_t *constr; ///< Normalized constraint after binding variable
 };
 
 /** Variable environment entry */
@@ -210,16 +223,6 @@ void *alloc(size_t size);
 /** Deallocate memory on the allocation stack */
 void dealloc(void *elem);
 
-/** Hash value of a variable */
-cache_tag_t hash_var(const struct val_t *var);
-
-/** Mark a variable as dirty */
-void cache_dirty(cache_tag_t tag);
-/** Mark all variables as clean */
-void cache_clean(void);
-/** Check if a variable is marked dirty */
-bool cache_is_dirty(cache_tag_t tag);
-
 /** Default size of bind stack */
 #define BIND_STACK_SIZE_DEFAULT (1024)
 /** Initialize the binding structures */
@@ -249,14 +252,21 @@ void sema_wait(sem_t *sema);
 /** Release a semaphore */
 void sema_post(sem_t *sema);
 
+/** Add an element to a clause list */
+struct clause_list_t *clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem);
+
 /** Evaluate a constraint */
 const struct val_t eval(const struct constr_t *constr);
+
 /** Fully normalize a constraint */
 struct constr_t *normalize(struct constr_t *constr);
 /** Perform a single normalizion step on a constraint */
-struct constr_t *normal(struct constr_t *constr);
+struct constr_t *normalize_step(struct constr_t *constr);
+
 /** Propagate a result value to the terminal nodes of the constraint */
-struct constr_t *propagate(struct constr_t *constr, struct val_t val);
+prop_result_t propagate(struct constr_t *constr, struct val_t val);
+/** Propagate updates to a list of clauses */
+prop_result_t propagate_clauses(struct clause_list_t *clauses);
 
 /** Initialize objective function type */
 void objective_init(enum objective_t o, volatile domain_t *best);

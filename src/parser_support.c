@@ -114,38 +114,6 @@ void vars_weighten(struct constr_t *constr, int32_t weight) {
   }
 }
 
-cache_tag_t vars_hash(struct constr_t *constr) {
-  switch (constr->type) {
-  case CONSTR_TERM:
-    if (is_value(*constr->constr.term)) {
-      return 0;
-    } else {
-      return hash_var(constr->constr.term);
-    }
-  case CONSTR_EXPR:
-    switch (constr->constr.expr.op) {
-    case OP_EQ:
-    case OP_LT:
-    case OP_ADD:
-    case OP_MUL:
-    case OP_AND:
-    case OP_OR:
-      return vars_hash(constr->constr.expr.l) | vars_hash(constr->constr.expr.r);
-    case OP_NEG:
-    case OP_NOT:
-      return vars_hash(constr->constr.expr.l);
-    default:
-      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
-    }
-    break;
-  case CONSTR_WAND:
-    return -1;
-  default:
-    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
-  }
-  return 0;
-}
-
 int vars_compare(const void *a, const void *b) {
   const struct var_t *x = (const struct var_t *)a;
   const struct var_t *y = (const struct var_t *)b;
@@ -209,3 +177,43 @@ void expr_list_free(struct expr_list_t *list) {
     free(l);
   }
 }
+
+void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
+  switch (constr->type) {
+  case CONSTR_TERM:
+    if (!is_value(*constr->constr.term) && clause != NULL) {
+      constr->constr.term->clauses = clause_list_append(constr->constr.term->clauses, clause);
+    }
+    break;
+  case CONSTR_EXPR:
+    switch (constr->constr.expr.op) {
+    case OP_EQ:
+    case OP_LT:
+    case OP_ADD:
+    case OP_MUL:
+    case OP_AND:
+    case OP_OR:
+      clauses_init(constr->constr.expr.r, clause);
+      /* fall through */
+    case OP_NEG:
+    case OP_NOT:
+      clauses_init(constr->constr.expr.l, clause);
+      break;
+    default:
+      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+    }
+    break;
+  case CONSTR_WAND:
+    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+      struct wand_expr_t *c = clause;
+      if (clause == NULL && constr->constr.wand.elems[i].constr->type != CONSTR_WAND) {
+        c = &constr->constr.wand.elems[i];
+      }
+      clauses_init(constr->constr.wand.elems[i].constr, c);
+    }
+    break;
+  default:
+    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
+  }
+}
+

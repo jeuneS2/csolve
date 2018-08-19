@@ -48,8 +48,6 @@ static struct constr_t *update_unary_expr(struct constr_t *constr, struct constr
   return constr;
 }
 
-struct constr_t *normal(struct constr_t *constr);
-
 struct constr_t *normal_eval(struct constr_t *constr) {
   struct val_t val = eval(constr);
   if (is_value(val)) {
@@ -63,14 +61,14 @@ struct constr_t *normal_eval(struct constr_t *constr) {
 }
 
 struct constr_t *normal_eq(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
-  struct constr_t *r = normal(constr->constr.expr.r);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
+  struct constr_t *r = normalize_step(constr->constr.expr.r);
   return update_expr(constr, l, r);
 }
 
 struct constr_t *normal_lt(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
-  struct constr_t *r = normal(constr->constr.expr.r);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
+  struct constr_t *r = normalize_step(constr->constr.expr.r);
 
   if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NEG &&
       r->type == CONSTR_EXPR && r->constr.expr.op == OP_NEG) {
@@ -85,13 +83,13 @@ struct constr_t *normal_lt(struct constr_t *constr) {
 
       struct constr_t *c = (struct constr_t *)alloc(sizeof(struct constr_t));
       *c = CONSTRAINT_EXPR(OP_NEG, r->constr.expr.r, NULL);
-      c = normal(update_expr(r, l, c));
+      c = normalize_step(update_expr(r, l, c));
 
       return update_expr(constr, c, r->constr.expr.l);
     }
 
     if (r->type == CONSTR_EXPR && r->constr.expr.op == OP_NEG) {
-      return update_expr(constr, r->constr.expr.l, normal(update_unary_expr(r, l)));
+      return update_expr(constr, r->constr.expr.l, normalize_step(update_unary_expr(r, l)));
     }
   }
 
@@ -103,13 +101,13 @@ struct constr_t *normal_lt(struct constr_t *constr) {
 
       struct constr_t *c = (struct constr_t *)alloc(sizeof(struct constr_t));
       *c = CONSTRAINT_EXPR(OP_NEG, l->constr.expr.r, NULL);
-      c = normal(update_expr(l, r, c));
+      c = normalize_step(update_expr(l, r, c));
 
       return update_expr(constr, l->constr.expr.l, c);
     }
 
     if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NEG) {
-      return update_expr(constr, normal(update_unary_expr(l, r)), l->constr.expr.l);
+      return update_expr(constr, normalize_step(update_unary_expr(l, r)), l->constr.expr.l);
     }
   }
 
@@ -117,7 +115,7 @@ struct constr_t *normal_lt(struct constr_t *constr) {
 }
 
 struct constr_t *normal_neg(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
   if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NEG) {
     return l->constr.expr.l;
   }
@@ -125,8 +123,8 @@ struct constr_t *normal_neg(struct constr_t *constr) {
 }
 
 struct constr_t *normal_add(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
-  struct constr_t *r = normal(constr->constr.expr.r);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
+  struct constr_t *r = normalize_step(constr->constr.expr.r);
 
   if (is_const(l)) {
     return update_expr(constr, r, l);
@@ -152,8 +150,8 @@ struct constr_t *normal_add(struct constr_t *constr) {
 }
 
 struct constr_t *normal_mul(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
-  struct constr_t *r = normal(constr->constr.expr.r);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
+  struct constr_t *r = normalize_step(constr->constr.expr.r);
 
   if (is_const(l)) {
     return update_expr(constr, r, l);
@@ -179,7 +177,7 @@ struct constr_t *normal_mul(struct constr_t *constr) {
 }
 
 struct constr_t *normal_not(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
   if (l->type == CONSTR_EXPR && l->constr.expr.op == OP_NOT) {
     return l->constr.expr.l;
   }
@@ -187,8 +185,8 @@ struct constr_t *normal_not(struct constr_t *constr) {
 }
 
 struct constr_t *normal_and(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
-  struct constr_t *r = normal(constr->constr.expr.r);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
+  struct constr_t *r = normalize_step(constr->constr.expr.r);
 
   if (is_term(l) && is_true(*l->constr.term)) {
     return r;
@@ -211,8 +209,8 @@ struct constr_t *normal_and(struct constr_t *constr) {
 }
 
 struct constr_t *normal_or(struct constr_t *constr) {
-  struct constr_t *l = normal(constr->constr.expr.l);
-  struct constr_t *r = normal(constr->constr.expr.r);
+  struct constr_t *l = normalize_step(constr->constr.expr.l);
+  struct constr_t *r = normalize_step(constr->constr.expr.r);
 
   if (is_term(l) && is_false(*l->constr.term)) {
     return r;
@@ -238,25 +236,16 @@ struct constr_t *normal_wand(struct constr_t *constr) {
   struct constr_t *retval = constr;
   
   for (size_t i = 0; i < constr->constr.wand.length; i++) {
-    if (!cache_is_dirty(constr->constr.wand.elems[i].cache_tag)) {
-      continue;
-    }
-    struct constr_t *c = normal(constr->constr.wand.elems[i].constr);
+    struct constr_t *c = normalize_step(constr->constr.wand.elems[i].constr);
     if (c != constr->constr.wand.elems[i].constr) {
-      cache_tag_t t;
-      if (is_term(c)) {
-        t = 0;
-      } else {
-        t = constr->constr.wand.elems[i].cache_tag;
-      }
-      patch(&retval->constr.wand.elems[i], (struct wand_expr_t){ c, t });
+      patch(&retval->constr.wand.elems[i], (struct wand_expr_t){ c, 0 });
     }
   }
 
   return retval;
 }
 
-struct constr_t *normal(struct constr_t *constr) {
+struct constr_t *normalize_step(struct constr_t *constr) {
   if (constr->type == CONSTR_EXPR) {
     // merge constant values into new terminal node
     struct constr_t *e = normal_eval(constr);
@@ -289,7 +278,7 @@ struct constr_t *normalize(struct constr_t *constr) {
   do {
     _patch_count = 0;
     prev = retval;
-    retval = normal(retval);    
+    retval = normalize_step(retval);    
   } while (retval != prev || _patch_count > 0);
   return retval;
 }

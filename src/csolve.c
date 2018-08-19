@@ -203,23 +203,17 @@ static bool update_solution(struct env_t *env, struct constr_t *constr) {
 }
 
 static bool check_assignment(struct env_t *env, size_t depth) {
-  bool failed = true;
-
   // propagate values
-  struct constr_t *prop = propagate(env[depth].step->constr, VALUE(1));
-  // check if still feasible
-  if (prop != NULL) {
-    // normalize constraints
-    env[depth+1].step->constr = normal(prop);
-    // proceed with next variable
-    failed = false;
-  } else {
+  bool failed =
+    propagate_clauses(env[depth].val->clauses) == PROP_ERROR ||
+    propagate_clauses(objective_val()->clauses) == PROP_ERROR;
+  
+  // update statistics if propagation failed
+  if (failed) {
     stat_inc_cuts();
     stat_add_cut_depth(depth);
   }
 
-  cache_clean();
-  
   return failed;
 }
 
@@ -326,7 +320,6 @@ static void unwind(struct env_t *env, size_t depth, size_t stop) {
 // search algorithm core
 void solve(struct env_t *env, struct constr_t *constr) {
   size_t depth = 0;
-  env[depth].step->constr = constr;
 
   while (true) {
     if (depth < _worker_min_depth) {
@@ -340,7 +333,7 @@ void solve(struct env_t *env, struct constr_t *constr) {
 
     // check if a better feasible solution is reached
     if (env[depth].key == NULL) {
-      bool update = update_solution(env, env[depth].step->constr);
+      bool update = update_solution(env, constr);
       if (update) {
         depth--;
         RESTART();

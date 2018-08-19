@@ -91,7 +91,6 @@ void objective_update_val(void) {
     domain_t best = objective_best();
     if (get_hi(_objective_val) > add(best, neg(1))) {
       _objective_val.hi = add(best, neg(1));
-      cache_dirty(hash_var(&_objective_val));
     }
     break;
   }
@@ -99,7 +98,6 @@ void objective_update_val(void) {
     domain_t best = objective_best();
     if (get_lo(_objective_val) < add(best, 1)) {
       _objective_val.lo = add(best, 1);
-      cache_dirty(hash_var(&_objective_val));
     }
     break;
   }
