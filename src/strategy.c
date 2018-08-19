@@ -60,17 +60,21 @@ void strategy_order_init(enum order_t order) {
 int strategy_pick_var_cmp(struct env_t *env, size_t depth1, size_t depth2) {
   struct val_t v1 = *env[depth1].val;
   struct val_t v2 = *env[depth2].val;
-  domain_t d1 = add(get_hi(v1), neg(get_lo(v1)));
-  domain_t d2 = add(get_hi(v2), neg(get_lo(v2)));
 
   int cmp = 0;
   switch (_order) {
-  case ORDER_SMALLEST_DOMAIN:
-    cmp = add(d2, neg(d1));
+  case ORDER_SMALLEST_DOMAIN: {
+    domain_t d1 = add(get_lo(v1), neg(get_hi(v1)));
+    domain_t d2 = add(get_hi(v2), neg(get_lo(v2)));
+    cmp = add(d2, d1);
     break;
-  case ORDER_LARGEST_DOMAIN:
-    cmp = add(d1, neg(d2));
+  }
+  case ORDER_LARGEST_DOMAIN: {
+    domain_t d1 = add(get_hi(v1), neg(get_lo(v1)));
+    domain_t d2 = add(get_lo(v2), neg(get_hi(v2)));
+    cmp = add(d1, d2);
     break;
+  }
   case ORDER_SMALLEST_VALUE:
     cmp = add(get_lo(v2), neg(get_lo(v1)));
     break;
