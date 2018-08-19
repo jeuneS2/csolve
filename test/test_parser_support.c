@@ -110,7 +110,6 @@ TEST(VarsAdd, Basic) {
   EXPECT_STREQ(k1, _vars[0].var.key);
   EXPECT_EQ(&v1, _vars[0].var.val);
   EXPECT_EQ(0, _vars[0].var.fails);
-  EXPECT_NE((struct solve_step_t *)NULL, _vars[0].var.step);
   EXPECT_EQ(0, _vars[0].weight);
 
   const char *k2 = "k2";
@@ -120,7 +119,6 @@ TEST(VarsAdd, Basic) {
   EXPECT_STREQ(k2, _vars[1].var.key);
   EXPECT_EQ(&v2, _vars[1].var.val);
   EXPECT_EQ(0, _vars[1].var.fails);
-  EXPECT_NE((struct solve_step_t *)NULL, _vars[1].var.step);
   EXPECT_EQ(0, _vars[1].weight);
 }
 
@@ -306,15 +304,12 @@ TEST(EnvGenerate, Basic) {
   EXPECT_STREQ("k1", env[0].key);
   EXPECT_EQ(&v1, env[0].val);
   EXPECT_EQ(0, env[0].fails);
-  EXPECT_NE((struct solve_step_t *)NULL, env[0].step);
   EXPECT_STREQ("k2", env[1].key);
   EXPECT_EQ(&v2, env[1].val);
   EXPECT_EQ(0, env[1].fails);
-  EXPECT_NE((struct solve_step_t *)NULL, env[1].step);
   EXPECT_EQ((const char *)NULL, env[2].key);
   EXPECT_EQ((struct val_t *)NULL, env[2].val);
   EXPECT_EQ(0, env[2].fails);
-  EXPECT_NE((struct solve_step_t *)NULL, env[1].step);
   EXPECT_EQ((struct var_t *)NULL, _vars);
   EXPECT_EQ(0, _var_count);
   delete(MockProxy);
@@ -324,19 +319,14 @@ TEST(EnvFree, Basic) {
   struct env_t env[3];
 
   struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[2] = { .key = NULL, .val = NULL, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, free((void *)env[0].key));
-  EXPECT_CALL(*MockProxy, free((void *)env[0].step));
   EXPECT_CALL(*MockProxy, free((void *)env[1].key));
-  EXPECT_CALL(*MockProxy, free((void *)env[1].step));
-  EXPECT_CALL(*MockProxy, free((void *)env[2].step));
   EXPECT_CALL(*MockProxy, free((void *)&env[0]));
   env_free(env);
   delete(MockProxy);

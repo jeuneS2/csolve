@@ -276,21 +276,17 @@ TEST(SwapEnv, Basic) {
   struct env_t env[3];
 
   struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[2] = { .key = NULL, .val = NULL, .fails = 0 };
 
   MockProxy = new Mock();
   swap_env(env, 0, 1);
   EXPECT_STREQ("b", env[0].key);
   EXPECT_EQ(&b, env[0].val);
-  EXPECT_EQ(&sA, env[0].step);
   EXPECT_STREQ("a", env[1].key);
   EXPECT_EQ(&a, env[1].val);
-  EXPECT_EQ(&sB, env[1].step);
   delete(MockProxy);
 }
 
@@ -298,50 +294,39 @@ TEST(SwapEnv, NoSwap) {
   struct env_t env[3];
 
   struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[2] = { .key = NULL, .val = NULL, .fails = 0 };
 
   MockProxy = new Mock();
   swap_env(env, 0, 2);
   EXPECT_STREQ("a", env[0].key);
   EXPECT_EQ(&a, env[0].val);
-  EXPECT_EQ(&sA, env[0].step);
   EXPECT_STREQ("b", env[1].key);
   EXPECT_EQ(&b, env[1].val);
-  EXPECT_EQ(&sB, env[1].step);
   EXPECT_EQ((const char *)NULL, env[2].key);
   EXPECT_EQ((const val_t *)NULL, env[2].val);
-  EXPECT_EQ((const solve_step_t *)NULL, env[2].step);
   delete(MockProxy);
 
   MockProxy = new Mock();
   swap_env(env, 2, 0);
   EXPECT_STREQ("a", env[0].key);
   EXPECT_EQ(&a, env[0].val);
-  EXPECT_EQ(&sA, env[0].step);
   EXPECT_STREQ("b", env[1].key);
   EXPECT_EQ(&b, env[1].val);
-  EXPECT_EQ(&sB, env[1].step);
   EXPECT_EQ((const char *)NULL, env[2].key);
   EXPECT_EQ((const val_t *)NULL, env[2].val);
-  EXPECT_EQ((const solve_step_t *)NULL, env[2].step);
   delete(MockProxy);
 
   MockProxy = new Mock();
   swap_env(env, 1, 1);
   EXPECT_EQ("a", env[0].key);
   EXPECT_EQ(&a, env[0].val);
-  EXPECT_EQ(&sA, env[0].step);
   EXPECT_EQ("b", env[1].key);
   EXPECT_EQ(&b, env[1].val);
-  EXPECT_EQ(&sB, env[1].step);
   EXPECT_EQ((const char *)NULL, env[2].key);
   EXPECT_EQ((const val_t *)NULL, env[2].val);
-  EXPECT_EQ((const solve_step_t *)NULL, env[2].step);
   delete(MockProxy);
 }
 
@@ -349,7 +334,7 @@ TEST(UpdateSolution, FalseConstr) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, eval(&C))
@@ -363,7 +348,7 @@ TEST(UpdateSolution, AnySolution) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
 
   struct shared_t s;
   s.solutions = 1;
@@ -388,7 +373,7 @@ TEST(UpdateSolution, NotBetter) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
 
   struct shared_t s;
   s.solutions = 0;
@@ -416,7 +401,7 @@ TEST(UpdateSolution, Better) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
 
   struct shared_t s;
   s.solutions = 0;
@@ -453,17 +438,7 @@ TEST(UpdateSolution, Better) {
 }
 
 TEST(CheckAssignment, Infeasible) {
-  struct env_t env[3];
-
   struct val_t a = VALUE(1);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
-
-  struct val_t b = INTERVAL(3, 4);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
-
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
 
   stats_init();
 
@@ -471,26 +446,15 @@ TEST(CheckAssignment, Infeasible) {
   EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
     .Times(1)
     .WillOnce(::testing::Return(PROP_ERROR));
-  EXPECT_EQ(true, check_assignment(env, 0));
+  EXPECT_EQ(true, check_assignment(&a, 0));
   EXPECT_EQ(1, cuts);
   delete(MockProxy);
 }
 
 TEST(CheckAssignment, Feasible) {
-  struct env_t env[3];
-
   struct val_t a = VALUE(1);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 2, .step = &sA };
-
-  struct val_t b = INTERVAL(3, 4);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 5, .step = &sB };
-
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
-
   struct val_t obj = VALUE(0);
-  
+
   stats_init();
 
   MockProxy = new Mock();
@@ -500,7 +464,7 @@ TEST(CheckAssignment, Feasible) {
   EXPECT_CALL(*MockProxy, objective_val())
     .Times(1)
     .WillOnce(::testing::Return(&obj));
-  EXPECT_EQ(false, check_assignment(env, 0));
+  EXPECT_EQ(false, check_assignment(&a, 0));
   delete(MockProxy);
 }
 
@@ -557,60 +521,40 @@ TEST(CheckRestart, True) {
 }
 
 TEST(Step, Activate) {
-  struct env_t env[3];
-
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  struct val_t v = INTERVAL(13, 13);
+  struct step_t s;
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, strategy_restart_frequency())
     .Times(::testing::AtLeast(0))
     .WillOnce(::testing::Return(0));
-   EXPECT_CALL(*MockProxy, objective())
+  EXPECT_CALL(*MockProxy, objective())
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(OBJ_ANY));
-   env[1].step->active = false;
-  step_activate(env, 1);
-  EXPECT_EQ(true, env[1].step->active);
-  EXPECT_EQ(*env[1].val, env[1].step->bounds);
-  EXPECT_EQ(0, env[1].step->iter);
-  EXPECT_EQ(0, env[1].step->seed);
+  s.active = false;
+  step_activate(&s, &v);
+  EXPECT_EQ(true, s.active);
+  EXPECT_EQ(&v, s.var);
+  EXPECT_EQ(v, s.bounds);
+  EXPECT_EQ(0, s.iter);
+  EXPECT_EQ(0, s.seed);
   delete(MockProxy);
 }
 
 TEST(Step, Deactivate) {
-  struct env_t env[3];
-
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  struct step_t s;
 
   MockProxy = new Mock();
-  env[1].step->active = true;
-  step_deactivate(env, 1);
-  EXPECT_EQ(false, env[1].step->active);
+  s.active = true;
+  step_deactivate(&s);
+  EXPECT_EQ(false, s.active);
   delete(MockProxy);
 }
 
 TEST(Step, Enter) {
-  struct env_t env[3];
-
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  struct val_t v;
+  struct step_t s;
+  s.var = &v;
 
   char marker;
 
@@ -621,32 +565,24 @@ TEST(Step, Enter) {
   EXPECT_CALL(*MockProxy, patch(NULL, (struct wand_expr_t){ NULL, 0 }))
     .Times(1)
     .WillOnce(::testing::Return(17));
-  EXPECT_CALL(*MockProxy, bind(env[1].val, VALUE(42)))
+  EXPECT_CALL(*MockProxy, bind(&v, VALUE(42)))
     .Times(1)
     .WillOnce(::testing::Return(23));
-  step_enter(env, 1, 42);
-  EXPECT_EQ(&marker, env[1].step->alloc_marker);
-  EXPECT_EQ(23, env[1].step->bind_depth);
-  EXPECT_EQ(17, env[1].step->patch_depth);
+  step_enter(&s, 42);
+  EXPECT_EQ(&marker, s.alloc_marker);
+  EXPECT_EQ(23, s.bind_depth);
+  EXPECT_EQ(17, s.patch_depth);
   delete(MockProxy);
 }
 
 TEST(Step, Leave) {
-  struct env_t env[3];
-
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  struct step_t s;
 
   char marker;
 
-  env[1].step->bind_depth = 17;
-  env[1].step->patch_depth = 23;
-  env[1].step->alloc_marker = &marker;
+  s.bind_depth = 17;
+  s.patch_depth = 23;
+  s.alloc_marker = &marker;
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, unbind(17))
@@ -655,69 +591,47 @@ TEST(Step, Leave) {
     .Times(1);
   EXPECT_CALL(*MockProxy, dealloc(&marker))
     .Times(1);
-  step_leave(env, 1);
+  step_leave(&s);
   delete(MockProxy);
 }
 
 TEST(Step, Next) {
-  struct env_t env[3];
+  struct step_t s;
 
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
-
-  env[1].step->iter = 23;
+  s.iter = 23;
 
   MockProxy = new Mock();
-  step_next(env, 1);
-  EXPECT_EQ(env[1].step->iter, 24);
+  step_next(&s);
+  EXPECT_EQ(s.iter, 24);
   delete(MockProxy);
 }
 
 TEST(Step, Check) {
-  struct env_t env[3];
+  struct val_t v = INTERVAL(3, 17);
+  struct step_t s;
 
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
-
-  env[1].step->bounds = *env[1].val;
-  env[1].step->iter = 4;
-  EXPECT_EQ(true, step_check(env, 1));
-  env[1].step->iter = 14;
-  EXPECT_EQ(true, step_check(env, 1));
-  env[1].step->iter = 15;
-  EXPECT_EQ(false, step_check(env, 1));
+  s.bounds = v;
+  s.iter = 4;
+  EXPECT_EQ(true, step_check(&s));
+  s.iter = 14;
+  EXPECT_EQ(true, step_check(&s));
+  s.iter = 15;
+  EXPECT_EQ(false, step_check(&s));
 }
 
 TEST(Step, Val) {
-  struct env_t env[3];
+  struct val_t v = INTERVAL(3, 17);
+  struct step_t s;
 
-  struct val_t a = INTERVAL(1, 27);
-  struct solve_step_t sA;
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = &sA };
-  struct val_t b = INTERVAL(3, 17);
-  struct solve_step_t sB;
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = &sB };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  s.bounds = v;
 
-  env[1].step->bounds = *env[1].val;
-
-  env[1].step->iter = 4;
-  domain_t v1 = step_val(env, 1);
+  s.iter = 4;
+  domain_t v1 = step_val(&s);
   EXPECT_LE(3, v1);
   EXPECT_GE(17, v1);
 
-  env[1].step->iter = 5;
-  domain_t v2 = step_val(env, 1);
+  s.iter = 5;
+  domain_t v2 = step_val(&s);
   EXPECT_LE(3, v2);
   EXPECT_GE(17, v2);
   EXPECT_NE(v1, v2);

@@ -93,9 +93,9 @@ struct shared_t *shared(void) {
   return _shared;
 }
 
-void worker_spawn(struct env_t *env, size_t depth) {
+void worker_spawn(struct val_t *var, size_t depth) {
 
-  if (!is_value(*env[depth].val) && shared()->workers < _workers_max) {
+  if (!is_value(*var) && shared()->workers < _workers_max) {
 
     sema_wait(&shared()->semaphore);
     // avoid race condition
@@ -107,8 +107,8 @@ void worker_spawn(struct env_t *env, size_t depth) {
     int32_t id = ++shared()->workers_id;
     sema_post(&shared()->semaphore);
 
-    domain_t lo = get_lo(*env[depth].val);
-    domain_t hi = get_hi(*env[depth].val);
+    domain_t lo = get_lo(*var);
+    domain_t hi = get_hi(*var);
     domain_t mid = (lo + hi) / 2;
 
     // pick up any children that may have finished
@@ -123,7 +123,7 @@ void worker_spawn(struct env_t *env, size_t depth) {
       // child gets a new id and searches the upper half
       _worker_id = id;
       struct val_t v = (mid+1 == hi) ? VALUE(hi) : INTERVAL(mid+1, hi);
-      bind(env[depth].val, v);
+      bind(var, v);
       _worker_min_depth = depth;
       // reset stats for child
       stats_init();
@@ -132,7 +132,7 @@ void worker_spawn(struct env_t *env, size_t depth) {
     } else {
       // parent searches the lower half
       struct val_t v = (lo == mid) ? VALUE(lo) : INTERVAL(lo, mid);
-      bind(env[depth].val, v);
+      bind(var, v);
     }
   }
 }
@@ -167,12 +167,8 @@ void worker_die(void) {
 void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
   if (env[depth1].key != NULL && env[depth2].key != NULL && depth1 != depth2) {
     struct env_t t = env[depth2];
-    env[depth2].key = env[depth1].key;
-    env[depth2].val = env[depth1].val;
-    env[depth2].fails = env[depth1].fails;
-    env[depth1].key = t.key;
-    env[depth1].val = t.val;
-    env[depth1].fails = t.fails;
+    env[depth2] = env[depth1];
+    env[depth1] = t;
   }
 }
 
@@ -206,10 +202,10 @@ static bool update_solution(struct env_t *env, struct constr_t *constr) {
   return updated;
 }
 
-static bool check_assignment(struct env_t *env, size_t depth) {
+static bool check_assignment(struct val_t *var, size_t depth) {
   // propagate values
   bool failed =
-    propagate_clauses(env[depth].val->clauses) == PROP_ERROR ||
+    propagate_clauses(var->clauses) == PROP_ERROR ||
     propagate_clauses(objective_val()->clauses) == PROP_ERROR;
 
   // update statistics if propagation failed
@@ -220,8 +216,6 @@ static bool check_assignment(struct env_t *env, size_t depth) {
 
   return failed;
 }
-
-
 
 static bool check_restart(void) {
   // check whether search should restart
@@ -238,63 +232,64 @@ static bool check_restart(void) {
   return false;
 }
 
-static void step_activate(struct env_t *env, size_t depth) {
+static void step_activate(struct step_t *step, struct val_t *var) {
   // set up iteration
-  env[depth].step->active = true;
-  env[depth].step->bounds = *env[depth].val;
-  env[depth].step->iter = 0;
-  env[depth].step->seed = is_restartable() ? rand() : 0;
+  step->active = true;
+  step->var = var;
+  step->bounds = *var;
+  step->iter = 0;
+  step->seed = is_restartable() ? rand() : 0;
 }
 
-static void step_deactivate(struct env_t *env, size_t depth) {
-  env[depth].step->active = false;
+static void step_deactivate(struct step_t *step) {
+  step->active = false;
 }
 
-static void step_enter(struct env_t *env, size_t depth, domain_t val) {
+static void step_enter(struct step_t *step, domain_t val) {
   // mark how much memory is allocated
-  env[depth].step->alloc_marker = alloc(0);
+  step->alloc_marker = alloc(0);
   // mark patching depth
-  env[depth].step->patch_depth = patch(NULL, (struct wand_expr_t){ NULL, 0 });
+  step->patch_depth = patch(NULL, (struct wand_expr_t){ NULL, 0 });
   // bind variable
-  env[depth].step->bind_depth = bind(env[depth].val, VALUE(val));
+  step->bind_depth = bind(step->var, VALUE(val));
 }
 
-static void step_leave(struct env_t *env, size_t depth) {
+static void step_leave(struct step_t *step) {
   // unbind variable
-  unbind(env[depth].step->bind_depth);
+  unbind(step->bind_depth);
   // unbind wide-ands
-  unpatch(env[depth].step->patch_depth);
+  unpatch(step->patch_depth);
   // free up memory
-  dealloc(env[depth].step->alloc_marker);
+  dealloc(step->alloc_marker);
 }
 
-static void step_next(struct env_t *env, size_t depth) {
+static void step_next(struct step_t *step) {
   // continue with next iteration
-  env[depth].step->iter++;
+  step->iter++;
 }
 
-static bool step_check(struct env_t *env, size_t depth) {
+static bool step_check(struct step_t *step) {
   // check if search space for this variable is exhausted
-  udomain_t i = env[depth].step->iter;
-  domain_t lo = get_lo(env[depth].step->bounds);
-  domain_t hi = get_hi(env[depth].step->bounds);
+  udomain_t i = step->iter;
+  domain_t lo = get_lo(step->bounds);
+  domain_t hi = get_hi(step->bounds);
   return i <= (udomain_t)(hi - lo);
 }
 
-static domain_t step_val(struct env_t *env, size_t depth) {
+static domain_t step_val(struct step_t *step) {
   // search from the edges of the interval
-  udomain_t i = env[depth].step->iter;
-  udomain_t s = env[depth].step->seed;
-  domain_t lo = get_lo(env[depth].step->bounds);
-  domain_t hi = get_hi(env[depth].step->bounds);
+  udomain_t i = step->iter;
+  udomain_t s = step->seed;
+  domain_t lo = get_lo(step->bounds);
+  domain_t hi = get_hi(step->bounds);
   return ((i ^ s) & 1) ? hi - (i >> 1) : lo + (i >> 1);
 }
 
-static void unwind(struct env_t *env, size_t depth, size_t stop) {
+static void unwind(struct step_t *steps, size_t depth, size_t stop) {
   // unwind search steps up to a specified level
   for (size_t i = depth; i != (stop-1); --i) {
-    step_deactivate(env, i);
-    step_leave(env, i);
+    step_deactivate(&steps[i]);
+    step_leave(&steps[i]);
   }
 }
 
@@ -310,7 +305,7 @@ static void unwind(struct env_t *env, size_t depth, size_t stop) {
 // restart the search
 #define RESTART()                               \
   {                                             \
-    unwind(env, depth, _worker_min_depth);      \
+    unwind(steps, depth, _worker_min_depth);      \
     depth = _worker_min_depth;                  \
     continue;                                   \
   }
@@ -322,7 +317,11 @@ static void unwind(struct env_t *env, size_t depth, size_t stop) {
   }
 
 // search algorithm core
-void solve(struct env_t *env, struct constr_t *constr) {
+void solve(size_t size, struct env_t *env, struct constr_t *constr) {
+
+  // allocate data structure for search steps
+  struct step_t *steps = (struct step_t *)calloc(size, sizeof(struct step_t));
+
   size_t depth = 0;
 
   while (true) {
@@ -336,7 +335,7 @@ void solve(struct env_t *env, struct constr_t *constr) {
     }
 
     // check if a better feasible solution is reached
-    if (env[depth].key == NULL) {
+    if (depth == size) {
       bool update = update_solution(env, constr);
       if (update) {
         depth--;
@@ -346,26 +345,26 @@ void solve(struct env_t *env, struct constr_t *constr) {
       }
     }
 
-    if (!env[depth].step->active) {
+    if (!steps[depth].active) {
       // not active yet, so we can pick a variable
       strategy_pick_var(env, depth);
       // spawn a worker if possible
-      worker_spawn(env, depth);
-      step_activate(env, depth);
+      worker_spawn(env[depth].val, depth);
+      step_activate(&steps[depth], env[depth].val);
     } else {
       // continue iteration
-      step_leave(env, depth);
-      step_next(env, depth);
+      step_leave(&steps[depth]);
+      step_next(&steps[depth]);
     }
 
     // check if values for variable are exhausted
-    if (!step_check(env, depth)) {
-      step_deactivate(env, depth);
+    if (!step_check(&steps[depth])) {
+      step_deactivate(&steps[depth]);
       BACKTRACK();
     }
 
     // try next value
-    step_enter(env, depth, step_val(env, depth));
+    step_enter(&steps[depth], step_val(&steps[depth]));
 
     // update objective value
     objective_update_val();
@@ -373,7 +372,7 @@ void solve(struct env_t *env, struct constr_t *constr) {
     update_stats(depth);
 
     // decide whether to move to next variable, stay at current one, or restart
-    bool failed = check_assignment(env, depth);
+    bool failed = check_assignment(steps[depth].var, depth);
     if (!failed) {
       depth++;
     } else {
@@ -383,6 +382,9 @@ void solve(struct env_t *env, struct constr_t *constr) {
       }
     }
   }
+
+  // release memory again
+  free(steps);
 
   // wait for children and die
   worker_die();

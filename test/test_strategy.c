@@ -76,12 +76,12 @@ TEST(PickVarCmp, SmallestDomain) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 7);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
@@ -108,12 +108,12 @@ TEST(PickVarCmp, LargestDomain) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
@@ -140,12 +140,12 @@ TEST(PickVarCmp, SmallestValue) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
@@ -172,12 +172,12 @@ TEST(PickVarCmp, LargestValue) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
@@ -204,12 +204,12 @@ TEST(PickVarCmp, None) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   _prefer_failing = false;
   EXPECT_EQ(strategy_pick_var_cmp(env, 0, 1), 0);
@@ -237,12 +237,12 @@ TEST(PickVarCmp, Error) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER)).Times(1);
@@ -257,12 +257,12 @@ TEST(PickVar, Basic) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 7);
-  env[0] = { .key = "a", .val = &a, .fails = 3, .step = NULL };
+  env[0] = { .key = "a", .val = &a, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4, .step = NULL };
+  env[1] = { .key = "b", .val = &b, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5, .step = NULL };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0, .step = NULL };
+  env[2] = { .key = "c", .val = &c, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, swap_env(env, 1, 2)).Times(1);

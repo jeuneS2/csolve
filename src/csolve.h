@@ -157,10 +157,11 @@ struct patching_t {
 };
 
 /** Type holding information for a solving step */
-struct solve_step_t {
+struct step_t {
   size_t bind_depth; ///< Bind depth before binding variable
   size_t patch_depth; ///< Patch depth before propagation/normalization
   void *alloc_marker; ///< Allocation marker before propagation/normalization
+  struct val_t *var; ///< Variable considered in this step
   bool active; ///< Iteration active
   udomain_t iter; ///< Iteration state
   udomain_t seed; ///< Iteration random seed
@@ -172,7 +173,6 @@ struct env_t {
   const char *key; ///< Key (identifier) of variable
   struct val_t *val; ///< Value of variable
   uint64_t fails; ///< Number of times this variable has failed
-  struct solve_step_t *step; ///< Solving state
 };
 
 /** Types of objective functions */
@@ -284,7 +284,7 @@ void objective_update_best(void);
 void objective_update_val(void);
 
 /** Find solutions */
-void solve(struct env_t *env, struct constr_t *constr);
+void solve(size_t size, struct env_t *env, struct constr_t *constr);
 
 /** Swap two environment entries (keeping step) */
 void swap_env(struct env_t *env, size_t depth1, size_t depth2);

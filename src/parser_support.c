@@ -25,6 +25,10 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 static struct var_t *_vars = NULL;
 static size_t _var_count = 0;
 
+size_t var_count(void) {
+  return _var_count;
+}
+
 struct var_t *vars_find_key(const char *key) {
   for (size_t i = 0; i < _var_count; i++) {
     if (strcmp(_vars[i].var.key, key) == 0) {
@@ -49,7 +53,6 @@ void vars_add(const char *key, struct val_t *val) {
   strcpy((char *)_vars[_var_count-1].var.key, key);
   _vars[_var_count-1].var.val = val;
   _vars[_var_count-1].var.fails = 0;
-  _vars[_var_count-1].var.step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
   _vars[_var_count-1].weight = 0;
 }
 
@@ -146,7 +149,6 @@ struct env_t *env_generate(void) {
   env[_var_count].key = NULL;
   env[_var_count].val = NULL;
   env[_var_count].fails = 0;
-  env[_var_count].step = (struct solve_step_t *)calloc(1, sizeof(struct solve_step_t));
 
   vars_free();
 
@@ -154,12 +156,9 @@ struct env_t *env_generate(void) {
 }
 
 void env_free(struct env_t *env) {
-  size_t i;
-  for (i = 0; env[i].key != NULL; i++) {
+  for (size_t i = 0; env[i].key != NULL; i++) {
     free((char *)env[i].key);
-    free(env[i].step);
   }
-  free(env[i].step);
   free(env);
 }
 

@@ -32,6 +32,9 @@ struct var_t {
 /** Weight for variables in a "not-equal" constraint */
 #define WEIGHT_NOT_EQUAL 10
 
+/** Total number of variables */
+size_t var_count(void);
+
 /** Find variable with the given key */
 struct var_t *vars_find_key(const char *key);
 /** Add a new variable */
@@ -47,7 +50,7 @@ void vars_sort(void);
 
 /** Generate variable environment */
 struct env_t *env_generate(void);
-/** Deallocate memory occipied by variable environment */
+/** Deallocate memory occupied by variable environment */
 void env_free(struct env_t *);
 
 /** Type to represent a list of expressions during parsing */

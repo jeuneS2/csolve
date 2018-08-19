@@ -25,7 +25,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 int yylex(void);
 void yyerror(const char *);
- 
+
 %}
 
 %union {
@@ -71,9 +71,12 @@ Input : Constraints
 
         if (prop != PROP_ERROR) {
           clauses_init(norm, NULL);
+
+          size_t size = var_count();
           struct env_t *env = env_generate();
 
-          solve(env, norm);
+          solve(size, env, norm);
+
           env_free(env);
         }
       }

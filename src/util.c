@@ -116,7 +116,8 @@ void unbind(size_t depth) {
   while (_bind_depth > depth) {
     --_bind_depth;
     struct val_t *loc = _bind_stack[_bind_depth].loc;
-    *loc = _bind_stack[_bind_depth].val;
+    loc->lo = get_lo(_bind_stack[_bind_depth].val);
+    loc->hi = get_hi(_bind_stack[_bind_depth].val);
   }
 }
 
