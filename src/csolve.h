@@ -359,14 +359,14 @@ const char *main_name(void);
 STAT_LIST(STAT_EXTVAR)
 
 /** Functions provided for a statistic counter */
-#define STAT_FUNCS(NAME, TYPE, RESET_VAL, ...)               \
-  static inline TYPE stat_get_ ## NAME(void) { return NAME; }              \
-  static inline void stat_set_ ## NAME(TYPE v) { NAME = v; }               \
-  static inline void stat_reset_ ## NAME(void) { NAME = RESET_VAL; }       \
-  static inline void stat_inc_ ## NAME(void)   { NAME++; }                 \
-  static inline void stat_add_ ## NAME(TYPE v) { NAME += v; }              \
-  static inline void stat_min_ ## NAME(TYPE v) { if (v < NAME) NAME = v; } \
-  static inline void stat_max_ ## NAME(TYPE v) { if (v > NAME) NAME = v; }
+#define STAT_FUNCS(NAME, TYPE, RESET_VAL, ...)                          \
+  static inline TYPE stat_get_ ## NAME(void) { return NAME; }           \
+  static inline void stat_set_ ## NAME(TYPE v) { NAME = v; }            \
+  static inline void stat_reset_ ## NAME(void) { NAME = RESET_VAL; }    \
+  static inline void stat_inc_ ## NAME(void)   { NAME++; }              \
+  static inline void stat_add_ ## NAME(TYPE v) { NAME += v; }           \
+  static inline void stat_min_ ## NAME(TYPE v) { if (v < NAME) { NAME = v; } } \
+  static inline void stat_max_ ## NAME(TYPE v) { if (v > NAME) { NAME = v; } }
 
 /** Declare functions for list of statistic counters */
 STAT_LIST(STAT_FUNCS)
@@ -375,7 +375,7 @@ STAT_LIST(STAT_FUNCS)
 void stats_init(void);
 /** Print statistics */
 void stats_print(FILE *file);
-  
+
 /** Error message for errors in the lexer */
 #define ERROR_MSG_LEXER_ERROR               "invalid input `%c' in line %u"
 /** Error message for errors in the parser */

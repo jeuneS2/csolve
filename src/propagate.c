@@ -50,7 +50,7 @@ prop_result_t propagate_term(struct constr_t *constr, struct val_t val) {
 prop_result_t propagate_eq(struct constr_t *constr, struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
-  
+
   if (is_true(val)) {
     struct val_t lval = eval(l);
     prop_result_t p = prop(r, lval);
@@ -208,7 +208,7 @@ prop_result_t propagate_and(struct constr_t *constr, struct val_t val) {
     return p + q;
 
   } else if (is_false(val)) {
-    prop_result_t p = PROP_NONE;    
+    prop_result_t p = PROP_NONE;
     struct val_t lval = eval(l);
     if (is_true(lval)) {
       p = prop(r, val);
@@ -250,7 +250,7 @@ prop_result_t propagate_or(struct constr_t *constr, struct val_t val) {
     return p + q;
 
   } else if (is_true(val)) {
-    prop_result_t p = PROP_NONE;    
+    prop_result_t p = PROP_NONE;
     struct val_t lval = eval(l);
     if (is_false(lval)) {
       p = prop(r, val);
@@ -329,7 +329,7 @@ prop_result_t propagate(struct constr_t *constr, struct val_t val) {
 
 prop_result_t propagate_clauses(struct clause_list_t *clauses) {
   static prop_tag_t _prop_tag = 0;
-  
+
   prop_result_t r = PROP_NONE;
 
   prop_tag_t tag = ++_prop_tag;
@@ -342,7 +342,7 @@ prop_result_t propagate_clauses(struct clause_list_t *clauses) {
     if (clause->prop_tag != tag) {
       continue;
     }
-    
+
     prop_result_t p = prop(clause->constr, VALUE(1));
     if (p == PROP_ERROR) {
       return PROP_ERROR;

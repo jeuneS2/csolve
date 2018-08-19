@@ -234,7 +234,7 @@ struct constr_t *normal_or(struct constr_t *constr) {
 
 struct constr_t *normal_wand(struct constr_t *constr) {
   struct constr_t *retval = constr;
-  
+
   for (size_t i = 0; i < constr->constr.wand.length; i++) {
     struct constr_t *c = normalize_step(constr->constr.wand.elems[i].constr);
     if (c != constr->constr.wand.elems[i].constr) {
@@ -278,7 +278,7 @@ struct constr_t *normalize(struct constr_t *constr) {
   do {
     _patch_count = 0;
     prev = retval;
-    retval = normalize_step(retval);    
+    retval = normalize_step(retval);
   } while (retval != prev || _patch_count > 0);
   return retval;
 }

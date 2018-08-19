@@ -211,7 +211,7 @@ static bool check_assignment(struct env_t *env, size_t depth) {
   bool failed =
     propagate_clauses(env[depth].val->clauses) == PROP_ERROR ||
     propagate_clauses(objective_val()->clauses) == PROP_ERROR;
-  
+
   // update statistics if propagation failed
   if (failed) {
     stat_inc_cuts();
