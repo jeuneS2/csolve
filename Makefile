@@ -89,10 +89,10 @@ fuzz: fuzz/csolve
 		afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
 	fi
 
-doxygen:
+doc/doxygen: ${SRC} ${HEADERS} doxygen.config
 	mkdir -p doc; doxygen doxygen.config
 
-doc: doxygen
+doc: doc/doxygen
 
 clean:
 	rm -rf csolve fuzz/csolve test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
@@ -104,4 +104,4 @@ sonar_stop:
 sonar_run:
 	${SONAR_RUNNER}
 
-.PHONY: all test coverage fuzz doxygen doc clean sonar_start sonar_stop sonar_run
+.PHONY: all test coverage fuzz doc clean sonar_start sonar_stop sonar_run
