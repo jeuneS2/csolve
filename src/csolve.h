@@ -42,7 +42,7 @@ typedef int64_t ddomain_t;
 struct val_t {
   domain_t lo; ///< Lower bound of interval
   domain_t hi; ///< Upper bound of interval
-  struct clause_list_t *clauses; ///< Clauses affected by this value
+  struct env_t *env; ///< Link to environment of value
 };
 
 /** Get the lower bound of an interval or the single value */
@@ -66,7 +66,7 @@ static inline bool is_false(struct val_t v) {
   return is_value(v) && get_lo(v) == 0;
 }
 
-#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H), .clauses = NULL })
+#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H), .env = NULL })
 #define VALUE(V) INTERVAL(V,V)
 
 /** Binding entry */
@@ -161,7 +161,7 @@ struct step_t {
   size_t bind_depth; ///< Bind depth before binding variable
   size_t patch_depth; ///< Patch depth before propagation/normalization
   void *alloc_marker; ///< Allocation marker before propagation/normalization
-  struct val_t *var; ///< Variable considered in this step
+  struct env_t *var; ///< Environment of variable considered in this step
   bool active; ///< Iteration active
   udomain_t iter; ///< Iteration state
   udomain_t seed; ///< Iteration random seed
@@ -172,7 +172,9 @@ struct step_t {
 struct env_t {
   const char *key; ///< Key (identifier) of variable
   struct val_t *val; ///< Value of variable
-  uint64_t fails; ///< Number of times this variable has failed
+  struct clause_list_t *clauses; ///< Clauses affected by this value
+  size_t order; ///< Position in variable ordering
+  int64_t fails; ///< Number of times this variable has failed
 };
 
 /** Types of objective functions */
@@ -314,8 +316,14 @@ uint64_t strategy_restart_frequency(void);
 #define STRATEGY_ORDER_DEFAULT ORDER_NONE
 /** Set the ordering to use when searching */
 void strategy_order_init(enum order_t order);
+/** Initialize the variable ordering */
+void strategy_var_order_init(size_t size, struct env_t *env);
 /** Pick a variable according to the chosen strategy */
-void strategy_pick_var(struct env_t *env, size_t depth);
+struct env_t *strategy_var_order_pop(void);
+/** Put back variable into ordering */
+void strategy_var_order_push(struct env_t *e);
+/** Update position of variable in ordering */
+void strategy_var_order_update(struct env_t *e);
 
 /** How many workers to use by default */
 #define WORKERS_MAX_DEFAULT 1

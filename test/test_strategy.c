@@ -70,212 +70,183 @@ TEST(Order, Init) {
   EXPECT_EQ(ORDER_LARGEST_VALUE, _order);
 }
 
-TEST(PickVarCmp, SmallestDomain) {
+TEST(VarCmp, SmallestDomain) {
   _order = ORDER_SMALLEST_DOMAIN;
 
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 7);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   _prefer_failing = false;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[1]), 0);
 
   _prefer_failing = true;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_GT(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_GT(strategy_var_cmp(&env[2], &env[1]), 0);
 }
 
-TEST(PickVarCmp, LargestDomain) {
+TEST(VarCmp, LargestDomain) {
   _order = ORDER_LARGEST_DOMAIN;
 
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   _prefer_failing = false;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[1]), 0);
 
   _prefer_failing = true;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_GT(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_GT(strategy_var_cmp(&env[2], &env[1]), 0);
 }
 
-TEST(PickVarCmp, SmallestValue) {
+TEST(VarCmp, SmallestValue) {
   _order = ORDER_SMALLEST_VALUE;
 
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   _prefer_failing = false;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[1]), 0);
 
   _prefer_failing = true;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_GT(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_GT(strategy_var_cmp(&env[2], &env[1]), 0);
 }
 
-TEST(PickVarCmp, LargestValue) {
+TEST(VarCmp, LargestValue) {
   _order = ORDER_LARGEST_VALUE;
 
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   _prefer_failing = false;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[1]), 0);
 
   _prefer_failing = true;
-  EXPECT_GT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_GT(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_GT(strategy_var_cmp(&env[2], &env[1]), 0);
 }
 
-TEST(PickVarCmp, None) {
+TEST(VarCmp, None) {
   _order = ORDER_NONE;
 
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   _prefer_failing = false;
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[1]), 0);
 
   _prefer_failing = true;
-  EXPECT_LT(strategy_pick_var_cmp(env, 0, 1), 0);
-  EXPECT_GT(strategy_pick_var_cmp(env, 1, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 0, 0), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 1, 1), 0);
-  EXPECT_EQ(strategy_pick_var_cmp(env, 2, 2), 0);
-  EXPECT_LT(strategy_pick_var_cmp(env, 1, 2), 0);
-  EXPECT_GT(strategy_pick_var_cmp(env, 2, 1), 0);
+  EXPECT_LT(strategy_var_cmp(&env[0], &env[1]), 0);
+  EXPECT_GT(strategy_var_cmp(&env[1], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[0], &env[0]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[1], &env[1]), 0);
+  EXPECT_EQ(strategy_var_cmp(&env[2], &env[2]), 0);
+  EXPECT_LT(strategy_var_cmp(&env[1], &env[2]), 0);
+  EXPECT_GT(strategy_var_cmp(&env[2], &env[1]), 0);
 }
 
-TEST(PickVarCmp, Error) {
+TEST(VarCmp, Error) {
   _order = (order_t)0x1337;
   _prefer_failing = false;
 
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER)).Times(1);
-  strategy_pick_var_cmp(env, 2, 1);
-  delete(MockProxy);
-}
-
-TEST(PickVar, Basic) {
-  _order = ORDER_SMALLEST_DOMAIN;
-  _prefer_failing = true;
-
-  struct env_t env[4];
-
-  struct val_t a = INTERVAL(5, 7);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
-  struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
-  struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .fails = 0 };
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, swap_env(env, 1, 2)).Times(1);
-  strategy_pick_var(env, 1);
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, swap_env(env, 2, 2)).Times(1);
-  strategy_pick_var(env, 2);
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  strategy_pick_var(env, 3);
+  strategy_var_cmp(&env[2], &env[1]);
   delete(MockProxy);
 }
 

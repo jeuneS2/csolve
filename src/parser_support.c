@@ -52,6 +52,8 @@ void vars_add(const char *key, struct val_t *val) {
   _vars[_var_count-1].var.key = (const char *)malloc(strlen(key)+1);
   strcpy((char *)_vars[_var_count-1].var.key, key);
   _vars[_var_count-1].var.val = val;
+  _vars[_var_count-1].var.clauses = NULL;
+  _vars[_var_count-1].var.order = SIZE_MAX;
   _vars[_var_count-1].var.fails = 0;
   _vars[_var_count-1].weight = 0;
 }
@@ -145,9 +147,13 @@ struct env_t *env_generate(void) {
   struct env_t *env = (struct env_t *)malloc(sizeof(struct env_t) * (_var_count+1));
   for (size_t i = 0; i < _var_count; i++) {
     env[i] = _vars[i].var;
+    env[i].val->env = &env[i];
+    env[i].fails = _vars[i].weight;
   }
   env[_var_count].key = NULL;
   env[_var_count].val = NULL;
+  env[_var_count].clauses = NULL;
+  env[_var_count].order = SIZE_MAX;
   env[_var_count].fails = 0;
 
   vars_free();
@@ -181,7 +187,8 @@ void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
   switch (constr->type) {
   case CONSTR_TERM:
     if (!is_value(*constr->constr.term) && clause != NULL) {
-      constr->constr.term->clauses = clause_list_append(constr->constr.term->clauses, clause);
+      struct env_t *e = constr->constr.term->env;
+      e->clauses = clause_list_append(e->clauses, clause);
     }
     break;
   case CONSTR_EXPR:

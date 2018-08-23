@@ -37,7 +37,8 @@ class Mock {
   MOCK_METHOD0(objective_update_val, void(void));
   MOCK_METHOD0(objective_val, struct val_t*(void));
   MOCK_METHOD0(strategy_restart_frequency, uint64_t(void));
-  MOCK_METHOD2(strategy_pick_var, void(struct env_t *, size_t));
+  MOCK_METHOD0(strategy_var_order_pop, struct env_t *(void));
+  MOCK_METHOD1(strategy_var_order_push, void(struct env_t *));
   MOCK_METHOD1(print_error, void(const char *));
   MOCK_METHOD2(print_solution, void(FILE *, struct env_t *));
 };
@@ -104,8 +105,12 @@ uint64_t strategy_restart_frequency(void) {
   return MockProxy->strategy_restart_frequency();
 }
 
-void strategy_pick_var(struct env_t *env, size_t depth) {
-  return MockProxy->strategy_pick_var(env, depth);
+struct env_t *strategy_var_order_pop(void) {
+  return MockProxy->strategy_var_order_pop();
+}
+
+void strategy_var_order_push(struct env_t *var) {
+  MockProxy->strategy_var_order_push(var);
 }
 
 bool objective_better() {
@@ -272,69 +277,11 @@ TEST(FailThresholdNext, Basic) {
   EXPECT_EQ(8, fail_threshold_next());
 }
 
-TEST(SwapEnv, Basic) {
-  struct env_t env[3];
-
-  struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
-  struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0 };
-
-  MockProxy = new Mock();
-  swap_env(env, 0, 1);
-  EXPECT_STREQ("b", env[0].key);
-  EXPECT_EQ(&b, env[0].val);
-  EXPECT_STREQ("a", env[1].key);
-  EXPECT_EQ(&a, env[1].val);
-  delete(MockProxy);
-}
-
-TEST(SwapEnv, NoSwap) {
-  struct env_t env[3];
-
-  struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
-  struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0 };
-
-  MockProxy = new Mock();
-  swap_env(env, 0, 2);
-  EXPECT_STREQ("a", env[0].key);
-  EXPECT_EQ(&a, env[0].val);
-  EXPECT_STREQ("b", env[1].key);
-  EXPECT_EQ(&b, env[1].val);
-  EXPECT_EQ((const char *)NULL, env[2].key);
-  EXPECT_EQ((const val_t *)NULL, env[2].val);
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  swap_env(env, 2, 0);
-  EXPECT_STREQ("a", env[0].key);
-  EXPECT_EQ(&a, env[0].val);
-  EXPECT_STREQ("b", env[1].key);
-  EXPECT_EQ(&b, env[1].val);
-  EXPECT_EQ((const char *)NULL, env[2].key);
-  EXPECT_EQ((const val_t *)NULL, env[2].val);
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  swap_env(env, 1, 1);
-  EXPECT_EQ("a", env[0].key);
-  EXPECT_EQ(&a, env[0].val);
-  EXPECT_EQ("b", env[1].key);
-  EXPECT_EQ(&b, env[1].val);
-  EXPECT_EQ((const char *)NULL, env[2].key);
-  EXPECT_EQ((const val_t *)NULL, env[2].val);
-  delete(MockProxy);
-}
-
 TEST(UpdateSolution, FalseConstr) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[0] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, eval(&C))
@@ -348,7 +295,7 @@ TEST(UpdateSolution, AnySolution) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[0] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   struct shared_t s;
   s.solutions = 1;
@@ -373,7 +320,7 @@ TEST(UpdateSolution, NotBetter) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[0] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   struct shared_t s;
   s.solutions = 0;
@@ -401,7 +348,7 @@ TEST(UpdateSolution, Better) {
   struct val_t c = VALUE(0);
   struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
   struct env_t env[1];
-  env[0] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[0] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   struct shared_t s;
   s.solutions = 0;
@@ -439,6 +386,7 @@ TEST(UpdateSolution, Better) {
 
 TEST(CheckAssignment, Infeasible) {
   struct val_t a = VALUE(1);
+  struct env_t e = { .key = NULL, .val = &a, .clauses = NULL, .order = 0, .fails = 0 };
 
   stats_init();
 
@@ -446,13 +394,14 @@ TEST(CheckAssignment, Infeasible) {
   EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
     .Times(1)
     .WillOnce(::testing::Return(PROP_ERROR));
-  EXPECT_EQ(true, check_assignment(&a, 0));
+  EXPECT_EQ(true, check_assignment(&e, 0));
   EXPECT_EQ(1, cuts);
   delete(MockProxy);
 }
 
 TEST(CheckAssignment, Feasible) {
   struct val_t a = VALUE(1);
+  struct env_t e = { .key = NULL, .val = &a, .clauses = NULL, .order = 0, .fails = 0 };
   struct val_t obj = VALUE(0);
 
   stats_init();
@@ -464,7 +413,7 @@ TEST(CheckAssignment, Feasible) {
   EXPECT_CALL(*MockProxy, objective_val())
     .Times(1)
     .WillOnce(::testing::Return(&obj));
-  EXPECT_EQ(false, check_assignment(&a, 0));
+  EXPECT_EQ(false, check_assignment(&e, 0));
   delete(MockProxy);
 }
 
@@ -522,6 +471,7 @@ TEST(CheckRestart, True) {
 
 TEST(Step, Activate) {
   struct val_t v = INTERVAL(13, 13);
+  struct env_t e = { .key = NULL, .val = &v, .clauses = NULL, .order = 0, .fails = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -532,9 +482,9 @@ TEST(Step, Activate) {
     .Times(::testing::AtLeast(0))
     .WillRepeatedly(::testing::Return(OBJ_ANY));
   s.active = false;
-  step_activate(&s, &v);
+  step_activate(&s, &e);
   EXPECT_EQ(true, s.active);
-  EXPECT_EQ(&v, s.var);
+  EXPECT_EQ(&e, s.var);
   EXPECT_EQ(v, s.bounds);
   EXPECT_EQ(0, s.iter);
   EXPECT_EQ(0, s.seed);
@@ -542,9 +492,14 @@ TEST(Step, Activate) {
 }
 
 TEST(Step, Deactivate) {
+  struct val_t v;
+  struct env_t e = { .key = NULL, .val = &v, .clauses = NULL, .order = 0, .fails = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, strategy_var_order_push(&e))
+    .Times(1);
+  s.var = &e;
   s.active = true;
   step_deactivate(&s);
   EXPECT_EQ(false, s.active);
@@ -553,8 +508,9 @@ TEST(Step, Deactivate) {
 
 TEST(Step, Enter) {
   struct val_t v;
+  struct env_t e = { .key = NULL, .val = &v, .clauses = NULL, .order = 0, .fails = 0 };
   struct step_t s;
-  s.var = &v;
+  s.var = &e;
 
   char marker;
 

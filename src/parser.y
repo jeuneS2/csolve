@@ -70,10 +70,11 @@ Input : Constraints
         stats_init();
 
         if (prop != PROP_ERROR) {
-          clauses_init(norm, NULL);
-
           size_t size = var_count();
           struct env_t *env = env_generate();
+
+          clauses_init(norm, NULL);
+          strategy_var_order_init(size, env);
 
           solve(size, env, norm);
 

@@ -319,10 +319,10 @@ TEST(EnvFree, Basic) {
   struct env_t env[3];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .fails = 4 };
-  env[2] = { .key = NULL, .val = NULL, .fails = 0 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[2] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, free((void *)env[0].key));

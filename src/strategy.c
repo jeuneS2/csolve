@@ -57,9 +57,9 @@ void strategy_order_init(enum order_t order) {
   _order = order;
 }
 
-int strategy_pick_var_cmp(struct env_t *env, size_t depth1, size_t depth2) {
-  struct val_t v1 = *env[depth1].val;
-  struct val_t v2 = *env[depth2].val;
+int strategy_var_cmp(struct env_t *e1, struct env_t *e2) {
+  struct val_t v1 = *e1->val;
+  struct val_t v2 = *e2->val;
 
   int cmp = 0;
   switch (_order) {
@@ -89,20 +89,103 @@ int strategy_pick_var_cmp(struct env_t *env, size_t depth1, size_t depth2) {
   }
 
   if (strategy_prefer_failing() && cmp == 0) {
-    cmp = env[depth1].fails - env[depth2].fails;
+    cmp = e1->fails - e2->fails;
   }
 
   return cmp;
 }
 
-void strategy_pick_var(struct env_t *env, size_t depth) {
-  if (env[depth].key != NULL) {
-    size_t best_depth = depth;
-    for (size_t i = depth; env[i].key != NULL; i++) {
-      if (strategy_pick_var_cmp(env, i, best_depth) > 0) {
-        best_depth = i;
-      }
+size_t _var_order_size;
+struct env_t **_var_order;
+
+static inline size_t parent(size_t child) {
+  return child/2;
+}
+static inline size_t left(size_t parent) {
+  return 2*parent + 1;
+}
+static inline size_t right(size_t parent) {
+  return 2*parent + 2;
+}
+
+void strategy_var_order_print(FILE *file, size_t pos) {
+  if (pos < _var_order_size) {
+    fprintf(file, "(%s %lu ", _var_order[pos]->key, _var_order[pos]->fails);
+    strategy_var_order_print(file, left(pos));
+    strategy_var_order_print(file, right(pos));
+    fprintf(file, ")");
+  }
+}
+
+void strategy_var_order_init(size_t size, struct env_t *env) {
+  _var_order_size = size;
+  _var_order = (struct env_t **)malloc(size * sizeof(struct env_t *));
+
+  for (size_t i = 0; i < size; i++) {
+    _var_order[i] = &env[i];
+    env[i].order = i;
+  }
+}
+
+static void strategy_var_order_swap(size_t pos1, size_t pos2) {
+  struct env_t *t = _var_order[pos1];
+  _var_order[pos1] = _var_order[pos2];
+  _var_order[pos1]->order = pos1;
+  _var_order[pos2] = t;
+  _var_order[pos2]->order = pos2;
+}
+
+static void strategy_var_order_up(size_t pos) {
+  while (pos > 0 && strategy_var_cmp(_var_order[parent(pos)], _var_order[pos]) < 0) {
+    strategy_var_order_swap(pos, parent(pos));
+    pos = parent(pos);
+  }
+}
+
+static void strategy_var_order_down(size_t pos) {
+  while (true) {
+    size_t lpos = left(pos);
+    size_t rpos = right(pos);
+
+    size_t best = pos;
+    if (lpos < _var_order_size && strategy_var_cmp(_var_order[lpos], _var_order[best]) > 0) {
+      best = lpos;
     }
-    swap_env(env, depth, best_depth);
+    if (rpos < _var_order_size && strategy_var_cmp(_var_order[rpos], _var_order[best]) > 0) {
+      best = rpos;
+    }
+    if (best != pos) {
+      strategy_var_order_swap(best, pos);
+      pos = best;
+    } else {
+      break;
+    }
+  }
+}
+
+void strategy_var_order_push(struct env_t *e) {
+  size_t pos = _var_order_size++;
+  _var_order[pos] = e;
+  _var_order[pos]->order = pos;
+  strategy_var_order_up(pos);
+}
+
+struct env_t *strategy_var_order_pop(void) {
+  struct env_t *retval = _var_order[0];
+  retval->order = SIZE_MAX;
+  --_var_order_size;
+
+  if (_var_order_size > 0) {
+    _var_order[0] = _var_order[_var_order_size];
+    _var_order[0]->order = 0;
+    strategy_var_order_down(0);
+  }
+  return retval;
+}
+
+void strategy_var_order_update(struct env_t *e) {
+  if (e->order != SIZE_MAX) {
+    strategy_var_order_up(e->order);
+    strategy_var_order_down(e->order);
   }
 }

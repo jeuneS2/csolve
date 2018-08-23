@@ -28,6 +28,10 @@ prop_result_t propagate_term(struct constr_t *constr, struct val_t val) {
   struct val_t *term = constr->constr.term;
 
   if (get_lo(*term) > get_hi(val) || get_hi(*term) < get_lo(val)) {
+    if (term->env != NULL) {
+      term->env->fails++;
+      strategy_var_order_update(term->env);
+    }
     return PROP_ERROR;
   } else {
     domain_t lo = max(get_lo(*term), get_lo(val));
@@ -36,11 +40,17 @@ prop_result_t propagate_term(struct constr_t *constr, struct val_t val) {
       struct val_t v = INTERVAL(lo, hi);
       bind(term, v);
       stat_inc_props();
-      prop_result_t p = propagate_clauses(term->clauses);
-      if (p == PROP_ERROR) {
-        return PROP_ERROR;
+      if (term->env != NULL) {
+        prop_result_t p = propagate_clauses(term->env->clauses);
+        if (p == PROP_ERROR) {
+          term->env->fails++;
+          strategy_var_order_update(term->env);
+          return PROP_ERROR;
+        }
+        return p + 1;
+      } else {
+        return 1;
       }
-      return p + 1;
     }
   }
 

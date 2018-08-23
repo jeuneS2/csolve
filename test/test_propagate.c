@@ -32,6 +32,7 @@ class Mock {
  public:
   MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
   MOCK_METHOD1(normalize_step, struct constr_t *(struct constr_t *));
+  MOCK_METHOD1(strategy_var_order_update, void(struct env_t *));
   MOCK_METHOD2(patch, size_t(struct wand_expr_t *, const struct wand_expr_t));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
@@ -48,6 +49,10 @@ struct constr_t *normalize_step(struct constr_t *constr) {
   return MockProxy->normalize_step(constr);
 }
  
+void strategy_var_order_update(struct env_t *var) {
+  MockProxy->strategy_var_order_update(var);
+}
+
 size_t patch(struct wand_expr_t *loc, const struct wand_expr_t val) {
   return MockProxy->patch(loc, val);
 }

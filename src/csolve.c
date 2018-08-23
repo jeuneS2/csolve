@@ -202,11 +202,12 @@ static bool update_solution(struct env_t *env, struct constr_t *constr) {
   return updated;
 }
 
-static bool check_assignment(struct val_t *var, size_t depth) {
+static bool check_assignment(struct env_t *var, size_t depth) {
   // propagate values
   bool failed =
     propagate_clauses(var->clauses) == PROP_ERROR ||
-    propagate_clauses(objective_val()->clauses) == PROP_ERROR;
+    (objective_val()->env != NULL &&
+     propagate_clauses(objective_val()->env->clauses) == PROP_ERROR);
 
   // update statistics if propagation failed
   if (failed) {
@@ -232,16 +233,17 @@ static bool check_restart(void) {
   return false;
 }
 
-static void step_activate(struct step_t *step, struct val_t *var) {
+static void step_activate(struct step_t *step, struct env_t *var) {
   // set up iteration
   step->active = true;
   step->var = var;
-  step->bounds = *var;
+  step->bounds = *var->val;
   step->iter = 0;
   step->seed = is_restartable() ? rand() : 0;
 }
 
-static void step_deactivate(struct step_t *step) {
+static void step_deactivate(struct step_t *step){
+  strategy_var_order_push(step->var);
   step->active = false;
 }
 
@@ -251,7 +253,7 @@ static void step_enter(struct step_t *step, domain_t val) {
   // mark patching depth
   step->patch_depth = patch(NULL, (struct wand_expr_t){ NULL, 0 });
   // bind variable
-  step->bind_depth = bind(step->var, VALUE(val));
+  step->bind_depth = bind(step->var->val, VALUE(val));
 }
 
 static void step_leave(struct step_t *step) {
@@ -346,11 +348,12 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
     }
 
     if (!steps[depth].active) {
-      // not active yet, so we can pick a variable
-      strategy_pick_var(env, depth);
+      // pick a variable
+      struct env_t *var = strategy_var_order_pop();
+      /* fprintf(stderr, "PICK: %s (%lu) @%lu\n", var->key, var->fails, depth); */
       // spawn a worker if possible
-      worker_spawn(env[depth].val, depth);
-      step_activate(&steps[depth], env[depth].val);
+      worker_spawn(var->val, depth);
+      step_activate(&steps[depth], var);
     } else {
       // continue iteration
       step_leave(&steps[depth]);
@@ -374,9 +377,10 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
     // decide whether to move to next variable, stay at current one, or restart
     bool failed = check_assignment(steps[depth].var, depth);
     if (!failed) {
+      steps[depth].var->fails--;
       depth++;
     } else {
-      env[depth].fails++;
+      steps[depth].var->fails++;
       if (check_restart()) {
         RESTART();
       }
