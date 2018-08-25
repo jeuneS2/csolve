@@ -4,9 +4,7 @@
 namespace parser_support {
 
 void mock_free(void *);
-void mock_qsort(void *, size_t, size_t, int (*)(const void *, const void *));
 #define free mock_free
-#define qsort mock_qsort
 
 #include "../src/parser_support.c"
 
@@ -21,7 +19,6 @@ class Mock {
   MOCK_METHOD1(print_fatal, void (const char *));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
   MOCK_METHOD1(free, void(void *));
-  MOCK_METHOD4(qsort, void(void *, size_t, size_t, int (*)(const void *, const void *)));
 };
 
 Mock *MockProxy;
@@ -48,14 +45,10 @@ void free(void *ptr) {
   MockProxy->free(ptr);
 }
 
-void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *)) {
-  MockProxy->qsort(base, nmemb, size, compar);
-}
-
 TEST(VarsFindKey, Find) {
   struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct var_t v[2]  = { { { "x", &val }, 0 },
-                         { { "y", &val }, 1 } };
+  struct env_t v[2]  = { { "x", &val, NULL, 0, 1 },
+                         { "y", &val, NULL, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   keytab_add(0);
@@ -65,15 +58,16 @@ TEST(VarsFindKey, Find) {
   EXPECT_EQ(&_vars[0], vars_find_key("x"));
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("x") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("y") % TABLE_SIZE]));
   keytab_free();
   delete(MockProxy);
 }
 
 TEST(VarsFindKey, NotFound) {
   struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct var_t v[2]  = { { { "x", &val }, 0 },
-                         { { "y", &val }, 1 } };
+  struct env_t v[2]  = { { "x", &val, NULL, 0, 1 },
+                         { "y", &val, NULL, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   keytab_add(0);
@@ -82,7 +76,8 @@ TEST(VarsFindKey, NotFound) {
   EXPECT_EQ(NULL, vars_find_key("z"));
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("x") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("y") % TABLE_SIZE]));
   keytab_free();
   delete(MockProxy);
 }
@@ -90,8 +85,8 @@ TEST(VarsFindKey, NotFound) {
 TEST(VarsFindVal, Find) {
   struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct var_t v[2]  = { { { "x", &val1 }, 0 },
-                         { { "y", &val2 }, 1 } };
+  struct env_t v[2]  = { { "x", &val1, NULL, 0, 1 },
+                         { "y", &val2, NULL, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -101,7 +96,8 @@ TEST(VarsFindVal, Find) {
   EXPECT_EQ(&_vars[0], vars_find_val(&val1));
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val1) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val2) % TABLE_SIZE]));
   valtab_free();
   delete(MockProxy);
 }
@@ -110,8 +106,8 @@ TEST(VarsFindVal, NotFound) {
   struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct val_t val3 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct var_t v[2]  = { { { "x", &val1 }, 0 },
-                         { { "y", &val2 }, 1 } };
+  struct env_t v[2]  = { { "x", &val1, NULL, 0, 1 },
+                         { "y", &val2, NULL, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -120,7 +116,8 @@ TEST(VarsFindVal, NotFound) {
   EXPECT_EQ(NULL, vars_find_val(&val3));
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val1) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val2) % TABLE_SIZE]));
   valtab_free();
   delete(MockProxy);
 }
@@ -132,28 +129,29 @@ TEST(VarsAdd, Basic) {
   const char *k1 = "k1";
   struct val_t v1;
   vars_add(k1, &v1);
-  EXPECT_NE((struct var_t *)NULL, _vars);
+  EXPECT_NE((struct env_t *)NULL, _vars);
   EXPECT_EQ(1, _var_count);
-  EXPECT_NE(k1, _vars[0].var.key);
-  EXPECT_STREQ(k1, _vars[0].var.key);
-  EXPECT_EQ(&v1, _vars[0].var.val);
-  EXPECT_EQ(0, _vars[0].var.fails);
-  EXPECT_EQ(0, _vars[0].weight);
+  EXPECT_NE(k1, _vars[0].key);
+  EXPECT_STREQ(k1, _vars[0].key);
+  EXPECT_EQ(&v1, _vars[0].val);
+  EXPECT_EQ(0, _vars[0].prio);
 
   const char *k2 = "k2";
   struct val_t v2;
   vars_add(k2, &v2);
-  EXPECT_NE(k2, _vars[1].var.key);
-  EXPECT_STREQ(k2, _vars[1].var.key);
-  EXPECT_EQ(&v2, _vars[1].var.val);
-  EXPECT_EQ(0, _vars[1].var.fails);
-  EXPECT_EQ(0, _vars[1].weight);
+  EXPECT_NE(k2, _vars[1].key);
+  EXPECT_STREQ(k2, _vars[1].key);
+  EXPECT_EQ(&v2, _vars[1].val);
+  EXPECT_EQ(0, _vars[1].prio);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(4);
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("k1") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("k2") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&v1) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&v2) % TABLE_SIZE]));
   keytab_free();
   valtab_free();
-  delete(MockProxy);  
+  delete(MockProxy);
 }
 
 TEST(VarsCount, Basic) {
@@ -207,8 +205,8 @@ TEST(VarsCount, Errors) {
 TEST(VarsWeighten, Basic) {
   struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
   struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct var_t v[2]  = { { { "x", &val1 }, 0 },
-                         { { "y", &val2 }, 3 } };
+  struct env_t v[2]  = { { "x", &val1, NULL, 0, 0 },
+                         { "y", &val2, NULL, 1, 3 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -220,26 +218,27 @@ TEST(VarsWeighten, Basic) {
 
   Z = CONSTRAINT_EXPR(OP_EQ, &X, &Y);
   vars_weighten(&Z, 10);
-  EXPECT_EQ(v[0].weight, 10);
-  EXPECT_EQ(v[1].weight, 13);
+  EXPECT_EQ(v[0].prio, 10);
+  EXPECT_EQ(v[1].prio, 13);
 
   Z = CONSTRAINT_EXPR(OP_AND, &X, &Y);
   vars_weighten(&Z, 15);
-  EXPECT_EQ(v[0].weight, 25);
-  EXPECT_EQ(v[1].weight, 28);
+  EXPECT_EQ(v[0].prio, 25);
+  EXPECT_EQ(v[1].prio, 28);
 
   Z = CONSTRAINT_EXPR(OP_NEG, &X, NULL);
   vars_weighten(&Z, 100);
-  EXPECT_EQ(v[0].weight, 125);
-  EXPECT_EQ(v[1].weight, 28);
+  EXPECT_EQ(v[0].prio, 125);
+  EXPECT_EQ(v[1].prio, 28);
 
   Z = CONSTRAINT_EXPR(OP_NOT, &X, NULL);
   vars_weighten(&Z, 200);
-  EXPECT_EQ(v[0].weight, 325);
-  EXPECT_EQ(v[1].weight, 28);
+  EXPECT_EQ(v[0].prio, 325);
+  EXPECT_EQ(v[1].prio, 28);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val1) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val2) % TABLE_SIZE]));
   valtab_free();
   delete(MockProxy);
 }
@@ -260,78 +259,6 @@ TEST(VarsWeighten, Errors) {
   delete(MockProxy);
 }
 
-TEST(VarsCompare, Basic) {
-  struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct val_t val3 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct var_t x = { { "x", &val1 }, 10 };
-  struct var_t y = { { "y", &val2 }, 20 };
-  struct var_t z = { { "z", &val3 }, 20 };
-
-  EXPECT_GT(vars_compare(&x, &y), 0);
-  EXPECT_GT(vars_compare(&x, &z), 0);
-  EXPECT_LT(vars_compare(&y, &x), 0);
-  EXPECT_LT(vars_compare(&z, &x), 0);
-
-  EXPECT_EQ(vars_compare(&y, &y), 0);
-  EXPECT_EQ(vars_compare(&y, &z), 0);
-  EXPECT_EQ(vars_compare(&z, &y), 0);
-}
-
-TEST(VarsPrint, Basic) {
-  struct val_t val1 = INTERVAL(-1, 5);
-  struct val_t val2 = INTERVAL(18, 86);
-  struct var_t v[2]  = { { { "x", &val1 }, 0 },
-                         { { "y", &val2 }, 3 } };
-  _vars = &v[0];
-  _var_count = 2;
-
-  std::string output;
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_val(stderr, val1)).Times(1);
-  EXPECT_CALL(*MockProxy, print_val(stderr, val2)).Times(1);
-  testing::internal::CaptureStderr();
-  vars_print(stderr);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "x: 0<val0>\ny: 3<val1>\n");
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, print_val(stdout, val1)).Times(1);
-  EXPECT_CALL(*MockProxy, print_val(stdout, val2)).Times(1);
-  testing::internal::CaptureStdout();
-  vars_print(stdout);
-  output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "x: 0<val2>\ny: 3<val3>\n");
-  delete(MockProxy);
-}
-
-TEST(VarsFree, Basic) {
-  _vars = 0;
-  _var_count = 0;
-  
-  struct val_t val;
-  vars_add("key", &val);
-  EXPECT_NE((struct var_t *)NULL, _vars);
-  EXPECT_EQ(1, _var_count);
-
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
-  EXPECT_CALL(*MockProxy, free(_vars)).Times(1);
-  vars_free();
-  EXPECT_EQ((struct var_t *)NULL, _vars);
-  EXPECT_EQ(0, _var_count);
-  delete(MockProxy);
-}
-
-TEST(VarsSort, Basic) {
-  MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, qsort(_vars, _var_count, sizeof(struct var_t), vars_compare)).Times(1);
-  vars_sort();
-  delete(MockProxy);
-}
-
 TEST(EnvGenerate, Basic) {
   _vars = 0;
   _var_count = 0;
@@ -341,37 +268,40 @@ TEST(EnvGenerate, Basic) {
   vars_add("k2", &v2);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(testing::_)).Times(4);
-  EXPECT_CALL(*MockProxy, free(_vars)).Times(1);
   struct env_t *env = env_generate();
+  EXPECT_EQ(env, _vars);
   EXPECT_STREQ("k1", env[0].key);
   EXPECT_EQ(&v1, env[0].val);
-  EXPECT_EQ(0, env[0].fails);
+  EXPECT_EQ(0, env[0].prio);
   EXPECT_STREQ("k2", env[1].key);
   EXPECT_EQ(&v2, env[1].val);
-  EXPECT_EQ(0, env[1].fails);
-  EXPECT_EQ((const char *)NULL, env[2].key);
-  EXPECT_EQ((struct val_t *)NULL, env[2].val);
-  EXPECT_EQ(0, env[2].fails);
-  EXPECT_EQ((struct var_t *)NULL, _vars);
-  EXPECT_EQ(0, _var_count);
+  EXPECT_EQ(0, env[1].prio);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("k1") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("k2") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&v1) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&v2) % TABLE_SIZE]));
+  keytab_free();
+  valtab_free();
   delete(MockProxy);
 }
 
 TEST(EnvFree, Basic) {
-  struct env_t env[3];
+  struct env_t env[2];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
-  env[2] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
+  _vars = env;
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, free((void *)env[0].key));
   EXPECT_CALL(*MockProxy, free((void *)env[1].key));
-  EXPECT_CALL(*MockProxy, free((void *)&env[0]));
-  env_free(env);
+  EXPECT_CALL(*MockProxy, free((void *)_vars));
+  env_free();
   delete(MockProxy);
 }
 

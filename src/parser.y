@@ -53,8 +53,6 @@ void yyerror(const char *);
 
 Input : Constraints
       {
-        vars_sort();
-
         prop_result_t prop = propagate($1, VALUE(1));
         struct constr_t *norm = $1;
 
@@ -78,7 +76,7 @@ Input : Constraints
 
           solve(size, env, norm);
 
-          env_free(env);
+          env_free();
         }
       }
 
@@ -88,7 +86,7 @@ Constraints : Constraints Constraint
               $$->constr.wand.elems = realloc($1->constr.wand.elems, size);
               $$->constr.wand.elems[$$->constr.wand.length-1].constr = $2;
               $$->constr.wand.elems[$$->constr.wand.length-1].prop_tag = 0;
-	    }
+            }
             | Objective
             { $$ = alloc(sizeof(struct constr_t));
               $$->type = CONSTR_WAND;
@@ -96,7 +94,7 @@ Constraints : Constraints Constraint
               $$->constr.wand.elems = malloc(sizeof(struct wand_expr_t));
               $$->constr.wand.elems[0].constr = $1;
               $$->constr.wand.elems[0].prop_tag = 0;
-	    }
+            }
 ;
 
 Objective : ANY ';'
@@ -144,9 +142,9 @@ PrimaryExpr : NUM
             | IDENT
             { $$ = alloc(sizeof(struct constr_t));
               $$->type = CONSTR_TERM;
-              struct var_t *var = vars_find_key($1);
+              struct env_t *var = vars_find_key($1);
               if (var != NULL) {
-                $$->constr.term = var->var.val;
+                $$->constr.term = var->val;
               } else {
                 $$->constr.term = alloc(sizeof(struct val_t));
                 *$$->constr.term = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);

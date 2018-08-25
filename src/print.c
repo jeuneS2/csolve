@@ -56,17 +56,17 @@ void print_constr(FILE *file, const struct constr_t *constr) {
   }
 }
 
-void print_env(FILE *file, struct env_t *env) {
-  for (int i = 0; env[i].key != NULL; i++) {
+void print_env(FILE *file, size_t size, struct env_t *env) {
+  for (size_t i = 0; i < size; i++) {
     fprintf(file, "%s =", env[i].key);
     print_val(file, *env[i].val);
     fprintf(file, ", ");
   }
 }
 
-void print_solution(FILE *file, struct env_t *env) {
+void print_solution(FILE *file, size_t size, struct env_t *env) {
   fprintf(file, "SOLUTION: ");
-  print_env(file, env);
+  print_env(file, size, env);
   fprintf(file, "BEST: %d\n", objective_best());
 }
 

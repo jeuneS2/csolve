@@ -34,7 +34,7 @@ prop_result_t propagate_term(struct constr_t *constr, struct val_t val) {
 
   if (get_lo(*term) > get_hi(val) || get_hi(*term) < get_lo(val)) {
     if (term->env != NULL) {
-      term->env->fails++;
+      term->env->prio++;
       strategy_var_order_update(term->env);
     }
     return PROP_ERROR;
@@ -48,7 +48,7 @@ prop_result_t propagate_term(struct constr_t *constr, struct val_t val) {
       if (term->env != NULL) {
         prop_result_t p = propagate_clauses(term->env->clauses);
         if (p == PROP_ERROR) {
-          term->env->fails++;
+          term->env->prio++;
           strategy_var_order_update(term->env);
           return PROP_ERROR;
         }

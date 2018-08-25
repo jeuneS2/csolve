@@ -89,7 +89,7 @@ int strategy_var_cmp(struct env_t *e1, struct env_t *e2) {
   }
 
   if (strategy_prefer_failing() && cmp == 0) {
-    cmp = e1->fails - e2->fails;
+    cmp = e1->prio - e2->prio;
   }
 
   return cmp;
@@ -111,7 +111,7 @@ static inline size_t right(size_t parent) {
 
 void strategy_var_order_print(FILE *file, size_t pos) {
   if (pos < _var_order_size) {
-    fprintf(file, "(%s %lu ", _var_order[pos]->key, _var_order[pos]->fails);
+    fprintf(file, "(%s %lu ", _var_order[pos]->key, _var_order[pos]->prio);
     strategy_var_order_print(file, left(pos));
     strategy_var_order_print(file, right(pos));
     fprintf(file, ")");
@@ -119,12 +119,11 @@ void strategy_var_order_print(FILE *file, size_t pos) {
 }
 
 void strategy_var_order_init(size_t size, struct env_t *env) {
-  _var_order_size = size;
+  _var_order_size = 0;
   _var_order = (struct env_t **)malloc(size * sizeof(struct env_t *));
 
   for (size_t i = 0; i < size; i++) {
-    _var_order[i] = &env[i];
-    env[i].order = i;
+    strategy_var_order_push(&env[i]);
   }
 }
 

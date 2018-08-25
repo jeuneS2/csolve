@@ -174,7 +174,7 @@ struct env_t {
   struct val_t *val; ///< Value of variable
   struct clause_list_t *clauses; ///< Clauses affected by this value
   size_t order; ///< Position in variable ordering
-  int64_t fails; ///< Number of times this variable has failed
+  int64_t prio; ///< Priority of this variable
 };
 
 /** Types of objective functions */
@@ -337,9 +337,9 @@ void print_val(FILE *file, const struct val_t val);
 /** Print constraint */
 void print_constr(FILE *file, const struct constr_t *constr);
 /** Print variable environment/bindings */
-void print_env(FILE *file, struct env_t *env);
+void print_env(FILE *file, size_t size, struct env_t *env);
 /** Print a solution */
-void print_solution(FILE *file, struct env_t *env);
+void print_solution(FILE *file, size_t size, struct env_t *env);
 /** Print an error message */
 void print_error(const char *fmt, ...);
 /** Print an error message and die */

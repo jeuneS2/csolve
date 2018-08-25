@@ -76,12 +76,12 @@ TEST(VarCmp, SmallestDomain) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 7);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .prio = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .prio = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -108,12 +108,12 @@ TEST(VarCmp, LargestDomain) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(5, 27);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .prio = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .prio = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -140,12 +140,12 @@ TEST(VarCmp, SmallestValue) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .prio = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .prio = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -172,12 +172,12 @@ TEST(VarCmp, LargestValue) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .prio = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .prio = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -204,12 +204,12 @@ TEST(VarCmp, None) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .prio = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .prio = 0 };
 
   _prefer_failing = false;
   EXPECT_EQ(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -237,12 +237,12 @@ TEST(VarCmp, Error) {
   struct env_t env[4];
 
   struct val_t a = INTERVAL(1, 27);
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .fails = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
   struct val_t b = INTERVAL(3, 17);
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .fails = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   struct val_t c = INTERVAL(3, 17);
-  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .fails = 5 };
-  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .fails = 0 };
+  env[2] = { .key = "c", .val = &c, .clauses = NULL, .order = 0, .prio = 5 };
+  env[3] = { .key = NULL, .val = NULL, .clauses = NULL, .order = 0, .prio = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER)).Times(1);

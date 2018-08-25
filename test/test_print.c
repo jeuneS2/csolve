@@ -168,18 +168,17 @@ TEST(PrintEnv, Basic) {
   struct val_t b = VALUE(23);
   struct val_t c = INTERVAL(-1,42);
 
-  struct env_t env [4] = { { "a", &a },
+  struct env_t env [3] = { { "a", &a },
                            { "b", &b },
-                           { "c", &c },
-                           { NULL, NULL } };
+                           { "c", &c } };
 
   testing::internal::CaptureStderr();
-  print_env(stderr, env);
+  print_env(stderr, 3, env);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "a = 17, b = 23, c = [-1;42], ");
 
   testing::internal::CaptureStdout();
-  print_env(stdout, env);
+  print_env(stdout, 3, env);
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "a = 17, b = 23, c = [-1;42], ");
 }
@@ -190,17 +189,16 @@ TEST(PrintSolution, Basic) {
   struct val_t b = VALUE(23);
   struct val_t c = INTERVAL(-1,42);
 
-  struct env_t env [4] = { { "a", &a },
+  struct env_t env [3] = { { "a", &a },
                            { "b", &b },
-                           { "c", &c },
-                           { NULL, NULL } };
+                           { "c", &c } };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, objective_best())
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(77));
   testing::internal::CaptureStderr();
-  print_solution(stderr, env);
+  print_solution(stderr, 3, env);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "SOLUTION: a = 17, b = 23, c = [-1;42], BEST: 77\n");
   delete(MockProxy);
@@ -210,7 +208,7 @@ TEST(PrintSolution, Basic) {
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(77));
   testing::internal::CaptureStdout();
-  print_solution(stdout, env);
+  print_solution(stdout, 3, env);
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "SOLUTION: a = 17, b = 23, c = [-1;42], BEST: 77\n");
   delete(MockProxy);

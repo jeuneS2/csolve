@@ -168,7 +168,7 @@ static inline bool is_restartable(void) {
   return objective() == OBJ_ANY && strategy_restart_frequency() > 0;
 }
 
-static bool update_solution(struct env_t *env, struct constr_t *constr) {
+static bool update_solution(size_t size, struct env_t *env, struct constr_t *constr) {
   bool updated = false;
 
   if (is_true(eval(constr))) {
@@ -178,7 +178,7 @@ static bool update_solution(struct env_t *env, struct constr_t *constr) {
 
       objective_update_best();
       fprintf(stderr, "#%d: ", _worker_id);
-      print_solution(stdout, env);
+      print_solution(stdout, size, env);
       shared()->solutions++;
 
       updated = true;
@@ -326,7 +326,7 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
 
     // check if a better feasible solution is reached
     if (depth == size) {
-      bool update = update_solution(env, constr);
+      bool update = update_solution(size, env, constr);
       if (update) {
         depth--;
         RESTART();
@@ -364,10 +364,10 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
     // decide whether to move to next variable, stay at current one, or restart
     bool failed = check_assignment(steps[depth].var, depth);
     if (!failed) {
-      steps[depth].var->fails--;
+      steps[depth].var->prio--;
       depth++;
     } else {
-      steps[depth].var->fails++;
+      steps[depth].var->prio++;
       if (check_restart()) {
         RESTART();
       }
