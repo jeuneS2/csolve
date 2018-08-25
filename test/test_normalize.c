@@ -29,7 +29,7 @@ bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
 }
 
 bool operator==(const struct wand_expr_t& lhs, const struct wand_expr_t& rhs) {
-  return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+  return lhs.constr == rhs.constr && lhs.prop_tag == rhs.prop_tag;
 }
 
 class Mock {

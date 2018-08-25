@@ -13,7 +13,7 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 }
 
 bool operator==(const struct wand_expr_t& lhs, const struct wand_expr_t& rhs) {
-  return memcmp(&lhs, &rhs, sizeof(lhs)) == 0;
+  return lhs.constr == rhs.constr && lhs.prop_tag == rhs.prop_tag;
 }
 
 class Mock {
