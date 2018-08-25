@@ -50,10 +50,11 @@ static void var_list_free(struct var_list_t *list) {
   }
 }
 
+#define HASH_STR_MAGIC 31
 static uint32_t hash_str(const char *str) {
   int32_t hash = 0;
   while (*str != '\0') {
-    hash = hash * 31 + *str;
+    hash = hash * HASH_STR_MAGIC + *str;
     str++;
   }
   return hash;

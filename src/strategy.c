@@ -95,17 +95,18 @@ int strategy_var_cmp(struct env_t *e1, struct env_t *e2) {
   return cmp;
 }
 
+#define VAR_ORDER_HEAP_ARITY 2
 size_t _var_order_size;
 struct env_t **_var_order;
 
 static inline size_t parent(size_t child) {
-  return child/2;
+  return child / VAR_ORDER_HEAP_ARITY;
 }
 static inline size_t left(size_t parent) {
-  return 2*parent + 1;
+  return VAR_ORDER_HEAP_ARITY * parent + 1;
 }
 static inline size_t right(size_t parent) {
-  return 2*parent + 2;
+  return VAR_ORDER_HEAP_ARITY * parent + 2;
 }
 
 void strategy_var_order_print(FILE *file, size_t pos) {
