@@ -350,7 +350,6 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
     if (!steps[depth].active) {
       // pick a variable
       struct env_t *var = strategy_var_order_pop();
-      /* fprintf(stderr, "PICK: %s (%lu) @%lu\n", var->key, var->fails, depth); */
       // spawn a worker if possible
       worker_spawn(var->val, depth);
       step_activate(&steps[depth], var);
