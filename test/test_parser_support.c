@@ -58,9 +58,16 @@ TEST(VarsFindKey, Find) {
                          { { "y", &val }, 1 } };
   _vars = &v[0];
   _var_count = 2;
+  keytab_add(0);
+  keytab_add(1);
 
   EXPECT_EQ(&_vars[1], vars_find_key("y"));
   EXPECT_EQ(&_vars[0], vars_find_key("x"));
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  keytab_free();
+  delete(MockProxy);
 }
 
 TEST(VarsFindKey, NotFound) {
@@ -69,8 +76,15 @@ TEST(VarsFindKey, NotFound) {
                          { { "y", &val }, 1 } };
   _vars = &v[0];
   _var_count = 2;
+  keytab_add(0);
+  keytab_add(1);
 
   EXPECT_EQ(NULL, vars_find_key("z"));
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  keytab_free();
+  delete(MockProxy);
 }
 
 TEST(VarsFindVal, Find) {
@@ -80,9 +94,16 @@ TEST(VarsFindVal, Find) {
                          { { "y", &val2 }, 1 } };
   _vars = &v[0];
   _var_count = 2;
+  valtab_add(0);
+  valtab_add(1);
 
   EXPECT_EQ(&_vars[1], vars_find_val(&val2));
   EXPECT_EQ(&_vars[0], vars_find_val(&val1));
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  valtab_free();
+  delete(MockProxy);
 }
 
 TEST(VarsFindVal, NotFound) {
@@ -93,8 +114,15 @@ TEST(VarsFindVal, NotFound) {
                          { { "y", &val2 }, 1 } };
   _vars = &v[0];
   _var_count = 2;
+  valtab_add(0);
+  valtab_add(1);
 
   EXPECT_EQ(NULL, vars_find_val(&val3));
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  valtab_free();
+  delete(MockProxy);
 }
 
 TEST(VarsAdd, Basic) {
@@ -120,6 +148,12 @@ TEST(VarsAdd, Basic) {
   EXPECT_EQ(&v2, _vars[1].var.val);
   EXPECT_EQ(0, _vars[1].var.fails);
   EXPECT_EQ(0, _vars[1].weight);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(4);
+  keytab_free();
+  valtab_free();
+  delete(MockProxy);  
 }
 
 TEST(VarsCount, Basic) {
@@ -177,6 +211,8 @@ TEST(VarsWeighten, Basic) {
                          { { "y", &val2 }, 3 } };
   _vars = &v[0];
   _var_count = 2;
+  valtab_add(0);
+  valtab_add(1);
 
   struct constr_t X = { .type = CONSTR_TERM, .constr = { .term = &val1 } };
   struct constr_t Y = { .type = CONSTR_TERM, .constr = { .term = &val2 } };
@@ -201,6 +237,11 @@ TEST(VarsWeighten, Basic) {
   vars_weighten(&Z, 200);
   EXPECT_EQ(v[0].weight, 325);
   EXPECT_EQ(v[1].weight, 28);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
+  valtab_free();
+  delete(MockProxy);
 }
 
 TEST(VarsWeighten, Errors) {
@@ -269,13 +310,14 @@ TEST(VarsPrint, Basic) {
 TEST(VarsFree, Basic) {
   _vars = 0;
   _var_count = 0;
-
+  
   struct val_t val;
   vars_add("key", &val);
   EXPECT_NE((struct var_t *)NULL, _vars);
   EXPECT_EQ(1, _var_count);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(2);
   EXPECT_CALL(*MockProxy, free(_vars)).Times(1);
   vars_free();
   EXPECT_EQ((struct var_t *)NULL, _vars);
@@ -299,6 +341,7 @@ TEST(EnvGenerate, Basic) {
   vars_add("k2", &v2);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(testing::_)).Times(4);
   EXPECT_CALL(*MockProxy, free(_vars)).Times(1);
   struct env_t *env = env_generate();
   EXPECT_STREQ("k1", env[0].key);

@@ -25,25 +25,98 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 static struct var_t *_vars = NULL;
 static size_t _var_count = 0;
 
-size_t var_count(void) {
-  return _var_count;
+/** Type to represent a list of variables in a hash table */
+struct var_list_t {
+  size_t index; ///< Index of variable in _vars
+  struct var_list_t *next; ///< Next element in list
+};
+
+#define TABLE_SIZE 4096
+static struct var_list_t *_keytab[TABLE_SIZE];
+static struct var_list_t *_valtab[TABLE_SIZE];
+
+static struct var_list_t *var_list_append(struct var_list_t *list, size_t elem) {
+  struct var_list_t *retval = (struct var_list_t *)malloc(sizeof(struct var_list_t));
+  retval->index = elem;
+  retval->next = list;
+  return retval;
+}
+
+static void var_list_free(struct var_list_t *list) {
+  struct var_list_t *next;
+  for (struct var_list_t *l = list; l != NULL; l = next) {
+    next = l->next;
+    free(l);
+  }
+}
+
+static uint32_t hash_str(const char *str) {
+  int32_t hash = 0;
+  while (*str != '\0') {
+    hash = hash * 31 + *str;
+    str++;
+  }
+  return hash;
+}
+
+static void keytab_add(size_t index) {
+  size_t hash = hash_str(_vars[index].var.key) % TABLE_SIZE;
+  _keytab[hash] = var_list_append(_keytab[hash], index);
+}
+
+static struct var_t *keytab_find(const char *key) {
+  size_t index = hash_str(key) % TABLE_SIZE;
+  for (struct var_list_t *l = _keytab[index]; l != NULL; l = l->next) {
+    if (strcmp(key, _vars[l->index].var.key) == 0) {
+      return &_vars[l->index];
+    }
+  }
+  return NULL;
+}
+
+static void keytab_free(void) {
+  for (size_t i = 0; i < TABLE_SIZE; i++) {
+    var_list_free(_keytab[i]);
+    _keytab[i] = NULL;
+  }
 }
 
 struct var_t *vars_find_key(const char *key) {
-  for (size_t i = 0; i < _var_count; i++) {
-    if (strcmp(_vars[i].var.key, key) == 0) {
-      return &_vars[i];
+  return keytab_find(key);
+}
+
+static uint32_t hash_val(const struct val_t *val) {
+  return (intptr_t)val / sizeof(struct val_t);
+}
+
+static void valtab_add(size_t index) {
+  size_t hash = hash_val(_vars[index].var.val) % TABLE_SIZE;
+  _valtab[hash] = var_list_append(_valtab[hash], index);
+}
+
+static struct var_t *valtab_find(const struct val_t *val) {
+  size_t index = hash_val(val) % TABLE_SIZE;
+  for (struct var_list_t *l = _valtab[index]; l != NULL; l = l->next) {
+    if (val == _vars[l->index].var.val) {
+      return &_vars[l->index];
     }
   }
   return NULL;
 }
-struct var_t *vars_find_val(const struct val_t *val) {
-  for (size_t i = 0; i < _var_count; i++) {
-    if (_vars[i].var.val == val) {
-      return &_vars[i];
-    }
+
+static void valtab_free(void) {
+  for (size_t i = 0; i < TABLE_SIZE; i++) {
+    var_list_free(_valtab[i]);
+    _valtab[i] = NULL;
   }
-  return NULL;
+}
+
+struct var_t *vars_find_val(const struct val_t *val) {
+  return valtab_find(val);
+}
+
+size_t var_count(void) {
+  return _var_count;
 }
 
 void vars_add(const char *key, struct val_t *val) {
@@ -56,6 +129,9 @@ void vars_add(const char *key, struct val_t *val) {
   _vars[_var_count-1].var.order = SIZE_MAX;
   _vars[_var_count-1].var.fails = 0;
   _vars[_var_count-1].weight = 0;
+
+  keytab_add(_var_count-1);
+  valtab_add(_var_count-1);
 }
 
 int32_t vars_count(struct constr_t *constr) {
@@ -138,6 +214,8 @@ void vars_print(FILE *file) {
 }
 
 void vars_free(void) {
+  keytab_free();
+  valtab_free();
   free(_vars);
   _vars = NULL;
   _var_count = 0;
@@ -222,4 +300,3 @@ void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
     print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
-
