@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-std=c99 -pedantic -Wall -O3 -flto -g # -fprofile-arcs -ftest-coverage -pg -no-pie
+CFLAGS=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -O3 -flto -g # -fprofile-arcs -ftest-coverage -pg -no-pie
 LEX=flex
 LFLAGS=-8 -F
 YACC=bison
@@ -7,7 +7,7 @@ YFLAGS=-y -W
 
 GTEST_HOME=/usr/src/googletest
 TEST_CXX=g++
-TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -DGTEST_HAS_PTHREAD=1 -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
+TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -D_DEFAULT_SOURCE -DGTEST_HAS_PTHREAD=1 -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
 
 FUZZ_CC=afl-gcc
 FUZZ_CFLAGS=-std=c99 -pedantic -Wall -O2

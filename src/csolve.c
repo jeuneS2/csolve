@@ -16,10 +16,6 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _DEFAULT_SOURCE
-#define _DEFAULT_SOURCE
-#endif
-
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -164,14 +160,6 @@ void worker_die(void) {
 }
 
 // algorithm helper functions
-void swap_env(struct env_t *env, size_t depth1, size_t depth2) {
-  if (env[depth1].key != NULL && env[depth2].key != NULL && depth1 != depth2) {
-    struct env_t t = env[depth2];
-    env[depth2] = env[depth1];
-    env[depth1] = t;
-  }
-}
-
 static inline bool found_any(void) {
   return objective() == OBJ_ANY && shared()->solutions > 0;
 }
@@ -307,7 +295,7 @@ static void unwind(struct step_t *steps, size_t depth, size_t stop) {
 // restart the search
 #define RESTART()                               \
   {                                             \
-    unwind(steps, depth, _worker_min_depth);      \
+    unwind(steps, depth, _worker_min_depth);    \
     depth = _worker_min_depth;                  \
     continue;                                   \
   }
