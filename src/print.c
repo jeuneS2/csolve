@@ -33,26 +33,20 @@ void print_val(FILE *file, const struct val_t val) {
 }
 
 void print_constr(FILE *file, const struct constr_t *constr) {
-  switch (constr->type) {
-  case CONSTR_TERM:
+  if (IS_TYPE(TERM, constr)) {
     print_val(file, *constr->constr.term);
-    break;
-  case CONSTR_EXPR:
-    fprintf(file, " (%c", constr->constr.expr.op);
+  } else if (IS_TYPE(WAND, constr)) {
+    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+      print_constr(file, constr->constr.wand.elems[i].constr);
+      fprintf(file, ";");
+    }
+  } else {
+    fprintf(file, " (%c", constr->type->op);
     print_constr(file, constr->constr.expr.l);
     if (constr->constr.expr.r != NULL) {
       print_constr(file, constr->constr.expr.r);
     }
     fprintf(file, ")");
-    break;
-  case CONSTR_WAND:
-    for (size_t i = 0; i < constr->constr.wand.length; i++) {
-      print_constr(file, constr->constr.wand.elems[i].constr);
-      fprintf(file, ";");
-    }
-    break;
-  default:
-    print_error(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
 

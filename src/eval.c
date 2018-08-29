@@ -22,7 +22,16 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
-const struct val_t eval_eq(const struct val_t a, const struct val_t b) {
+const struct val_t eval_term(const struct constr_t *constr) {
+  return *constr->constr.term;
+}
+
+const struct val_t eval_eq(const struct constr_t *constr) {
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct constr_t *r = constr->constr.expr.r;
+  const struct val_t a = l->type->eval(l);
+  const struct val_t b = r->type->eval(r);
+
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
   domain_t b_lo = get_lo(b);
@@ -41,7 +50,12 @@ const struct val_t eval_eq(const struct val_t a, const struct val_t b) {
   return INTERVAL(0, 1);
 }
 
-const struct val_t eval_lt(const struct val_t a, const struct val_t b) {
+const struct val_t eval_lt(const struct constr_t *constr) {
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct constr_t *r = constr->constr.expr.r;
+  const struct val_t a = l->type->eval(l);
+  const struct val_t b = r->type->eval(r);
+
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
   domain_t b_lo = get_lo(b);
@@ -60,7 +74,10 @@ const struct val_t eval_lt(const struct val_t a, const struct val_t b) {
   return INTERVAL(0, 1);
 }
 
-const struct val_t eval_neg(const struct val_t a) {
+const struct val_t eval_neg(const struct constr_t *constr) {
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct val_t a = l->type->eval(l);
+
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
   domain_t lo = neg(a_hi);
@@ -68,7 +85,12 @@ const struct val_t eval_neg(const struct val_t a) {
   return INTERVAL(lo, hi);
 }
 
-const struct val_t eval_add(const struct val_t a, const struct val_t b) {
+const struct val_t eval_add(const struct constr_t *constr) {
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct constr_t *r = constr->constr.expr.r;
+  const struct val_t a = l->type->eval(l);
+  const struct val_t b = r->type->eval(r);
+
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
   domain_t b_lo = get_lo(b);
@@ -78,7 +100,12 @@ const struct val_t eval_add(const struct val_t a, const struct val_t b) {
   return INTERVAL(lo, hi);
 }
 
-const struct val_t eval_mul(const struct val_t a, const struct val_t b) {
+const struct val_t eval_mul(const struct constr_t *constr) {
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct constr_t *r = constr->constr.expr.r;
+  const struct val_t a = l->type->eval(l);
+  const struct val_t b = r->type->eval(r);
+
   domain_t a_lo = get_lo(a);
   domain_t a_hi = get_hi(a);
   domain_t b_lo = get_lo(b);
@@ -92,7 +119,10 @@ const struct val_t eval_mul(const struct val_t a, const struct val_t b) {
   return INTERVAL(lo, hi);
 }
 
-const struct val_t eval_not(const struct val_t a) {
+const struct val_t eval_not(const struct constr_t *constr) {
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct val_t a = l->type->eval(l);
+
   if (is_true(a)) {
     return VALUE(0);
   }
@@ -103,12 +133,14 @@ const struct val_t eval_not(const struct val_t a) {
 }
 
 const struct val_t eval_and(const struct constr_t *constr) {
-  const struct val_t lval = eval(constr->constr.expr.l);
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct val_t lval = l->type->eval(l);
   if (is_false(lval)) {
     return VALUE(0);
   }
 
-  const struct val_t rval = eval(constr->constr.expr.r);
+  const struct constr_t *r = constr->constr.expr.r;
+  const struct val_t rval = r->type->eval(r);
   if (is_false(rval)) {
     return VALUE(0);
   }
@@ -121,12 +153,14 @@ const struct val_t eval_and(const struct constr_t *constr) {
 }
 
 const struct val_t eval_or(const struct constr_t *constr) {
-  const struct val_t lval = eval(constr->constr.expr.l);
+  const struct constr_t *l = constr->constr.expr.l;
+  const struct val_t lval = l->type->eval(l);
   if (is_true(lval)) {
     return VALUE(1);
   }
 
-  const struct val_t rval = eval(constr->constr.expr.r);
+  const struct constr_t *r = constr->constr.expr.r;
+  const struct val_t rval = r->type->eval(r);
   if (is_true(rval)) {
     return VALUE(1);
   }
@@ -138,29 +172,12 @@ const struct val_t eval_or(const struct constr_t *constr) {
   return INTERVAL(0, 1);
 }
 
-const struct val_t eval_expr(const struct constr_t *constr) {
-  const struct constr_t *l = constr->constr.expr.l;
-  const struct constr_t *r = constr->constr.expr.r;
-  switch (constr->constr.expr.op) {
-  case OP_EQ:  return eval_eq(eval(l), eval(r));
-  case OP_LT:  return eval_lt(eval(l), eval(r));
-  case OP_NEG: return eval_neg(eval(l));
-  case OP_ADD: return eval_add(eval(l), eval(r));
-  case OP_MUL: return eval_mul(eval(l), eval(r));
-  case OP_NOT: return eval_not(eval(l));
-  case OP_AND: return eval_and(constr);
-  case OP_OR : return eval_or(constr);
-  default:
-    print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
-  }
-  return VALUE(0);
-}
-
 const struct val_t eval_wand(const struct constr_t *constr) {
   bool all_true = true;
 
   for (size_t i = 0; i < constr->constr.wand.length; i++) {
-    struct val_t val = eval(constr->constr.wand.elems[i].constr);
+    const struct constr_t *c = constr->constr.wand.elems[i].constr;
+    struct val_t val = c->type->eval(c);
     if (is_false(val)) {
       return VALUE(0);
     }
@@ -174,15 +191,4 @@ const struct val_t eval_wand(const struct constr_t *constr) {
   }
 
   return INTERVAL(0, 1);
-}
-
-const struct val_t eval(const struct constr_t *constr) {
-  switch (constr->type) {
-  case CONSTR_TERM: return *constr->constr.term;
-  case CONSTR_EXPR: return eval_expr(constr);
-  case CONSTR_WAND: return eval_wand(constr);
-  default:
-    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
-  }
-  return INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
 }

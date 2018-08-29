@@ -171,7 +171,7 @@ static inline bool is_restartable(void) {
 static bool update_solution(size_t size, struct env_t *env, struct constr_t *constr) {
   bool updated = false;
 
-  if (is_true(eval(constr))) {
+  if (is_true(constr->type->eval(constr))) {
     sema_wait(&shared()->semaphore);
 
     if (!found_any() && objective_better()) {

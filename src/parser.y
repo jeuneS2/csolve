@@ -53,7 +53,7 @@ void yyerror(const char *);
 
 Input : Constraints
       {
-        prop_result_t prop = propagate($1, VALUE(1));
+        prop_result_t prop = propagate($1);
         struct constr_t *norm = $1;
 
         if (prop != PROP_ERROR) {
@@ -61,7 +61,7 @@ Input : Constraints
           do {
             prev = norm;
             norm = normalize(norm);
-            prop = propagate(norm, VALUE(1));
+            prop = propagate(norm);
           } while (norm != prev && prop != PROP_ERROR);
         }
 
@@ -89,9 +89,7 @@ Constraints : Constraints Constraint
             }
             | Objective
             { $$ = alloc(sizeof(struct constr_t));
-              $$->type = CONSTR_WAND;
-              $$->constr.wand.length = 1;
-              $$->constr.wand.elems = malloc(sizeof(struct wand_expr_t));
+              *$$ = CONSTRAINT_WAND(1, malloc(sizeof(struct wand_expr_t)));
               $$->constr.wand.elems[0].constr = $1;
               $$->constr.wand.elems[0].prop_tag = 0;
             }
@@ -100,34 +98,30 @@ Constraints : Constraints Constraint
 Objective : ANY ';'
           { objective_init(OBJ_ANY, &shared()->objective_best);
             $$ = alloc(sizeof(struct constr_t));
-            $$->type = CONSTR_TERM;
-            $$->constr.term = alloc(sizeof(struct val_t));
+            *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
             *$$->constr.term = VALUE(1);
           }
           | ALL ';'
           { objective_init(OBJ_ALL, &shared()->objective_best);
             $$ = alloc(sizeof(struct constr_t));
-            $$->type = CONSTR_TERM;
-            $$->constr.term = alloc(sizeof(struct val_t));
+            *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
             *$$->constr.term = VALUE(1);
           }
           | MIN Expr ';'
           { objective_init(OBJ_MIN, &shared()->objective_best);
             struct constr_t *v = alloc(sizeof(struct constr_t));
-            v->type = CONSTR_TERM;
-            v->constr.term = objective_val();
+            *v = CONSTRAINT_TERM(objective_val());
             vars_add("<obj>", objective_val());
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_EQ, $2, v);
+            *$$ = CONSTRAINT_EXPR(EQ, $2, v);
           }
           | MAX Expr ';'
           { objective_init(OBJ_MAX, &shared()->objective_best);
             struct constr_t *v = alloc(sizeof(struct constr_t));
-            v->type = CONSTR_TERM;
-            v->constr.term = objective_val();
+            *v = CONSTRAINT_TERM(objective_val());
             vars_add("<obj>", objective_val());
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_EQ, v, $2);
+            *$$ = CONSTRAINT_EXPR(EQ, v, $2);
           }
 ;
 
@@ -135,18 +129,16 @@ Constraint: Expr ';';
 
 PrimaryExpr : NUM
             { $$ = alloc(sizeof(struct constr_t));
-              $$->type = CONSTR_TERM;
-              $$->constr.term = alloc(sizeof(struct val_t));
+              *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
               *$$->constr.term = VALUE($1);
             }
             | IDENT
             { $$ = alloc(sizeof(struct constr_t));
-              $$->type = CONSTR_TERM;
               struct env_t *var = vars_find_key($1);
               if (var != NULL) {
-                $$->constr.term = var->val;
+                *$$ = CONSTRAINT_TERM(var->val);
               } else {
-                $$->constr.term = alloc(sizeof(struct val_t));
+                *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
                 *$$->constr.term = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
                 vars_add($1, $$->constr.term);
               }
@@ -159,28 +151,26 @@ PrimaryExpr : NUM
 UnaryExpr : PrimaryExpr
           | '-' PrimaryExpr
           { $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_NEG, $2, NULL);
+            *$$ = CONSTRAINT_EXPR(NEG, $2, NULL);
           }
           | '!' PrimaryExpr
           { $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_NOT, $2, NULL);
+            *$$ = CONSTRAINT_EXPR(NOT, $2, NULL);
           }
           | ALL_DIFFERENT '(' ExprList ')'
           {
-            // start with TRUE
+            // create wide-and node
             $$ = alloc(sizeof(struct constr_t));
-            $$->type = CONSTR_WAND;
-            $$->constr.wand.length = 0;
-            $$->constr.wand.elems = NULL;
+            *$$ = CONSTRAINT_WAND(0, NULL);
             // add != constraints for all pairs
             for (struct expr_list_t *l = $3; l != NULL; l = l->next) {
               for (struct expr_list_t *k = l->next; k != NULL; k = k->next) {
                 struct constr_t *a = alloc(sizeof(struct constr_t));
-                *a = CONSTRAINT_EXPR(OP_LT, l->expr, k->expr);
+                *a = CONSTRAINT_EXPR(LT, l->expr, k->expr);
                 struct constr_t *b = alloc(sizeof(struct constr_t));
-                *b = CONSTRAINT_EXPR(OP_LT, k->expr, l->expr);
+                *b = CONSTRAINT_EXPR(LT, k->expr, l->expr);
                 struct constr_t *c = alloc(sizeof(struct constr_t));
-                *c = CONSTRAINT_EXPR(OP_OR, a, b);
+                *c = CONSTRAINT_EXPR(OR, a, b);
 
                 $$->constr.wand.length++;
                 const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
@@ -204,60 +194,58 @@ ExprList : Expr
 MultExpr : UnaryExpr
          | MultExpr '*' UnaryExpr
          { $$ = alloc(sizeof(struct constr_t));
-           *$$ = CONSTRAINT_EXPR(OP_MUL, $1, $3);
+           *$$ = CONSTRAINT_EXPR(MUL, $1, $3);
          }
 ;
 
 AddExpr : MultExpr
         | AddExpr '+' MultExpr
         { $$ = alloc(sizeof(struct constr_t));
-          *$$ = CONSTRAINT_EXPR(OP_ADD, $1, $3);
+          *$$ = CONSTRAINT_EXPR(ADD, $1, $3);
         }
         | AddExpr '-' MultExpr
         { struct constr_t *c = alloc(sizeof(struct constr_t));
-          *c = CONSTRAINT_EXPR(OP_NEG, $3, NULL);
+          *c = CONSTRAINT_EXPR(NEG, $3, NULL);
           $$ = alloc(sizeof(struct constr_t));
-          *$$ = CONSTRAINT_EXPR(OP_ADD, $1, c);
+          *$$ = CONSTRAINT_EXPR(ADD, $1, c);
         }
 ;
 
 RelatExpr : AddExpr
           | RelatExpr '<' AddExpr
           { $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_LT, $1, $3);
+            *$$ = CONSTRAINT_EXPR(LT, $1, $3);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
             }
           }
           | RelatExpr '>' AddExpr
           { $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_LT, $3, $1);
+            *$$ = CONSTRAINT_EXPR(LT, $3, $1);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
             }
           }
           | RelatExpr LEQ AddExpr
           { struct constr_t *v = alloc(sizeof(struct constr_t));
-            v->type = CONSTR_TERM;
-            v->constr.term = alloc(sizeof(struct val_t));
+            *v = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
             *v->constr.term = VALUE(1);
             struct constr_t *c = alloc(sizeof(struct constr_t));
-            *c = CONSTRAINT_EXPR(OP_ADD, $3, v);
+            *c = CONSTRAINT_EXPR(ADD, $3, v);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_LT, $1, c);
+            *$$ = CONSTRAINT_EXPR(LT, $1, c);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
             }
           }
           | RelatExpr GEQ AddExpr
           { struct constr_t *v = alloc(sizeof(struct constr_t));
-            v->type = CONSTR_TERM;
-            v->constr.term = alloc(sizeof(struct val_t));
+            *v = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
             *v->constr.term = VALUE(1);
             struct constr_t *c = alloc(sizeof(struct constr_t));
-            *c = CONSTRAINT_EXPR(OP_ADD, $1, v);
+            *c = CONSTRAINT_EXPR(ADD, $1, v);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_LT, $3, c);
+            *$$ = CONSTRAINT_EXPR(LT, $3, c);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
             }
@@ -267,18 +255,18 @@ RelatExpr : AddExpr
 EqualExpr : RelatExpr
           | EqualExpr '=' RelatExpr
           { $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_EQ, $1, $3);
+            *$$ = CONSTRAINT_EXPR(EQ, $1, $3);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_EQUAL / max(1, vars_count($$)));
             }
           }
           | EqualExpr NEQ RelatExpr
           { struct constr_t *a = alloc(sizeof(struct constr_t));
-            *a = CONSTRAINT_EXPR(OP_LT, $1, $3);
+            *a = CONSTRAINT_EXPR(LT, $1, $3);
             struct constr_t *b = alloc(sizeof(struct constr_t));
-            *b = CONSTRAINT_EXPR(OP_LT, $3, $1);
+            *b = CONSTRAINT_EXPR(LT, $3, $1);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OP_OR, a, b);
+            *$$ = CONSTRAINT_EXPR(OR, a, b);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_NOT_EQUAL / max(1, vars_count($$)));
             }
@@ -288,14 +276,14 @@ EqualExpr : RelatExpr
 AndExpr : EqualExpr
         | AndExpr '&' EqualExpr
         { $$ = alloc(sizeof(struct constr_t));
-          *$$ = CONSTRAINT_EXPR(OP_AND, $1, $3);
+          *$$ = CONSTRAINT_EXPR(AND, $1, $3);
         }
 ;
 
 OrExpr : AndExpr
        | OrExpr '|' AndExpr
        { $$ = alloc(sizeof(struct constr_t));
-         *$$ = CONSTRAINT_EXPR(OP_OR, $1, $3);
+         *$$ = CONSTRAINT_EXPR(OR, $1, $3);
        }
 ;
 

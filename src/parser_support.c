@@ -135,15 +135,14 @@ void vars_add(const char *key, struct val_t *val) {
 }
 
 int32_t vars_count(struct constr_t *constr) {
-  switch (constr->type) {
-  case CONSTR_TERM:
+  if (IS_TYPE(TERM, constr)) {
     if (is_value(*constr->constr.term)) {
       return 0;
     } else {
       return 1;
     }
-  case CONSTR_EXPR:
-    switch (constr->constr.expr.op) {
+  } else {
+    switch (constr->type->op) {
     case OP_EQ:
     case OP_LT:
     case OP_ADD:
@@ -155,25 +154,20 @@ int32_t vars_count(struct constr_t *constr) {
     case OP_NOT:
       return vars_count(constr->constr.expr.l);
     default:
-      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->type->op);
     }
-    break;
-  default:
-    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
   return 0;
 }
 
 void vars_weighten(struct constr_t *constr, int32_t weight) {
-  switch (constr->type) {
-  case CONSTR_TERM:
+  if (IS_TYPE(TERM, constr)) {
     if (!is_value(*constr->constr.term)) {
       struct env_t *var = vars_find_val(constr->constr.term);
       var->prio += weight;
     }
-    break;
-  case CONSTR_EXPR:
-    switch (constr->constr.expr.op) {
+  } else {
+    switch (constr->type->op) {
     case OP_EQ:
     case OP_LT:
     case OP_ADD:
@@ -187,11 +181,8 @@ void vars_weighten(struct constr_t *constr, int32_t weight) {
       vars_weighten(constr->constr.expr.l, weight);
       break;
     default:
-      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->type->op);
     }
-    break;
-  default:
-    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }
 
@@ -232,15 +223,21 @@ void expr_list_free(struct expr_list_t *list) {
 }
 
 void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
-  switch (constr->type) {
-  case CONSTR_TERM:
+  if (IS_TYPE(TERM, constr)) {
     if (!is_value(*constr->constr.term) && clause != NULL) {
       struct env_t *e = constr->constr.term->env;
       e->clauses = clause_list_append(e->clauses, clause);
     }
-    break;
-  case CONSTR_EXPR:
-    switch (constr->constr.expr.op) {
+  } else if (IS_TYPE(WAND, constr)) {
+    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+      struct wand_expr_t *c = clause;
+      if (clause == NULL && !IS_TYPE(WAND, constr->constr.wand.elems[i].constr)) {
+        c = &constr->constr.wand.elems[i];
+      }
+      clauses_init(constr->constr.wand.elems[i].constr, c);
+    }
+  } else {
+    switch (constr->type->op) {
     case OP_EQ:
     case OP_LT:
     case OP_ADD:
@@ -254,19 +251,7 @@ void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
       clauses_init(constr->constr.expr.l, clause);
       break;
     default:
-      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->constr.expr.op);
+      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->type->op);
     }
-    break;
-  case CONSTR_WAND:
-    for (size_t i = 0; i < constr->constr.wand.length; i++) {
-      struct wand_expr_t *c = clause;
-      if (clause == NULL && constr->constr.wand.elems[i].constr->type != CONSTR_WAND) {
-        c = &constr->constr.wand.elems[i];
-      }
-      clauses_init(constr->constr.wand.elems[i].constr, c);
-    }
-    break;
-  default:
-    print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE, constr->type);
   }
 }

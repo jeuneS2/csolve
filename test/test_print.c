@@ -6,6 +6,7 @@ namespace print {
 void mock_exit(int code);
 #define exit mock_exit
 
+#include "../src/constr_types.c"
 #include "../src/print.c"
 
 class Mock {
@@ -13,6 +14,11 @@ class Mock {
   MOCK_METHOD0(objective_best, domain_t(void));
   MOCK_METHOD0(main_name, const char *(void));
   MOCK_METHOD1(exit, void(int));
+#define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
+  MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(const struct constr_t *, const struct val_t)); \
+  MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
+  CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
 
 Mock *MockProxy;
@@ -28,6 +34,18 @@ const char *main_name(void) {
 void exit(int code) {
   return MockProxy->exit(code);
 }
+
+#define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
+const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
+  return MockProxy->eval_ ## NAME(constr);                              \
+}                                                                       \
+prop_result_t propagate_ ## NAME(const struct constr_t *constr, struct val_t val) { \
+  return MockProxy->propagate_ ## NAME(constr, val);                    \
+}                                                                       \
+struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
+  return MockProxy->normal_ ## NAME(constr);                            \
+}
+CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(PrintValue, Basic) {
   std::string output;
@@ -58,8 +76,8 @@ TEST(PrintConstr, Basic) {
   struct val_t a = VALUE(17);
   struct val_t b = INTERVAL(23,42);
 
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t B = CONSTRAINT_TERM(&b);
   struct constr_t X;
 
   testing::internal::CaptureStderr();
@@ -82,49 +100,49 @@ TEST(PrintConstr, Basic) {
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, " [23;42]");
 
-  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  X = CONSTRAINT_EXPR(EQ, &A, &B);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " (= 17 [23;42])");
 
-  X = CONSTRAINT_EXPR(OP_EQ, &A, &B);
+  X = CONSTRAINT_EXPR(EQ, &A, &B);
   testing::internal::CaptureStdout();
   print_constr(stdout, &X);
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, " (= 17 [23;42])");
 
-  X = CONSTRAINT_EXPR(OP_LT, &A, &B);
+  X = CONSTRAINT_EXPR(LT, &A, &B);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " (< 17 [23;42])");
 
-  X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
+  X = CONSTRAINT_EXPR(NEG, &A, NULL);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " (- 17)");
 
-  X = CONSTRAINT_EXPR(OP_ADD, &B, &A);
+  X = CONSTRAINT_EXPR(ADD, &B, &A);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " (+ [23;42] 17)");
 
-  X = CONSTRAINT_EXPR(OP_MUL, &B, &A);
+  X = CONSTRAINT_EXPR(MUL, &B, &A);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " (* [23;42] 17)");
 
-  X = CONSTRAINT_EXPR(OP_AND, &A, &B);
+  X = CONSTRAINT_EXPR(AND, &A, &B);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " (& 17 [23;42])");
 
-  X = CONSTRAINT_EXPR(OP_OR, &B, &A);
+  X = CONSTRAINT_EXPR(OR, &B, &A);
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
@@ -137,29 +155,15 @@ TEST(PrintConstr, Wand) {
   struct val_t a = VALUE(17);
   struct val_t b = INTERVAL(23,42);
 
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t B = CONSTRAINT_TERM(&b);
   struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
-  struct constr_t X = { .type = CONSTR_WAND, .constr = { .wand = { .length = 2, .elems = E } } };
+  struct constr_t X = CONSTRAINT_WAND(2, E);
 
   testing::internal::CaptureStderr();
   print_constr(stderr, &X);
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, " 17; [23;42];");
-}
-
-TEST(PrintConstr, Error) {
-  std::string output;
-  struct constr_t X;
-
-  MockProxy = new Mock();
-  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, main_name()).Times(1).WillOnce(::testing::Return("<name>"));
-  testing::internal::CaptureStderr();
-  print_constr(stdout, &X);
-  output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "<name>: error: invalid constraint type: ffffffff\n");
-  delete(MockProxy);
 }
 
 TEST(PrintEnv, Basic) {

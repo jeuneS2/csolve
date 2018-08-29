@@ -6,6 +6,7 @@ namespace parser_support {
 void mock_free(void *);
 #define free mock_free
 
+#include "../src/constr_types.c"
 #include "../src/parser_support.c"
 
 bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
@@ -19,6 +20,11 @@ class Mock {
   MOCK_METHOD1(print_fatal, void (const char *));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
   MOCK_METHOD1(free, void(void *));
+#define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
+  MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(const struct constr_t *, const struct val_t)); \
+  MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
+  CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
 
 Mock *MockProxy;
@@ -44,6 +50,18 @@ void print_val(FILE *file, const struct val_t val) {
 void free(void *ptr) {
   MockProxy->free(ptr);
 }
+
+#define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
+const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
+  return MockProxy->eval_ ## NAME(constr);                              \
+}                                                                       \
+prop_result_t propagate_ ## NAME(const struct constr_t *constr, struct val_t val) { \
+  return MockProxy->propagate_ ## NAME(constr, val);                    \
+}                                                                       \
+struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
+  return MockProxy->normal_ ## NAME(constr);                            \
+}
+CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(VarsFindKey, Find) {
   struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
@@ -158,46 +176,41 @@ TEST(VarsCount, Basic) {
   struct val_t a = VALUE(1);
   struct val_t b = INTERVAL(17, 23);
 
-  struct constr_t A = { .type = CONSTR_TERM, .constr = { .term = &a } };
-  struct constr_t B = { .type = CONSTR_TERM, .constr = { .term = &b } };
+  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t B = CONSTRAINT_TERM(&b);
   struct constr_t X;
   struct constr_t Y;
 
-  X = CONSTRAINT_EXPR(OP_EQ, &A, &A);
+  X = CONSTRAINT_EXPR(EQ, &A, &A);
   EXPECT_EQ(0, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_LT, &A, &B);
+  X = CONSTRAINT_EXPR(LT, &A, &B);
   EXPECT_EQ(1, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_ADD, &B, &B);
+  X = CONSTRAINT_EXPR(ADD, &B, &B);
   EXPECT_EQ(2, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_MUL, &B, &B);
-  Y = CONSTRAINT_EXPR(OP_AND, &X, &B);
+  X = CONSTRAINT_EXPR(MUL, &B, &B);
+  Y = CONSTRAINT_EXPR(AND, &X, &B);
   EXPECT_EQ(3, vars_count(&Y));
-  X = CONSTRAINT_EXPR(OP_OR, &B, &B);
-  Y = CONSTRAINT_EXPR(OP_EQ, &X, &X);
+  X = CONSTRAINT_EXPR(OR, &B, &B);
+  Y = CONSTRAINT_EXPR(EQ, &X, &X);
   EXPECT_EQ(4, vars_count(&Y));
 
-  X = CONSTRAINT_EXPR(OP_NEG, &A, NULL);
+  X = CONSTRAINT_EXPR(NEG, &A, NULL);
   EXPECT_EQ(0, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_NOT, &B, NULL);
+  X = CONSTRAINT_EXPR(NOT, &B, NULL);
   EXPECT_EQ(1, vars_count(&X));
-  X = CONSTRAINT_EXPR(OP_EQ, &B, &B);
-  Y = CONSTRAINT_EXPR(OP_NEG, &X, NULL);
+  X = CONSTRAINT_EXPR(EQ, &B, &B);
+  Y = CONSTRAINT_EXPR(NEG, &X, NULL);
   EXPECT_EQ(2, vars_count(&Y));
 }
 
 TEST(VarsCount, Errors) {
+  struct constr_type_t CONSTR_FOO = { NULL, NULL, NULL, (enum operator_t)-1 };
   struct constr_t X;
   std::string output;
 
   MockProxy = new Mock();
-  X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
+  X = CONSTRAINT_EXPR(FOO, NULL, NULL);
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION)).Times(1);
-  vars_count(&X);
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE)).Times(1);
   vars_count(&X);
   delete(MockProxy);
 }
@@ -212,26 +225,26 @@ TEST(VarsWeighten, Basic) {
   valtab_add(0);
   valtab_add(1);
 
-  struct constr_t X = { .type = CONSTR_TERM, .constr = { .term = &val1 } };
-  struct constr_t Y = { .type = CONSTR_TERM, .constr = { .term = &val2 } };
+  struct constr_t X = CONSTRAINT_TERM(&val1);
+  struct constr_t Y = CONSTRAINT_TERM(&val2);
   struct constr_t Z;
 
-  Z = CONSTRAINT_EXPR(OP_EQ, &X, &Y);
+  Z = CONSTRAINT_EXPR(EQ, &X, &Y);
   vars_weighten(&Z, 10);
   EXPECT_EQ(v[0].prio, 10);
   EXPECT_EQ(v[1].prio, 13);
 
-  Z = CONSTRAINT_EXPR(OP_AND, &X, &Y);
+  Z = CONSTRAINT_EXPR(AND, &X, &Y);
   vars_weighten(&Z, 15);
   EXPECT_EQ(v[0].prio, 25);
   EXPECT_EQ(v[1].prio, 28);
 
-  Z = CONSTRAINT_EXPR(OP_NEG, &X, NULL);
+  Z = CONSTRAINT_EXPR(NEG, &X, NULL);
   vars_weighten(&Z, 100);
   EXPECT_EQ(v[0].prio, 125);
   EXPECT_EQ(v[1].prio, 28);
 
-  Z = CONSTRAINT_EXPR(OP_NOT, &X, NULL);
+  Z = CONSTRAINT_EXPR(NOT, &X, NULL);
   vars_weighten(&Z, 200);
   EXPECT_EQ(v[0].prio, 325);
   EXPECT_EQ(v[1].prio, 28);
@@ -244,17 +257,12 @@ TEST(VarsWeighten, Basic) {
 }
 
 TEST(VarsWeighten, Errors) {
+  struct constr_type_t CONSTR_FOO = { NULL, NULL, NULL, (enum operator_t)-1 };
   struct constr_t X;
 
   MockProxy = new Mock();
-  X = CONSTRAINT_EXPR((enum operator_t)-1, NULL, NULL);
+  X = CONSTRAINT_EXPR(FOO, NULL, NULL);
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION)).Times(1);
-  vars_weighten(&X, 1);
-  delete(MockProxy);
-
-  MockProxy = new Mock();
-  X = { .type = (enum constr_type_t)-1, .constr = { .term = NULL } };
-  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_CONSTRAINT_TYPE)).Times(1);
   vars_weighten(&X, 1);
   delete(MockProxy);
 }

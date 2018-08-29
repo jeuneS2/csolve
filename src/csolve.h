@@ -75,25 +75,6 @@ struct binding_t {
   struct val_t val; ///< Original value of bound value (for unbinding)
 };
 
-/** Constraint node types */
-enum constr_type_t {
-  CONSTR_TERM, ///< Terminal node
-  CONSTR_EXPR, ///< Expression node
-  CONSTR_WAND  ///< Wide-and node
-};
-
-/** Supported operators */
-enum operator_t {
-  OP_EQ  = '=', ///< Equality
-  OP_LT  = '<', ///< Less-than
-  OP_NEG = '-', ///< Negation
-  OP_ADD = '+', ///< Addition
-  OP_MUL = '*', ///< Multiplication
-  OP_NOT = '!', ///< Logical not
-  OP_AND = '&', ///< Logical and
-  OP_OR  = '|', ///< Logical or
-};
-
 /** Propagation result type */
 typedef int32_t prop_result_t;
 /** Propagation failed */
@@ -110,21 +91,14 @@ struct wand_expr_t {
   prop_tag_t prop_tag; ///< Propagation tag
 };
 
-/** Type to represent a list of clauses for propagation */
-struct clause_list_t {
-  struct wand_expr_t *clause; ///< Clause
-  struct clause_list_t *next; ///< Next element of list
-};
-
 /** Type representing a constraint */
 struct constr_t {
-  enum constr_type_t type; ///< Type of constraint node
+  const struct constr_type_t *type; ///< Type of constraint node
   /** Union to hold either terminal node or expression node */
   union constr_union_t {
     struct val_t *term; ///< Value of terminal node
     /** Expression node type */
     struct expr_t {
-      enum operator_t op; ///< Operator of expression
       struct constr_t *l; ///< Left child of expression
       struct constr_t *r; ///< Right child of expression, NULL for unary operators
     } expr; ///< Expression node
@@ -136,19 +110,72 @@ struct constr_t {
   } constr; ///< Constraint
 };
 
-/** Checks whether constraint is a terminal node */
-static inline bool is_term(struct constr_t *c) {
-  return c->type == CONSTR_TERM;
-}
+/** List of supported constraint types */
+#define CONSTR_TYPE_LIST(F)                     \
+  /** Terminal */                               \
+  F(TERM, term, ' ')                            \
+  /** Equality */                               \
+  F(EQ,   eq,   '=')                            \
+  /** Less-than */                              \
+  F(LT,   lt,   '<')                            \
+  /** Negation */                               \
+  F(NEG,  neg,  '-')                            \
+  /** Addition */                               \
+  F(ADD,  add,  '+')                            \
+  /** Multiplication */                         \
+  F(MUL,  mul,  '*')                            \
+  /** Logical not */                            \
+  F(NOT,  not,  '!')                            \
+  /** Logical and */                            \
+  F(AND,  and,  '&')                            \
+  /** Logical or */                             \
+  F(OR,   or,   '|')                            \
+  /** Wide and */                               \
+  F(WAND, wand, '#')
+
+/** Supported operators */
+#define CONSTR_TYPE_OPS(UPNAME, NAME, OP)       \
+  OP_ ## UPNAME = OP,
+enum operator_t {
+  CONSTR_TYPE_LIST(CONSTR_TYPE_OPS)
+};
+
+/** Constraint type */
+struct constr_type_t {
+  const struct val_t (*eval)(const struct constr_t *constr); ///< Evaluation function
+  prop_result_t (*prop)(const struct constr_t *constr, const struct val_t val); ///< Propagation function
+  struct constr_t * (*norm)(struct constr_t *constr); ///< Normalization function
+  const enum operator_t op;
+};
+
+/** Supported constraint type variables */
+#define CONSTR_TYPES_EXT(UPNAME, NAME, OP) \
+  extern const struct constr_type_t CONSTR_ ## UPNAME;
+CONSTR_TYPE_LIST(CONSTR_TYPES_EXT)
+
+/** Checks whether constraint has a particular type */
+#define IS_TYPE(T, C)                           \
+  ((C)->type == &CONSTR_ ## T)
+
 /** Checks whether constraint is a constant value */
 static inline bool is_const(struct constr_t *c) {
-  return is_term(c) && is_value(*c->constr.term);
+  return IS_TYPE(TERM, c) && is_value(*c->constr.term);
 }
 
-#define CONSTRAINT_EXPR(O, L, R)                         \
-  ((struct constr_t){                                    \
-    .type = CONSTR_EXPR,                                 \
-      .constr = { .expr = { .op = O, .l = L, .r = R } } } )
+/** Create a terminal constraint */
+#define CONSTRAINT_TERM(V)                                              \
+  ((struct constr_t) {                                                  \
+    .type = &CONSTR_TERM, .constr = { .term = V } } )
+
+/** Create an expression constraint */
+#define CONSTRAINT_EXPR(T, L, R)                                        \
+  ((struct constr_t){                                                   \
+    .type = &(CONSTR_ ## T), .constr = { .expr = { .l = L, .r = R } } } )
+
+/** Create a wide-and constraint */
+#define CONSTRAINT_WAND(L, E)                                           \
+  ((struct constr_t) {                                                  \
+    .type = &CONSTR_WAND, .constr = { .wand = { .length = L, .elems = E } } } )
 
 /** Patching entry */
 struct patching_t {
@@ -166,6 +193,12 @@ struct step_t {
   udomain_t iter; ///< Iteration state
   udomain_t seed; ///< Iteration random seed
   struct val_t bounds; ///< Iteration bounds
+};
+
+/** Type to represent a list of clauses for propagation */
+struct clause_list_t {
+  struct wand_expr_t *clause; ///< Clause
+  struct clause_list_t *next; ///< Next element of list
 };
 
 /** Variable environment entry */
@@ -257,18 +290,28 @@ void sema_post(sem_t *sema);
 /** Add an element to a clause list */
 struct clause_list_t *clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem);
 
-/** Evaluate a constraint */
-const struct val_t eval(const struct constr_t *constr);
+/** Evaluation functions for different constraint types */
+#define CONSTR_TYPE_EVAL_FUNCS(UPNAME, NAME, OP)                    \
+  const struct val_t eval_ ## NAME(const struct constr_t *constr);
+CONSTR_TYPE_LIST(CONSTR_TYPE_EVAL_FUNCS)
 
-/** Fully normalize a constraint */
+/** Propagation functions for different constraint types */
+#define CONSTR_TYPE_PROP_FUNCS(UPNAME, NAME, OP)                    \
+  prop_result_t propagate_ ## NAME(const struct constr_t *constr, const struct val_t val);
+CONSTR_TYPE_LIST(CONSTR_TYPE_PROP_FUNCS)
+
+/** Normalization functions for different constraint types */
+#define CONSTR_TYPE_NORM_FUNCS(UPNAME, NAME, OP)                    \
+  struct constr_t *normal_ ## NAME(struct constr_t *constr);
+CONSTR_TYPE_LIST(CONSTR_TYPE_NORM_FUNCS)
+
+/** Normalize a constraint */
 struct constr_t *normalize(struct constr_t *constr);
-/** Perform a single normalizion step on a constraint */
-struct constr_t *normalize_step(struct constr_t *constr);
 
-/** Propagate a result value to the terminal nodes of the constraint */
-prop_result_t propagate(struct constr_t *constr, struct val_t val);
+/** Propagate "true" to the terminal nodes of the constraint */
+prop_result_t propagate(const struct constr_t *constr);
 /** Propagate updates to a list of clauses */
-prop_result_t propagate_clauses(struct clause_list_t *clauses);
+prop_result_t propagate_clauses(const struct clause_list_t *clauses);
 
 /** Initialize objective function type */
 void objective_init(enum objective_t o, volatile domain_t *best);
@@ -287,9 +330,6 @@ void objective_update_val(void);
 
 /** Find solutions */
 void solve(size_t size, struct env_t *env, struct constr_t *constr);
-
-/** Swap two environment entries (keeping step) */
-void swap_env(struct env_t *env, size_t depth1, size_t depth2);
 
 /** Whether to prefer failing variables as default */
 #define STRATEGY_PREFER_FAILING_DEFAULT true
@@ -398,8 +438,6 @@ void stats_print(FILE *file);
 #define ERROR_MSG_NULL_BIND                 "cannot bind NULL"
 /** Error message when exceeding the maximum number of patches */
 #define ERROR_MSG_TOO_MANY_PATCHES          "exceeded maximum number of patches"
-/** Error message when encountering an invalid constraint type */
-#define ERROR_MSG_INVALID_CONSTRAINT_TYPE   "invalid constraint type: %02x"
 /** Error message when encountering an invalid operation */
 #define ERROR_MSG_INVALID_OPERATION         "invalid operation: %02x"
 /** Error message when encountering an invalid variable type */

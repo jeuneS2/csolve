@@ -3,6 +3,7 @@
 
 namespace csolve {
 #include "../src/stats.c"
+#include "../src/constr_types.c"
 #include "../src/csolve.c"
 
 #define STR(X) #X
@@ -28,9 +29,8 @@ class Mock {
   MOCK_METHOD1(sema_init, void(sem_t *));
   MOCK_METHOD1(sema_wait, void(sem_t *));
   MOCK_METHOD1(sema_post, void(sem_t *));
-  MOCK_METHOD1(eval, const struct val_t(const struct constr_t *));
   MOCK_METHOD1(normal, struct constr_t *(struct constr_t *));
-  MOCK_METHOD1(propagate_clauses, prop_result_t(struct clause_list_t *));
+  MOCK_METHOD1(propagate_clauses, prop_result_t(const struct clause_list_t *));
   MOCK_METHOD0(objective, enum objective_t(void));
   MOCK_METHOD0(objective_better, bool(void));
   MOCK_METHOD0(objective_update_best, void(void));
@@ -41,6 +41,11 @@ class Mock {
   MOCK_METHOD1(strategy_var_order_push, void(struct env_t *));
   MOCK_METHOD1(print_error, void(const char *));
   MOCK_METHOD3(print_solution, void(FILE *, size_t, struct env_t *));
+#define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
+  MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(const struct constr_t *, const struct val_t)); \
+  MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
+  CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
 
 Mock *MockProxy;
@@ -85,15 +90,11 @@ void sema_post(sem_t *sema) {
   MockProxy->sema_post(sema);
 }
 
-const struct val_t eval(const struct constr_t *constr) {
-  return MockProxy->eval(constr);
-}
-
 struct constr_t *normal(struct constr_t *constr) {
   return MockProxy->normal(constr);
 }
 
-prop_result_t propagate_clauses(struct clause_list_t *clauses) {
+prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
   return MockProxy->propagate_clauses(clauses);
 }
 
@@ -136,6 +137,18 @@ void print_error(const char *fmt, ...) {
 void print_solution(FILE *file, size_t size, struct env_t *env) {
   MockProxy->print_solution(file, size, env);
 }
+
+#define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
+const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
+  return MockProxy->eval_ ## NAME(constr);                              \
+}                                                                       \
+prop_result_t propagate_ ## NAME(const struct constr_t *constr, struct val_t val) { \
+  return MockProxy->propagate_ ## NAME(constr, val);                    \
+}                                                                       \
+struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
+  return MockProxy->normal_ ## NAME(constr);                            \
+}
+CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(Stats, Init) {
   stats_init();
@@ -279,11 +292,11 @@ TEST(FailThresholdNext, Basic) {
 
 TEST(UpdateSolution, FalseConstr) {
   struct val_t c = VALUE(0);
-  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t C = CONSTRAINT_TERM(&c);
   struct env_t env[0];
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(&C))
+  EXPECT_CALL(*MockProxy, eval_term(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(VALUE(0)));
   EXPECT_EQ(false, update_solution(0, env, &C));
@@ -292,7 +305,7 @@ TEST(UpdateSolution, FalseConstr) {
 
 TEST(UpdateSolution, AnySolution) {
   struct val_t c = VALUE(0);
-  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t C = CONSTRAINT_TERM(&c);
   struct env_t env[0];
 
   struct shared_t s;
@@ -300,7 +313,7 @@ TEST(UpdateSolution, AnySolution) {
   _shared = &s;
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(&C))
+  EXPECT_CALL(*MockProxy, eval_term(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(VALUE(1)));
   EXPECT_CALL(*MockProxy, sema_wait(&s.semaphore))
@@ -316,7 +329,7 @@ TEST(UpdateSolution, AnySolution) {
 
 TEST(UpdateSolution, NotBetter) {
   struct val_t c = VALUE(0);
-  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t C = CONSTRAINT_TERM(&c);
   struct env_t env[0];
 
   struct shared_t s;
@@ -324,7 +337,7 @@ TEST(UpdateSolution, NotBetter) {
   _shared = &s;
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(&C))
+  EXPECT_CALL(*MockProxy, eval_term(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(VALUE(1)));
   EXPECT_CALL(*MockProxy, sema_wait(&s.semaphore))
@@ -343,7 +356,7 @@ TEST(UpdateSolution, NotBetter) {
 
 TEST(UpdateSolution, Better) {
   struct val_t c = VALUE(0);
-  struct constr_t C = { .type = CONSTR_TERM, .constr = { .term = &c } };
+  struct constr_t C = CONSTRAINT_TERM(&c);
   struct env_t env[0];
 
   struct shared_t s;
@@ -355,7 +368,7 @@ TEST(UpdateSolution, Better) {
   std::string output;
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, eval(&C))
+  EXPECT_CALL(*MockProxy, eval_term(&C))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(VALUE(1)));
   EXPECT_CALL(*MockProxy, sema_wait(&s.semaphore))
