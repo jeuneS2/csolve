@@ -10,7 +10,7 @@ TEST_CXX=g++
 TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -D_DEFAULT_SOURCE -DGTEST_HAS_PTHREAD=1 -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
 
 FUZZ_CC=afl-gcc
-FUZZ_CFLAGS=-std=c99 -pedantic -Wall -O2
+FUZZ_CFLAGS=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -O2
 
 SONAR=/mnt/work/sonar/sonarqube-6.7.2/bin/linux-x86-64/sonar.sh
 SONAR_RUNNER=/mnt/work/sonar/sonar-runner-2.4/bin/sonar-runner
@@ -21,6 +21,7 @@ HEADERS= \
 	src/parser_support.h
 SRC= \
 	src/arith.c \
+	src/constr_types.c \
 	src/csolve.c \
 	src/eval.c \
 	src/lexer.c \
@@ -80,13 +81,13 @@ test/coverage-report.xml: test/xunit-report.xml
 coverage: test/coverage-report.xml
 
 fuzz/csolve: ${SRC} ${HEADERS}
-	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC}
+	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC} -lpthread
 
 fuzz: fuzz/csolve
 	if [ -e fuzz/findings ]; then \
-		afl-fuzz -m 128 -t 1000+ -i fuzz/inputs -o fuzz/findings -- $<; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -m 128 -t 1000+ -i fuzz/inputs -o fuzz/findings -- $<; \
 	else \
-		afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
 	fi
 
 doc/doxygen: ${SRC} ${HEADERS} doxygen.config
