@@ -24,12 +24,12 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 static enum objective_t _objective;
-static struct val_t _objective_val;
+static struct constr_t _objective_val;
 static volatile domain_t *_objective_best;
 
 void objective_init(enum objective_t o, volatile domain_t *best) {
   _objective = o;
-  _objective_val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   _objective_best = best;
   switch (o) {
   case OBJ_ANY:
@@ -57,9 +57,9 @@ bool objective_better(void) {
   case OBJ_ALL:
     return true;
   case OBJ_MIN:
-    return get_lo(_objective_val) < objective_best();
+    return get_lo(_objective_val.constr.term.val) < objective_best();
   case OBJ_MAX:
-    return get_hi(_objective_val) > objective_best();
+    return get_hi(_objective_val.constr.term.val) > objective_best();
   default:
     print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
   }
@@ -72,10 +72,10 @@ void objective_update_best(void) {
   case OBJ_ALL:
     break;
   case OBJ_MIN:
-    *_objective_best = get_lo(_objective_val);
+    *_objective_best = get_lo(_objective_val.constr.term.val);
     break;
   case OBJ_MAX:
-    *_objective_best = get_hi(_objective_val);
+    *_objective_best = get_hi(_objective_val.constr.term.val);
     break;
   default:
     print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE, _objective);
@@ -89,15 +89,15 @@ void objective_update_val(void) {
     break;
   case OBJ_MIN: {
     domain_t best = objective_best();
-    if (get_hi(_objective_val) > add(best, neg(1))) {
-      _objective_val.hi = add(best, neg(1));
+    if (get_hi(_objective_val.constr.term.val) > add(best, neg(1))) {
+      _objective_val.constr.term.val.hi = add(best, neg(1));
     }
     break;
   }
   case OBJ_MAX: {
     domain_t best = objective_best();
-    if (get_lo(_objective_val) < add(best, 1)) {
-      _objective_val.lo = add(best, 1);
+    if (get_lo(_objective_val.constr.term.val) < add(best, 1)) {
+      _objective_val.constr.term.val.lo = add(best, 1);
     }
     break;
   }
@@ -106,7 +106,7 @@ void objective_update_val(void) {
   }
 }
 
-struct val_t *objective_val(void) {
+struct constr_t *objective_val(void) {
   return &_objective_val;
 }
 

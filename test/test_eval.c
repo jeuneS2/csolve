@@ -14,7 +14,7 @@ class Mock {
  public:
   MOCK_METHOD1(print_fatal, void (const char *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(const struct constr_t *, const struct val_t)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -26,7 +26,7 @@ void print_fatal(const char *fmt, ...) {
 }
 
 #define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
-prop_result_t propagate_ ## NAME(const struct constr_t *constr, struct val_t val) { \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
   return MockProxy->propagate_ ## NAME(constr, val);                    \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
@@ -35,13 +35,9 @@ struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
 CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(EvalNeg, Basic) {
-  struct val_t a = VALUE(-100);
-  struct val_t b = VALUE(100);
-  struct val_t c = INTERVAL(-1, 100);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(-100));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(100));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(-1, 100));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(NEG, &A, NULL);
@@ -53,15 +49,10 @@ TEST(EvalNeg, Basic) {
 }
 
 TEST(EvalNeg, Limits) {
-  struct val_t a = VALUE(DOMAIN_MIN);
-  struct val_t b = VALUE(DOMAIN_MAX);
-  struct val_t c = INTERVAL(-1, DOMAIN_MAX);
-  struct val_t d = INTERVAL(DOMAIN_MIN, -1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(-1, DOMAIN_MAX));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, -1));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(NEG, &A, NULL);
@@ -75,17 +66,11 @@ TEST(EvalNeg, Limits) {
 }
 
 TEST(EvalAdd, Basic) {
-  struct val_t a = VALUE(1);
-  struct val_t b = VALUE(99);
-  struct val_t c = INTERVAL(0, 99);
-  struct val_t d = INTERVAL(0, 200);
-  struct val_t e = INTERVAL(-100, 0);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(99));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 99));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(0, 200));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(-100, 0));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(ADD, &A, &B);
@@ -99,17 +84,11 @@ TEST(EvalAdd, Basic) {
 }
 
 TEST(EvalAdd, Max) {
-  struct val_t a = VALUE(1);
-  struct val_t b = VALUE(-1);
-  struct val_t c = VALUE(DOMAIN_MAX);
-  struct val_t d = INTERVAL(1, 100);
-  struct val_t e = INTERVAL(0, DOMAIN_MAX);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(-1));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(1, 100));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(0, DOMAIN_MAX));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(ADD, &A, &C);
@@ -131,17 +110,11 @@ TEST(EvalAdd, Max) {
 }
 
 TEST(EvalAdd, Min) {
-  struct val_t a = VALUE(1);
-  struct val_t b = VALUE(-1);
-  struct val_t c = VALUE(DOMAIN_MIN);
-  struct val_t d = INTERVAL(-100, 1);
-  struct val_t e = INTERVAL(DOMAIN_MIN, 0);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(-1));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(-100, 1));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, 0));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(ADD, &A, &C);
@@ -163,17 +136,11 @@ TEST(EvalAdd, Min) {
 }
 
 TEST(EvalMul, Basic) {
-  struct val_t a = VALUE(2);
-  struct val_t b = VALUE(100);
-  struct val_t c = INTERVAL(-1,100);
-  struct val_t d = INTERVAL(2, 3);
-  struct val_t e = INTERVAL(-1, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(2));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(100));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(-1,100));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(2, 3));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(-1, 1));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(MUL, &A, &B);
@@ -187,21 +154,13 @@ TEST(EvalMul, Basic) {
 }
 
 TEST(EvalMul, Max) {
-  struct val_t a = VALUE(1);
-  struct val_t b = VALUE(2);
-  struct val_t c = VALUE(-2);
-  struct val_t d = VALUE(DOMAIN_MAX);
-  struct val_t e = VALUE(DOMAIN_MIN);
-  struct val_t f = INTERVAL(1,100);
-  struct val_t g = INTERVAL(1,DOMAIN_MAX);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
-  struct constr_t F = CONSTRAINT_TERM(&f);
-  struct constr_t G = CONSTRAINT_TERM(&g);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(2));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(-2));
+  struct constr_t D = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t E = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t F = CONSTRAINT_TERM(INTERVAL(1,100));
+  struct constr_t G = CONSTRAINT_TERM(INTERVAL(1,DOMAIN_MAX));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(MUL, &B, &D);
@@ -223,21 +182,13 @@ TEST(EvalMul, Max) {
 }
 
 TEST(EvalMul, Min) {
-  struct val_t a = VALUE(1);
-  struct val_t b = VALUE(2);
-  struct val_t c = VALUE(-2);
-  struct val_t d = VALUE(DOMAIN_MAX);
-  struct val_t e = VALUE(DOMAIN_MIN);
-  struct val_t f = INTERVAL(-100,1);
-  struct val_t g = INTERVAL(DOMAIN_MIN, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
-  struct constr_t F = CONSTRAINT_TERM(&f);
-  struct constr_t G = CONSTRAINT_TERM(&g);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(2));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(-2));
+  struct constr_t D = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t E = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t F = CONSTRAINT_TERM(INTERVAL(-100,1));
+  struct constr_t G = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, 1));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(MUL, &B, &E);
@@ -259,19 +210,12 @@ TEST(EvalMul, Min) {
 }
 
 TEST(EvalLt, Basic) {
-  struct val_t a = VALUE(2);
-  struct val_t b = VALUE(-3);
-  struct val_t c = INTERVAL(-3, 1);
-  struct val_t d = INTERVAL(2, 4);
-  struct val_t e = INTERVAL(-3, 4);
-  struct val_t f = INTERVAL(1, 2);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
-  struct constr_t F = CONSTRAINT_TERM(&f);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(2));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(-3));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(-3, 1));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(2, 4));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(-3, 4));
+  struct constr_t F = CONSTRAINT_TERM(INTERVAL(1, 2));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(LT, &B, &A);
@@ -291,19 +235,12 @@ TEST(EvalLt, Basic) {
 }
 
 TEST(EvalLt, MinMax) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(DOMAIN_MAX);
-  struct val_t c = VALUE(DOMAIN_MIN);
-  struct val_t d = INTERVAL(1,DOMAIN_MAX);
-  struct val_t e = INTERVAL(DOMAIN_MIN,-1);
-  struct val_t f = INTERVAL(DOMAIN_MIN,DOMAIN_MAX);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
-  struct constr_t F = CONSTRAINT_TERM(&f);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(1,DOMAIN_MAX));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN,-1));
+  struct constr_t F = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN,DOMAIN_MAX));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(LT, &C, &A);
@@ -321,23 +258,14 @@ TEST(EvalLt, MinMax) {
 }
 
 TEST(EvalEq, Basic) {
-  struct val_t a = VALUE(2);
-  struct val_t b = VALUE(-3);
-  struct val_t c = INTERVAL(-3, 1);
-  struct val_t d = INTERVAL(2, 4);
-  struct val_t e = INTERVAL(-3, 4);
-  struct val_t f = INTERVAL(1, 4);
-  struct val_t g = INTERVAL(-3, 2);
-  struct val_t h = INTERVAL(7, 8);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
-  struct constr_t F = CONSTRAINT_TERM(&f);
-  struct constr_t G = CONSTRAINT_TERM(&g);
-  struct constr_t H = CONSTRAINT_TERM(&h);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(2));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(-3));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(-3, 1));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(2, 4));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(-3, 4));
+  struct constr_t F = CONSTRAINT_TERM(INTERVAL(1, 4));
+  struct constr_t G = CONSTRAINT_TERM(INTERVAL(-3, 2));
+  struct constr_t H = CONSTRAINT_TERM(INTERVAL(7, 8));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(EQ, &A, &A);
@@ -359,19 +287,12 @@ TEST(EvalEq, Basic) {
 }
 
 TEST(EvalEq, MinMax) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(DOMAIN_MIN);
-  struct val_t c = VALUE(DOMAIN_MAX);
-  struct val_t d = INTERVAL(DOMAIN_MIN, -1);
-  struct val_t e = INTERVAL(1, DOMAIN_MAX);
-  struct val_t f = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
-  struct constr_t D = CONSTRAINT_TERM(&d);
-  struct constr_t E = CONSTRAINT_TERM(&e);
-  struct constr_t F = CONSTRAINT_TERM(&f);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t D = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, -1));
+  struct constr_t E = CONSTRAINT_TERM(INTERVAL(1, DOMAIN_MAX));
+  struct constr_t F = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(EQ, &B, &A);
@@ -389,13 +310,9 @@ TEST(EvalEq, MinMax) {
 }
 
 TEST(EvalNot, Basic) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-  struct val_t c = INTERVAL(0, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 1));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(NOT, &A, NULL);
@@ -407,13 +324,9 @@ TEST(EvalNot, Basic) {
 }
 
 TEST(EvalAnd, Basic) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-  struct val_t c = INTERVAL(0, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 1));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(AND, &A, &A);
@@ -437,13 +350,9 @@ TEST(EvalAnd, Basic) {
 }
 
 TEST(EvalOr, Basic) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-  struct val_t c = INTERVAL(0, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 1));
   struct constr_t X;
 
   X = CONSTRAINT_EXPR(OR, &A, &A);
@@ -467,13 +376,9 @@ TEST(EvalOr, Basic) {
 }
 
 TEST(EvalWand, Basic) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-  struct val_t c = INTERVAL(0, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 1));
 
   struct wand_expr_t E1 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
   struct constr_t X1 = CONSTRAINT_WAND(2, E1);

@@ -58,8 +58,8 @@ void strategy_order_init(enum order_t order) {
 }
 
 int strategy_var_cmp(struct env_t *e1, struct env_t *e2) {
-  struct val_t v1 = *e1->val;
-  struct val_t v2 = *e2->val;
+  struct val_t v1 = e1->val->constr.term.val;
+  struct val_t v2 = e2->val->constr.term.val;
 
   int cmp = 0;
   switch (_order) {

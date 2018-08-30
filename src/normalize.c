@@ -58,8 +58,7 @@ struct constr_t *normal_eval(struct constr_t *constr) {
   struct val_t val = constr->type->eval(constr);
   if (is_value(val)) {
     struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
-    *retval = CONSTRAINT_TERM((struct val_t *)alloc(sizeof(struct val_t)));
-    *retval->constr.term = val;
+    *retval = CONSTRAINT_TERM(val);
     return retval;
   }
   return constr;
@@ -152,7 +151,7 @@ struct constr_t *normal_add(struct constr_t *constr) {
     return update_expr(constr, r, l);
   }
 
-  if (is_const(r) && get_lo(*r->constr.term) == 0) {
+  if (is_const(r) && get_lo(r->constr.term.val) == 0) {
     return l;
   }
 
@@ -179,7 +178,7 @@ struct constr_t *normal_mul(struct constr_t *constr) {
     return update_expr(constr, r, l);
   }
 
-  if (is_const(r) && get_lo(*r->constr.term) == 1) {
+  if (is_const(r) && get_lo(r->constr.term.val) == 1) {
     return l;
   }
 
@@ -214,11 +213,11 @@ struct constr_t *normal_and(struct constr_t *constr) {
   struct constr_t *r = constr->constr.expr.r;
   r = r->type->norm(r);
 
-  if (IS_TYPE(TERM, l) && is_true(*l->constr.term)) {
+  if (IS_TYPE(TERM, l) && is_true(l->constr.term.val)) {
     return r;
   }
 
-  if (IS_TYPE(TERM, r) && is_true(*r->constr.term)) {
+  if (IS_TYPE(TERM, r) && is_true(r->constr.term.val)) {
     return l;
   }
 
@@ -241,11 +240,11 @@ struct constr_t *normal_or(struct constr_t *constr) {
   struct constr_t *r = constr->constr.expr.r;
   r = r->type->norm(r);
 
-  if (IS_TYPE(TERM, l) && is_false(*l->constr.term)) {
+  if (IS_TYPE(TERM, l) && is_false(l->constr.term.val)) {
     return r;
   }
 
-  if (IS_TYPE(TERM, r) && is_false(*r->constr.term)) {
+  if (IS_TYPE(TERM, r) && is_false(r->constr.term.val)) {
     return l;
   }
 

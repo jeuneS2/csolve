@@ -22,7 +22,7 @@ class Mock {
   MOCK_METHOD1(free, void(void *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(const struct constr_t *, const struct val_t)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -55,7 +55,7 @@ void free(void *ptr) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(const struct constr_t *constr, struct val_t val) { \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
   return MockProxy->propagate_ ## NAME(constr, val);                    \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
@@ -64,7 +64,7 @@ struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
 CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(VarsFindKey, Find) {
-  struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
+  struct constr_t val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct env_t v[2]  = { { "x", &val, NULL, 0, 1 },
                          { "y", &val, NULL, 1, 0 } };
   _vars = &v[0];
@@ -83,7 +83,7 @@ TEST(VarsFindKey, Find) {
 }
 
 TEST(VarsFindKey, NotFound) {
-  struct val_t val = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
+  struct constr_t val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct env_t v[2]  = { { "x", &val, NULL, 0, 1 },
                          { "y", &val, NULL, 1, 0 } };
   _vars = &v[0];
@@ -101,8 +101,8 @@ TEST(VarsFindKey, NotFound) {
 }
 
 TEST(VarsFindVal, Find) {
-  struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
+  struct constr_t val1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct constr_t val2 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct env_t v[2]  = { { "x", &val1, NULL, 0, 1 },
                          { "y", &val2, NULL, 1, 0 } };
   _vars = &v[0];
@@ -121,9 +121,9 @@ TEST(VarsFindVal, Find) {
 }
 
 TEST(VarsFindVal, NotFound) {
-  struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct val_t val3 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
+  struct constr_t val1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct constr_t val2 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct constr_t val3 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct env_t v[2]  = { { "x", &val1, NULL, 0, 1 },
                          { "y", &val2, NULL, 1, 0 } };
   _vars = &v[0];
@@ -145,7 +145,7 @@ TEST(VarsAdd, Basic) {
   _var_count = 0;
 
   const char *k1 = "k1";
-  struct val_t v1;
+  struct constr_t v1;
   vars_add(k1, &v1);
   EXPECT_NE((struct env_t *)NULL, _vars);
   EXPECT_EQ(1, _var_count);
@@ -155,7 +155,7 @@ TEST(VarsAdd, Basic) {
   EXPECT_EQ(0, _vars[0].prio);
 
   const char *k2 = "k2";
-  struct val_t v2;
+  struct constr_t v2;
   vars_add(k2, &v2);
   EXPECT_NE(k2, _vars[1].key);
   EXPECT_STREQ(k2, _vars[1].key);
@@ -173,11 +173,8 @@ TEST(VarsAdd, Basic) {
 }
 
 TEST(VarsCount, Basic) {
-  struct val_t a = VALUE(1);
-  struct val_t b = INTERVAL(17, 23);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(17,  23));
   struct constr_t X;
   struct constr_t Y;
 
@@ -216,17 +213,15 @@ TEST(VarsCount, Errors) {
 }
 
 TEST(VarsWeighten, Basic) {
-  struct val_t val1 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct val_t val2 = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-  struct env_t v[2]  = { { "x", &val1, NULL, 0, 0 },
-                         { "y", &val2, NULL, 1, 3 } };
+  struct constr_t X = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct constr_t Y = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct env_t v[2]  = { { "x", &X, NULL, 0, 0 },
+                         { "y", &Y, NULL, 1, 3 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
   valtab_add(1);
 
-  struct constr_t X = CONSTRAINT_TERM(&val1);
-  struct constr_t Y = CONSTRAINT_TERM(&val2);
   struct constr_t Z;
 
   Z = CONSTRAINT_EXPR(EQ, &X, &Y);
@@ -250,8 +245,8 @@ TEST(VarsWeighten, Basic) {
   EXPECT_EQ(v[1].prio, 28);
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val1) % TABLE_SIZE]));
-  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&val2) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&X) % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&Y) % TABLE_SIZE]));
   valtab_free();
   delete(MockProxy);
 }
@@ -270,9 +265,9 @@ TEST(VarsWeighten, Errors) {
 TEST(EnvGenerate, Basic) {
   _vars = 0;
   _var_count = 0;
-  struct val_t v1;
+  struct constr_t v1;
   vars_add("k1", &v1);
-  struct val_t v2;
+  struct constr_t v2;
   vars_add("k2", &v2);
 
   MockProxy = new Mock();
@@ -299,9 +294,9 @@ TEST(EnvGenerate, Basic) {
 TEST(EnvFree, Basic) {
   struct env_t env[2];
 
-  struct val_t a = INTERVAL(1, 27);
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
   env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
-  struct val_t b = INTERVAL(3, 17);
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
   env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
   _vars = env;
 

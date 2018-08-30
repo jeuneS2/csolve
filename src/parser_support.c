@@ -86,8 +86,8 @@ struct env_t *vars_find_key(const char *key) {
   return keytab_find(key);
 }
 
-static uint32_t hash_val(const struct val_t *val) {
-  return (intptr_t)val / sizeof(struct val_t);
+static uint32_t hash_val(const struct constr_t *val) {
+  return (intptr_t)val / sizeof(struct constr_t);
 }
 
 static void valtab_add(size_t index) {
@@ -95,7 +95,7 @@ static void valtab_add(size_t index) {
   _valtab[hash] = var_list_append(_valtab[hash], index);
 }
 
-static struct env_t *valtab_find(const struct val_t *val) {
+static struct env_t *valtab_find(const struct constr_t *val) {
   size_t index = hash_val(val) % TABLE_SIZE;
   for (struct var_list_t *l = _valtab[index]; l != NULL; l = l->next) {
     if (val == _vars[l->index].val) {
@@ -112,7 +112,7 @@ static void valtab_free(void) {
   }
 }
 
-struct env_t *vars_find_val(const struct val_t *val) {
+struct env_t *vars_find_val(const struct constr_t *val) {
   return valtab_find(val);
 }
 
@@ -120,7 +120,7 @@ size_t var_count(void) {
   return _var_count;
 }
 
-void vars_add(const char *key, struct val_t *val) {
+void vars_add(const char *key, struct constr_t *val) {
   _var_count++;
   _vars = (struct env_t *)realloc(_vars, sizeof(struct env_t) * _var_count);
   _vars[_var_count-1].key = (const char *)malloc(strlen(key)+1);
@@ -136,7 +136,7 @@ void vars_add(const char *key, struct val_t *val) {
 
 int32_t vars_count(struct constr_t *constr) {
   if (IS_TYPE(TERM, constr)) {
-    if (is_value(*constr->constr.term)) {
+    if (is_value(constr->constr.term.val)) {
       return 0;
     } else {
       return 1;
@@ -162,8 +162,8 @@ int32_t vars_count(struct constr_t *constr) {
 
 void vars_weighten(struct constr_t *constr, int32_t weight) {
   if (IS_TYPE(TERM, constr)) {
-    if (!is_value(*constr->constr.term)) {
-      struct env_t *var = vars_find_val(constr->constr.term);
+    if (!is_value(constr->constr.term.val)) {
+      struct env_t *var = vars_find_val(constr);
       var->prio += weight;
     }
   } else {
@@ -188,7 +188,7 @@ void vars_weighten(struct constr_t *constr, int32_t weight) {
 
 struct env_t *env_generate(void) {
   for (size_t i = 0; i < _var_count; i++) {
-    _vars[i].val->env = &_vars[i];
+    _vars[i].val->constr.term.env = &_vars[i];
   }
 
   return _vars;
@@ -224,8 +224,8 @@ void expr_list_free(struct expr_list_t *list) {
 
 void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
   if (IS_TYPE(TERM, constr)) {
-    if (!is_value(*constr->constr.term) && clause != NULL) {
-      struct env_t *e = constr->constr.term->env;
+    if (!is_value(constr->constr.term.val) && clause != NULL) {
+      struct env_t *e = constr->constr.term.env;
       e->clauses = clause_list_append(e->clauses, clause);
     }
   } else if (IS_TYPE(WAND, constr)) {

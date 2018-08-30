@@ -194,8 +194,8 @@ static bool check_assignment(struct env_t *var, size_t depth) {
   // propagate values
   bool failed =
     propagate_clauses(var->clauses) == PROP_ERROR ||
-    (objective_val()->env != NULL &&
-     propagate_clauses(objective_val()->env->clauses) == PROP_ERROR);
+    (objective_val() != NULL && objective_val()->constr.term.env != NULL &&
+     propagate_clauses(objective_val()->constr.term.env->clauses) == PROP_ERROR);
 
   // update statistics if propagation failed
   if (failed) {
@@ -225,7 +225,7 @@ static void step_activate(struct step_t *step, struct env_t *var) {
   // set up iteration
   step->active = true;
   step->var = var;
-  step->bounds = *var->val;
+  step->bounds = var->val->constr.term.val;
   step->iter = 0;
   step->seed = is_restartable() ? rand() : 0;
 }
@@ -241,7 +241,7 @@ static void step_enter(struct step_t *step, domain_t val) {
   // mark patching depth
   step->patch_depth = patch(NULL, (struct wand_expr_t){ NULL, 0 });
   // bind variable
-  step->bind_depth = bind(step->var->val, VALUE(val));
+  step->bind_depth = bind(&step->var->val->constr.term.val, VALUE(val));
 }
 
 static void step_leave(struct step_t *step) {
@@ -339,7 +339,7 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
       // pick a variable
       struct env_t *var = strategy_var_order_pop();
       // spawn a worker if possible
-      worker_spawn(var->val, depth);
+      worker_spawn(&var->val->constr.term.val, depth);
       step_activate(&steps[depth], var);
     } else {
       // continue iteration

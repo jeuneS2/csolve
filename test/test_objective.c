@@ -3,6 +3,7 @@
 
 namespace objective {
 #include "../src/arith.c"
+#include "../src/constr_types.c"
 #include "../src/objective.c"
 
 bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
@@ -11,24 +12,31 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 
 class Mock {
  public:
-  MOCK_METHOD1(normalize, struct constr_t *(struct constr_t *constr));
-  MOCK_METHOD2(propagate, prop_result_t(struct constr_t *constr, struct val_t val));
   MOCK_METHOD1(print_fatal, void (const char *));
+#define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
+  MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
+  MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
+  CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
 
 Mock *MockProxy;
 
-struct constr_t *normalize(struct constr_t *constr) {
-  return MockProxy->normalize(constr);
-}
-
-prop_result_t propagate(struct constr_t *constr, struct val_t val) {
-  return MockProxy->propagate(constr, val);
-}
-
 void print_fatal(const char *fmt, ...) {
   MockProxy->print_fatal(fmt);
 }
+
+#define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
+const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
+  return MockProxy->eval_ ## NAME(constr);                              \
+}                                                                       \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
+  return MockProxy->propagate_ ## NAME(constr, val);                    \
+}                                                                       \
+struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
+  return MockProxy->normal_ ## NAME(constr);                            \
+}
+CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(ObjectiveInit, Basic) {
   domain_t best;
@@ -91,22 +99,22 @@ TEST(ObjectiveBetter, Min) {
   *_objective_best = DOMAIN_MAX;
 
   MockProxy = new Mock();
-  _objective_val = VALUE(-1);
+  _objective_val = CONSTRAINT_TERM(VALUE(-1));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = VALUE(23);
+  _objective_val = CONSTRAINT_TERM(VALUE(23));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(-1, 0);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(-1, 0));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(18, 23);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(18, 23));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
@@ -114,22 +122,22 @@ TEST(ObjectiveBetter, Min) {
   *_objective_best = 17;
 
   MockProxy = new Mock();
-  _objective_val = VALUE(-1);
+  _objective_val = CONSTRAINT_TERM(VALUE(-1));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = VALUE(23);
+  _objective_val = CONSTRAINT_TERM(VALUE(23));
   EXPECT_EQ(false, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(-1, 0);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(-1, 0));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(18, 23);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(18, 23));
   EXPECT_EQ(false, objective_better());
   delete(MockProxy);
 }
@@ -141,44 +149,44 @@ TEST(ObjectiveBetter, Max) {
   _objective = OBJ_MAX;
   *_objective_best = DOMAIN_MIN;
   MockProxy = new Mock();
-  _objective_val = VALUE(-1);
+  _objective_val = CONSTRAINT_TERM(VALUE(-1));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = VALUE(23);
+  _objective_val = CONSTRAINT_TERM(VALUE(23));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(-1, 0);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(-1, 0));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(18, 23);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(18, 23));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   _objective = OBJ_MAX;
   *_objective_best = 17;
   MockProxy = new Mock();
-  _objective_val = VALUE(-1);
+  _objective_val = CONSTRAINT_TERM(VALUE(-1));
   EXPECT_EQ(false, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = VALUE(23);
+  _objective_val = CONSTRAINT_TERM(VALUE(23));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(-1, 0);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(-1, 0));
   EXPECT_EQ(false, objective_better());
   delete(MockProxy);
 
   MockProxy = new Mock();
-  _objective_val = INTERVAL(18, 23);
+  _objective_val = CONSTRAINT_TERM(INTERVAL(18, 23));
   EXPECT_EQ(true, objective_better());
   delete(MockProxy);
 }
@@ -197,7 +205,7 @@ TEST(ObjectiveUpdateBest, Basic) {
 
   _objective = OBJ_MAX;
   *_objective_best = -1;
-  _objective_val = VALUE(17);
+  _objective_val = CONSTRAINT_TERM(VALUE(17));
   MockProxy = new Mock();
   objective_update_best();
   EXPECT_EQ(17, *_objective_best);

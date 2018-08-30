@@ -16,7 +16,8 @@ bool operator==(const struct constr_t& lhs, const struct constr_t& rhs) {
     return false;
   }
   if (lhs.type == &CONSTR_TERM) {
-    if (lhs.constr.term != rhs.constr.term) {
+    if (!(lhs.constr.term.val == rhs.constr.term.val) ||
+        lhs.constr.term.env != rhs.constr.term.env) {
       return false;
     }
   } else if (lhs.type == &CONSTR_WAND) {
@@ -71,8 +72,7 @@ struct constr_t *normal_ ## NAME(struct constr_t *constr) { \
 CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(PropagateTerm, Value) {
-  struct val_t a = VALUE(23);
-  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(23));
 
   MockProxy = new Mock();
   EXPECT_EQ(PROP_NONE, propagate_term(&A, VALUE(23)));
@@ -85,11 +85,10 @@ TEST(PropagateTerm, Value) {
 }
 
 TEST(PropagateTerm, Interval) {
-  struct val_t a = INTERVAL(23, 24);
-  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(23, 24));
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, VALUE(23))).Times(1);
   EXPECT_EQ(1, propagate_term(&A, VALUE(23)));
   delete(MockProxy);
 
@@ -98,7 +97,7 @@ TEST(PropagateTerm, Interval) {
   EXPECT_EQ(PROP_NONE, propagate_term(&A, INTERVAL(17, 42)));
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, VALUE(23))).Times(1);
   EXPECT_EQ(1, propagate_term(&A, INTERVAL(-1, 23)));
   delete(MockProxy);
 
@@ -107,11 +106,8 @@ TEST(PropagateTerm, Interval) {
 }
 
 TEST(PropagateEq, Value) {
-  struct val_t a = VALUE(17);
-  struct val_t b = VALUE(23);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(17));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(23));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -131,11 +127,8 @@ TEST(PropagateEq, Value) {
 }
 
 TEST(PropagateEq, Interval) {
-  struct val_t a = INTERVAL(0, 23);
-  struct val_t b = INTERVAL(17, 42);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 23));
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(17, 42));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -150,20 +143,17 @@ TEST(PropagateEq, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(EQ, &A, &B);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, INTERVAL(17, 23)))
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, INTERVAL(17, 23)))
     .Times(1);
-  EXPECT_CALL(*MockProxy, bind(B.constr.term, INTERVAL(17, 23)))
+  EXPECT_CALL(*MockProxy, bind(&B.constr.term.val, INTERVAL(17, 23)))
     .Times(1);
   EXPECT_EQ(2, propagate_eq(&X, VALUE(1)));
   delete(MockProxy);
 }
 
 TEST(PropagateLt, Value) {
-  struct val_t a = VALUE(23);
-  struct val_t b = VALUE(17);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(23));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(17));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -183,18 +173,15 @@ TEST(PropagateLt, Value) {
 }
 
 TEST(PropagateLt, Interval) {
-  struct val_t a = INTERVAL(0, 23);
-  struct val_t b = INTERVAL(17, 42);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 23));
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(17, 42));
   struct constr_t X;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(LT, &A, &B);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, INTERVAL(17, 23)))
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, INTERVAL(17, 23)))
     .Times(1);
-  EXPECT_CALL(*MockProxy, bind(B.constr.term, INTERVAL(17, 23)))
+  EXPECT_CALL(*MockProxy, bind(&B.constr.term.val, INTERVAL(17, 23)))
     .Times(1);
   EXPECT_EQ(2, propagate_lt(&X, VALUE(0)));
   delete(MockProxy);
@@ -211,18 +198,16 @@ TEST(PropagateLt, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(LT, &B, &A);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, INTERVAL(18, 23)))
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, INTERVAL(18, 23)))
     .Times(1);
-  EXPECT_CALL(*MockProxy, bind(B.constr.term, INTERVAL(17, 22)))
+  EXPECT_CALL(*MockProxy, bind(&B.constr.term.val, INTERVAL(17, 22)))
     .Times(1);
   EXPECT_EQ(2, propagate_lt(&X, VALUE(1)));
   delete(MockProxy);
 }
 
 TEST(PropagateNeg, Value) {
-  struct val_t a = VALUE(23);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(23));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -247,14 +232,12 @@ TEST(PropagateNeg, Value) {
 }
 
 TEST(PropagateNeg, Interval) {
-  struct val_t a = INTERVAL(17, 23);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(17, 23));
   struct constr_t X;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(NEG, &A, NULL);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, VALUE(23))).Times(1);
   EXPECT_EQ(1, propagate_neg(&X, VALUE(-23)));
   delete(MockProxy);
 
@@ -275,11 +258,8 @@ TEST(PropagateNeg, Interval) {
 }
 
 TEST(PropagateAdd, Value) {
-  struct val_t a = VALUE(23);
-  struct val_t b = VALUE(17);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(23));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(17));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -304,17 +284,14 @@ TEST(PropagateAdd, Value) {
 }
 
 TEST(PropagateAdd, Interval) {
-  struct val_t a = INTERVAL(23,24);
-  struct val_t b = INTERVAL(17,18);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(23,24));
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(17,18));
   struct constr_t X;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(ADD, &A, &B);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(23))).Times(1);
-  EXPECT_CALL(*MockProxy, bind(B.constr.term, VALUE(17))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, VALUE(23))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&B.constr.term.val, VALUE(17))).Times(1);
   EXPECT_EQ(2, propagate_add(&X, VALUE(40)));
   delete(MockProxy);
 
@@ -335,13 +312,9 @@ TEST(PropagateAdd, Interval) {
 }
 
 TEST(PropagateMul, Value) {
-  struct val_t a = VALUE(3);
-  struct val_t b = VALUE(7);
-  struct val_t z = VALUE(0);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
-  struct constr_t Z = CONSTRAINT_TERM(&z);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(3));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(7));
+  struct constr_t Z = CONSTRAINT_TERM(VALUE(0));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -381,11 +354,8 @@ TEST(PropagateMul, Value) {
 }
 
 TEST(PropagateMul, Interval) {
-  struct val_t a = INTERVAL(1,3);
-  struct val_t b = INTERVAL(7,8);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(1,3));
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(7,8));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -410,9 +380,7 @@ TEST(PropagateMul, Interval) {
 }
 
 TEST(PropagateNot, Value) {
-  struct val_t a = VALUE(1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(1));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -432,14 +400,12 @@ TEST(PropagateNot, Value) {
 }
 
 TEST(PropagateNot, Interval) {
-  struct val_t a = INTERVAL(0, 1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 1));
   struct constr_t X;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(NOT, &A, NULL);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(0))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, VALUE(0))).Times(1);
   EXPECT_EQ(1, propagate_not(&X, VALUE(1)));
   delete(MockProxy);
 
@@ -450,17 +416,14 @@ TEST(PropagateNot, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(NOT, &A, NULL);
-  EXPECT_CALL(*MockProxy, bind(A.constr.term, VALUE(1))).Times(1);
+  EXPECT_CALL(*MockProxy, bind(&A.constr.term.val, VALUE(1))).Times(1);
   EXPECT_EQ(1, propagate_not(&X, VALUE(0)));
   delete(MockProxy);
 }
 
 TEST(PropagateAnd, Value) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -485,11 +448,8 @@ TEST(PropagateAnd, Value) {
 }
 
 TEST(PropagateAnd, Interval) {
-  struct val_t a = INTERVAL(0, 1);
-  struct val_t b = VALUE(0);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(0));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -509,11 +469,8 @@ TEST(PropagateAnd, Interval) {
 }
 
 TEST(PropagateOr, Value) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -538,11 +495,8 @@ TEST(PropagateOr, Value) {
 }
 
 TEST(PropagateOr, Interval) {
-  struct val_t a = INTERVAL(0, 1);
-  struct val_t b = VALUE(1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct constr_t X;
 
   MockProxy = new Mock();
@@ -562,11 +516,8 @@ TEST(PropagateOr, Interval) {
 }
 
 TEST(PropagateWand, Basic) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
   struct constr_t X = CONSTRAINT_WAND(2, E);
 
@@ -580,11 +531,8 @@ TEST(PropagateWand, Basic) {
 }
 
 TEST(Propagate, Loop) {
-  struct val_t a = VALUE(0);
-  struct val_t b = VALUE(1);
-
-  struct constr_t A = CONSTRAINT_TERM(&a);
-  struct constr_t B = CONSTRAINT_TERM(&b);
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct constr_t X;
 
   MockProxy = new Mock();

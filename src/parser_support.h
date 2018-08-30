@@ -32,7 +32,7 @@ size_t var_count(void);
 /** Find variable with the given key */
 struct env_t *vars_find_key(const char *key);
 /** Add a new variable */
-void vars_add(const char *key, struct val_t *val);
+void vars_add(const char *key, struct constr_t *val);
 
 /** Count the number of variables in a constarint */
 int32_t vars_count(struct constr_t *constr);

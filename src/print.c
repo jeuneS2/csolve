@@ -34,7 +34,7 @@ void print_val(FILE *file, const struct val_t val) {
 
 void print_constr(FILE *file, const struct constr_t *constr) {
   if (IS_TYPE(TERM, constr)) {
-    print_val(file, *constr->constr.term);
+    print_val(file, constr->constr.term.val);
   } else if (IS_TYPE(WAND, constr)) {
     for (size_t i = 0; i < constr->constr.wand.length; i++) {
       print_constr(file, constr->constr.wand.elems[i].constr);
@@ -53,7 +53,7 @@ void print_constr(FILE *file, const struct constr_t *constr) {
 void print_env(FILE *file, size_t size, struct env_t *env) {
   for (size_t i = 0; i < size; i++) {
     fprintf(file, "%s =", env[i].key);
-    print_val(file, *env[i].val);
+    print_val(file, env[i].val->constr.term.val);
     fprintf(file, ", ");
   }
 }

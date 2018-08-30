@@ -98,30 +98,24 @@ Constraints : Constraints Constraint
 Objective : ANY ';'
           { objective_init(OBJ_ANY, &shared()->objective_best);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
-            *$$->constr.term = VALUE(1);
+            *$$ = CONSTRAINT_TERM(VALUE(1));
           }
           | ALL ';'
           { objective_init(OBJ_ALL, &shared()->objective_best);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
-            *$$->constr.term = VALUE(1);
+            *$$ = CONSTRAINT_TERM(VALUE(1));
           }
           | MIN Expr ';'
           { objective_init(OBJ_MIN, &shared()->objective_best);
-            struct constr_t *v = alloc(sizeof(struct constr_t));
-            *v = CONSTRAINT_TERM(objective_val());
             vars_add("<obj>", objective_val());
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(EQ, $2, v);
+            *$$ = CONSTRAINT_EXPR(EQ, $2, objective_val());
           }
           | MAX Expr ';'
           { objective_init(OBJ_MAX, &shared()->objective_best);
-            struct constr_t *v = alloc(sizeof(struct constr_t));
-            *v = CONSTRAINT_TERM(objective_val());
             vars_add("<obj>", objective_val());
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(EQ, v, $2);
+            *$$ = CONSTRAINT_EXPR(EQ, objective_val(), $2);
           }
 ;
 
@@ -129,18 +123,16 @@ Constraint: Expr ';';
 
 PrimaryExpr : NUM
             { $$ = alloc(sizeof(struct constr_t));
-              *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
-              *$$->constr.term = VALUE($1);
+              *$$ = CONSTRAINT_TERM(VALUE($1));
             }
             | IDENT
-            { $$ = alloc(sizeof(struct constr_t));
-              struct env_t *var = vars_find_key($1);
+            { struct env_t *var = vars_find_key($1);
               if (var != NULL) {
-                *$$ = CONSTRAINT_TERM(var->val);
+                $$ = var->val;
               } else {
-                *$$ = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
-                *$$->constr.term = INTERVAL(DOMAIN_MIN, DOMAIN_MAX);
-                vars_add($1, $$->constr.term);
+                $$ = alloc(sizeof(struct constr_t));
+                *$$ = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+                vars_add($1, $$);
               }
             }
             | '(' Expr ')'
@@ -228,8 +220,7 @@ RelatExpr : AddExpr
           }
           | RelatExpr LEQ AddExpr
           { struct constr_t *v = alloc(sizeof(struct constr_t));
-            *v = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
-            *v->constr.term = VALUE(1);
+            *v = CONSTRAINT_TERM(VALUE(1));
             struct constr_t *c = alloc(sizeof(struct constr_t));
             *c = CONSTRAINT_EXPR(ADD, $3, v);
             $$ = alloc(sizeof(struct constr_t));
@@ -240,8 +231,7 @@ RelatExpr : AddExpr
           }
           | RelatExpr GEQ AddExpr
           { struct constr_t *v = alloc(sizeof(struct constr_t));
-            *v = CONSTRAINT_TERM(alloc(sizeof(struct val_t)));
-            *v->constr.term = VALUE(1);
+            *v = CONSTRAINT_TERM(VALUE(1));
             struct constr_t *c = alloc(sizeof(struct constr_t));
             *c = CONSTRAINT_EXPR(ADD, $1, v);
             $$ = alloc(sizeof(struct constr_t));

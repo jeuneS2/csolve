@@ -100,8 +100,7 @@ size_t bind(struct val_t *loc, const struct val_t val) {
     if (_bind_depth < _bind_stack_size) {
       _bind_stack[_bind_depth].loc = loc;
       _bind_stack[_bind_depth].val = *loc;
-      loc->lo = get_lo(val);
-      loc->hi = get_hi(val);
+      *loc = val;
       return _bind_depth++;
     } else {
       print_fatal(ERROR_MSG_TOO_MANY_BINDS);
@@ -116,8 +115,7 @@ void unbind(size_t depth) {
   while (_bind_depth > depth) {
     --_bind_depth;
     struct val_t *loc = _bind_stack[_bind_depth].loc;
-    loc->lo = get_lo(_bind_stack[_bind_depth].val);
-    loc->hi = get_hi(_bind_stack[_bind_depth].val);
+    *loc = _bind_stack[_bind_depth].val;
   }
 }
 

@@ -35,7 +35,7 @@ class Mock {
   MOCK_METHOD0(objective_better, bool(void));
   MOCK_METHOD0(objective_update_best, void(void));
   MOCK_METHOD0(objective_update_val, void(void));
-  MOCK_METHOD0(objective_val, struct val_t*(void));
+  MOCK_METHOD0(objective_val, struct constr_t*(void));
   MOCK_METHOD0(strategy_restart_frequency, uint64_t(void));
   MOCK_METHOD0(strategy_var_order_pop, struct env_t *(void));
   MOCK_METHOD1(strategy_var_order_push, void(struct env_t *));
@@ -43,7 +43,7 @@ class Mock {
   MOCK_METHOD3(print_solution, void(FILE *, size_t, struct env_t *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(const struct constr_t *, const struct val_t)); \
+  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -126,7 +126,7 @@ void objective_update_val() {
   MockProxy->objective_update_val();
 }
 
-struct val_t *objective_val(void) {
+struct constr_t *objective_val(void) {
   return MockProxy->objective_val();
 }
 
@@ -142,7 +142,7 @@ void print_solution(FILE *file, size_t size, struct env_t *env) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(const struct constr_t *constr, struct val_t val) { \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
   return MockProxy->propagate_ ## NAME(constr, val);                    \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
@@ -291,8 +291,7 @@ TEST(FailThresholdNext, Basic) {
 }
 
 TEST(UpdateSolution, FalseConstr) {
-  struct val_t c = VALUE(0);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t C = CONSTRAINT_TERM(VALUE(0));
   struct env_t env[0];
 
   MockProxy = new Mock();
@@ -304,8 +303,7 @@ TEST(UpdateSolution, FalseConstr) {
 }
 
 TEST(UpdateSolution, AnySolution) {
-  struct val_t c = VALUE(0);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t C = CONSTRAINT_TERM(VALUE(0));
   struct env_t env[0];
 
   struct shared_t s;
@@ -328,8 +326,7 @@ TEST(UpdateSolution, AnySolution) {
 }
 
 TEST(UpdateSolution, NotBetter) {
-  struct val_t c = VALUE(0);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t C = CONSTRAINT_TERM(VALUE(0));
   struct env_t env[0];
 
   struct shared_t s;
@@ -355,8 +352,7 @@ TEST(UpdateSolution, NotBetter) {
 }
 
 TEST(UpdateSolution, Better) {
-  struct val_t c = VALUE(0);
-  struct constr_t C = CONSTRAINT_TERM(&c);
+  struct constr_t C = CONSTRAINT_TERM(VALUE(0));
   struct env_t env[0];
 
   struct shared_t s;
@@ -394,24 +390,24 @@ TEST(UpdateSolution, Better) {
 }
 
 TEST(CheckAssignment, Infeasible) {
-  struct val_t a = VALUE(1);
-  struct env_t e = { .key = NULL, .val = &a, .clauses = NULL, .order = 0, .prio = 0 };
+  struct constr_t c = CONSTRAINT_TERM(VALUE(1));
+  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
 
   stats_init();
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
     .Times(1)
-    .WillOnce(::testing::Return(PROP_ERROR));
+    .WillRepeatedly(::testing::Return(PROP_ERROR));
   EXPECT_EQ(true, check_assignment(&e, 0));
   EXPECT_EQ(1, cuts);
   delete(MockProxy);
 }
 
 TEST(CheckAssignment, Feasible) {
-  struct val_t a = VALUE(1);
-  struct env_t e = { .key = NULL, .val = &a, .clauses = NULL, .order = 0, .prio = 0 };
-  struct val_t obj = VALUE(0);
+  struct constr_t c = CONSTRAINT_TERM(VALUE(1));
+  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
+  struct constr_t obj = CONSTRAINT_TERM(VALUE(0));
 
   stats_init();
 
@@ -420,8 +416,8 @@ TEST(CheckAssignment, Feasible) {
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(PROP_NONE));
   EXPECT_CALL(*MockProxy, objective_val())
-    .Times(1)
-    .WillOnce(::testing::Return(&obj));
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(&obj));
   EXPECT_EQ(false, check_assignment(&e, 0));
   delete(MockProxy);
 }
@@ -479,8 +475,8 @@ TEST(CheckRestart, True) {
 }
 
 TEST(Step, Activate) {
-  struct val_t v = INTERVAL(13, 13);
-  struct env_t e = { .key = NULL, .val = &v, .clauses = NULL, .order = 0, .prio = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(12, 13));
+  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -494,15 +490,15 @@ TEST(Step, Activate) {
   step_activate(&s, &e);
   EXPECT_EQ(true, s.active);
   EXPECT_EQ(&e, s.var);
-  EXPECT_EQ(v, s.bounds);
+  EXPECT_EQ(INTERVAL(12, 13), s.bounds);
   EXPECT_EQ(0, s.iter);
   EXPECT_EQ(0, s.seed);
   delete(MockProxy);
 }
 
 TEST(Step, Deactivate) {
-  struct val_t v;
-  struct env_t e = { .key = NULL, .val = &v, .clauses = NULL, .order = 0, .prio = 0 };
+  struct constr_t c;
+  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -516,8 +512,8 @@ TEST(Step, Deactivate) {
 }
 
 TEST(Step, Enter) {
-  struct val_t v;
-  struct env_t e = { .key = NULL, .val = &v, .clauses = NULL, .order = 0, .prio = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(0, 100));
+  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
   struct step_t s;
   s.var = &e;
 
@@ -530,7 +526,7 @@ TEST(Step, Enter) {
   EXPECT_CALL(*MockProxy, patch(NULL, (struct wand_expr_t){ NULL, 0 }))
     .Times(1)
     .WillOnce(::testing::Return(17));
-  EXPECT_CALL(*MockProxy, bind(&v, VALUE(42)))
+  EXPECT_CALL(*MockProxy, bind(&c.constr.term.val, VALUE(42)))
     .Times(1)
     .WillOnce(::testing::Return(23));
   step_enter(&s, 42);

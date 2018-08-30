@@ -27,27 +27,28 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
     return PROP_ERROR;                          \
   }
 
-prop_result_t propagate_term(const struct constr_t *constr, const struct val_t val) {
-  struct val_t *term = constr->constr.term;
+prop_result_t propagate_term(struct constr_t *constr, const struct val_t val) {
+  struct val_t term = constr->constr.term.val;
+  struct env_t *env = constr->constr.term.env;
 
-  if (get_lo(*term) > get_hi(val) || get_hi(*term) < get_lo(val)) {
-    if (term->env != NULL) {
-      term->env->prio++;
-      strategy_var_order_update(term->env);
+  if (get_lo(term) > get_hi(val) || get_hi(term) < get_lo(val)) {
+    if (env != NULL) {
+      env->prio++;
+      strategy_var_order_update(env);
     }
     return PROP_ERROR;
   } else {
-    domain_t lo = max(get_lo(*term), get_lo(val));
-    domain_t hi = min(get_hi(*term), get_hi(val));
-    if (lo != get_lo(*term) || hi != get_hi(*term)) {
+    domain_t lo = max(get_lo(term), get_lo(val));
+    domain_t hi = min(get_hi(term), get_hi(val));
+    if (lo != get_lo(term) || hi != get_hi(term)) {
       struct val_t v = INTERVAL(lo, hi);
-      bind(term, v);
+      bind(&constr->constr.term.val, v);
       stat_inc_props();
-      if (term->env != NULL) {
-        prop_result_t p = propagate_clauses(term->env->clauses);
+      if (env != NULL) {
+        prop_result_t p = propagate_clauses(env->clauses);
         if (p == PROP_ERROR) {
-          term->env->prio++;
-          strategy_var_order_update(term->env);
+          env->prio++;
+          strategy_var_order_update(env);
           return PROP_ERROR;
         }
         return p + 1;
@@ -60,7 +61,7 @@ prop_result_t propagate_term(const struct constr_t *constr, const struct val_t v
   return PROP_NONE;
 }
 
-prop_result_t propagate_eq(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_eq(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
@@ -79,7 +80,7 @@ prop_result_t propagate_eq(const struct constr_t *constr, const struct val_t val
   return PROP_NONE;
 }
 
-prop_result_t propagate_lt(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_lt(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
@@ -110,7 +111,7 @@ prop_result_t propagate_lt(const struct constr_t *constr, const struct val_t val
   return PROP_NONE;
 }
 
-prop_result_t propagate_neg(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_neg(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
 
   domain_t lo = neg(get_hi(val));
@@ -120,7 +121,7 @@ prop_result_t propagate_neg(const struct constr_t *constr, const struct val_t va
   return l->type->prop(l, v);
 }
 
-prop_result_t propagate_add(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_add(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
@@ -141,7 +142,7 @@ prop_result_t propagate_add(const struct constr_t *constr, const struct val_t va
   return p + q;
 }
 
-prop_result_t propagate_mul_lr(const struct constr_t *p, struct constr_t *c, struct val_t val) {
+prop_result_t propagate_mul_lr(struct constr_t *p, struct constr_t *c, struct val_t val) {
   if (get_lo(val) != DOMAIN_MIN && get_hi(val) != DOMAIN_MIN) {
     struct val_t cval = c->type->eval(c);
     if (is_value(cval)) {
@@ -158,7 +159,7 @@ prop_result_t propagate_mul_lr(const struct constr_t *p, struct constr_t *c, str
   return PROP_NONE;
 }
 
-prop_result_t propagate_mul(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_mul(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
@@ -171,7 +172,7 @@ prop_result_t propagate_mul(const struct constr_t *constr, const struct val_t va
   return p + q;
 }
 
-prop_result_t propagate_not(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_not(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
 
   if (is_true(val)) {
@@ -183,7 +184,7 @@ prop_result_t propagate_not(const struct constr_t *constr, const struct val_t va
   return PROP_NONE;
 }
 
-prop_result_t propagate_and(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_and(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
@@ -217,7 +218,7 @@ prop_result_t propagate_and(const struct constr_t *constr, const struct val_t va
   return PROP_NONE;
 }
 
-prop_result_t propagate_or(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_or(struct constr_t *constr, const struct val_t val) {
   struct constr_t *l = constr->constr.expr.l;
   struct constr_t *r = constr->constr.expr.r;
 
@@ -251,11 +252,11 @@ prop_result_t propagate_or(const struct constr_t *constr, const struct val_t val
   return PROP_NONE;
 }
 
-prop_result_t propagate_wand(const struct constr_t *constr, const struct val_t val) {
+prop_result_t propagate_wand(struct constr_t *constr, const struct val_t val) {
   prop_result_t r = PROP_NONE;
   if (is_true(val)) {
     for (size_t i = 0; i < constr->constr.wand.length; i++) {
-      const struct constr_t *c = constr->constr.wand.elems[i].constr;
+      struct constr_t *c = constr->constr.wand.elems[i].constr;
       prop_result_t p = c->type->prop(c, val);
       CHECK(p);
       r += p;
@@ -264,7 +265,7 @@ prop_result_t propagate_wand(const struct constr_t *constr, const struct val_t v
   return r;
 }
 
-prop_result_t propagate(const struct constr_t *constr) {
+prop_result_t propagate(struct constr_t *constr) {
   prop_result_t r = PROP_NONE;
   prop_result_t p = PROP_NONE;
   do {

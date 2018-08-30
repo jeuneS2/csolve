@@ -42,7 +42,6 @@ typedef int64_t ddomain_t;
 struct val_t {
   domain_t lo; ///< Lower bound of interval
   domain_t hi; ///< Upper bound of interval
-  struct env_t *env; ///< Link to environment of value
 };
 
 /** Get the lower bound of an interval or the single value */
@@ -66,7 +65,7 @@ static inline bool is_false(struct val_t v) {
   return is_value(v) && get_lo(v) == 0;
 }
 
-#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H), .env = NULL })
+#define INTERVAL(L,H) ((struct val_t){ .lo = (L), .hi = (H) })
 #define VALUE(V) INTERVAL(V,V)
 
 /** Binding entry */
@@ -96,7 +95,11 @@ struct constr_t {
   const struct constr_type_t *type; ///< Type of constraint node
   /** Union to hold either terminal node or expression node */
   union constr_union_t {
-    struct val_t *term; ///< Value of terminal node
+    /** Terminal node type */
+    struct term_t {
+      struct val_t val; ///< Value of terminal node
+      struct env_t *env; ///< Link to environment of value
+    } term;
     /** Expression node type */
     struct expr_t {
       struct constr_t *l; ///< Left child of expression
@@ -143,7 +146,7 @@ enum operator_t {
 /** Constraint type */
 struct constr_type_t {
   const struct val_t (*eval)(const struct constr_t *constr); ///< Evaluation function
-  prop_result_t (*prop)(const struct constr_t *constr, const struct val_t val); ///< Propagation function
+  prop_result_t (*prop)(struct constr_t *constr, const struct val_t val); ///< Propagation function
   struct constr_t * (*norm)(struct constr_t *constr); ///< Normalization function
   const enum operator_t op;
 };
@@ -159,13 +162,13 @@ CONSTR_TYPE_LIST(CONSTR_TYPES_EXT)
 
 /** Checks whether constraint is a constant value */
 static inline bool is_const(struct constr_t *c) {
-  return IS_TYPE(TERM, c) && is_value(*c->constr.term);
+  return IS_TYPE(TERM, c) && is_value(c->constr.term.val);
 }
 
 /** Create a terminal constraint */
 #define CONSTRAINT_TERM(V)                                              \
   ((struct constr_t) {                                                  \
-    .type = &CONSTR_TERM, .constr = { .term = V } } )
+    .type = &CONSTR_TERM, .constr = { .term = { .val = V, .env = NULL } } } )
 
 /** Create an expression constraint */
 #define CONSTRAINT_EXPR(T, L, R)                                        \
@@ -204,7 +207,7 @@ struct clause_list_t {
 /** Variable environment entry */
 struct env_t {
   const char *key; ///< Key (identifier) of variable
-  struct val_t *val; ///< Value of variable
+  struct constr_t *val; ///< Value of variable
   struct clause_list_t *clauses; ///< Clauses affected by this value
   size_t order; ///< Position in variable ordering
   int64_t prio; ///< Priority of this variable
@@ -297,7 +300,7 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_EVAL_FUNCS)
 
 /** Propagation functions for different constraint types */
 #define CONSTR_TYPE_PROP_FUNCS(UPNAME, NAME, OP)                    \
-  prop_result_t propagate_ ## NAME(const struct constr_t *constr, const struct val_t val);
+  prop_result_t propagate_ ## NAME(struct constr_t *constr, const struct val_t val);
 CONSTR_TYPE_LIST(CONSTR_TYPE_PROP_FUNCS)
 
 /** Normalization functions for different constraint types */
@@ -309,7 +312,7 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_NORM_FUNCS)
 struct constr_t *normalize(struct constr_t *constr);
 
 /** Propagate "true" to the terminal nodes of the constraint */
-prop_result_t propagate(const struct constr_t *constr);
+prop_result_t propagate(struct constr_t *constr);
 /** Propagate updates to a list of clauses */
 prop_result_t propagate_clauses(const struct clause_list_t *clauses);
 
@@ -322,7 +325,7 @@ bool objective_better(void);
 /** Get the current best objective value */
 domain_t objective_best(void);
 /** Get a pointer to the objective value variable */
-struct val_t *objective_val(void);
+struct constr_t *objective_val(void);
 /** Update the current best objective value */
 void objective_update_best(void);
 /** Update the objective value variable */

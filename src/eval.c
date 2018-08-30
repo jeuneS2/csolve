@@ -23,7 +23,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 const struct val_t eval_term(const struct constr_t *constr) {
-  return *constr->constr.term;
+  return constr->constr.term.val;
 }
 
 const struct val_t eval_eq(const struct constr_t *constr) {
