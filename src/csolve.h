@@ -82,7 +82,7 @@ typedef int32_t prop_result_t;
 #define PROP_NONE 0
 
 /** Propagation tag type */
-typedef uint32_t prop_tag_t;
+typedef uint64_t prop_tag_t;
 
 /** Type for a wide-and element */
 struct wand_expr_t {

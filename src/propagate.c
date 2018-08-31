@@ -278,19 +278,16 @@ prop_result_t propagate(struct constr_t *constr) {
 
 prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
   static prop_tag_t _prop_tag = 0;
+  prop_tag_t tag = ++_prop_tag;
 
   prop_result_t r = PROP_NONE;
 
-  prop_tag_t tag = ++_prop_tag;
-  for (const struct clause_list_t *l = clauses; l != NULL; l = l->next) {
-    l->clause->prop_tag = tag;
-  }
-
   for (const struct clause_list_t *l = clauses; l != NULL; l = l->next) {
     struct wand_expr_t *clause = l->clause;
-    if (clause->prop_tag != tag) {
+    if (clause->prop_tag > tag) {
       continue;
     }
+    l->clause->prop_tag = tag;
 
     struct constr_t *c = clause->constr;
     prop_result_t p = c->type->prop(c, VALUE(1));
