@@ -45,7 +45,7 @@ prop_result_t propagate_term(struct constr_t *constr, const struct val_t val) {
       bind(&constr->constr.term.val, v);
       stat_inc_props();
       if (env != NULL) {
-        prop_result_t p = propagate_clauses(env->clauses);
+        prop_result_t p = propagate_clauses(&env->clauses);
         if (p == PROP_ERROR) {
           env->prio++;
           strategy_var_order_update(env);
@@ -282,12 +282,12 @@ prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
 
   prop_result_t r = PROP_NONE;
 
-  for (const struct clause_list_t *l = clauses; l != NULL; l = l->next) {
-    struct wand_expr_t *clause = l->clause;
+  for (size_t i = clauses->length; i > 0; i--) {
+    struct wand_expr_t *clause = clauses->elems[i-1];
     if (clause->prop_tag > tag) {
       continue;
     }
-    l->clause->prop_tag = tag;
+    clause->prop_tag = tag;
 
     struct constr_t *c = clause->constr;
     prop_result_t p = c->type->prop(c, VALUE(1));

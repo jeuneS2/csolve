@@ -200,15 +200,15 @@ struct step_t {
 
 /** Type to represent a list of clauses for propagation */
 struct clause_list_t {
-  struct wand_expr_t *clause; ///< Clause
-  struct clause_list_t *next; ///< Next element of list
+  size_t length; ///< Length of list
+  struct wand_expr_t **elems; ///< Clause
 };
 
 /** Variable environment entry */
 struct env_t {
   const char *key; ///< Key (identifier) of variable
   struct constr_t *val; ///< Value of variable
-  struct clause_list_t *clauses; ///< Clauses affected by this value
+  struct clause_list_t clauses; ///< Clauses affected by this value
   size_t order; ///< Position in variable ordering
   int64_t prio; ///< Priority of this variable
 };
@@ -291,7 +291,7 @@ void sema_wait(sem_t *sema);
 void sema_post(sem_t *sema);
 
 /** Add an element to a clause list */
-struct clause_list_t *clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem);
+void clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem);
 
 /** Evaluation functions for different constraint types */
 #define CONSTR_TYPE_EVAL_FUNCS(UPNAME, NAME, OP)                    \

@@ -126,7 +126,8 @@ void vars_add(const char *key, struct constr_t *val) {
   _vars[_var_count-1].key = (const char *)malloc(strlen(key)+1);
   strcpy((char *)_vars[_var_count-1].key, key);
   _vars[_var_count-1].val = val;
-  _vars[_var_count-1].clauses = NULL;
+  _vars[_var_count-1].clauses.length = 0;
+  _vars[_var_count-1].clauses.elems = NULL;
   _vars[_var_count-1].order = SIZE_MAX;
   _vars[_var_count-1].prio = 0;
 
@@ -200,6 +201,7 @@ void env_free(void) {
 
   for (size_t i = 0; i < _var_count; i++) {
     free((char *)_vars[i].key);
+    free(_vars[i].clauses.elems);
   }
   free(_vars);
 
@@ -226,7 +228,7 @@ void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
   if (IS_TYPE(TERM, constr)) {
     if (!is_value(constr->constr.term.val) && clause != NULL) {
       struct env_t *e = constr->constr.term.env;
-      e->clauses = clause_list_append(e->clauses, clause);
+      clause_list_append(&e->clauses, clause);
     }
   } else if (IS_TYPE(WAND, constr)) {
     for (size_t i = 0; i < constr->constr.wand.length; i++) {

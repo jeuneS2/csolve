@@ -188,21 +188,18 @@ void sema_post(sem_t *sema) {
 
 // functions to manipulate clause lists
 bool clause_list_contains(struct clause_list_t *list, struct wand_expr_t *elem) {
-  for (struct clause_list_t *l = list; l != NULL; l = l->next) {
-    if (l->clause == elem) {
+  for (size_t i = 0; i < list->length; i++) {
+    if (list->elems[i] == elem) {
       return true;
     }
   }
   return false;
 }
 
-struct clause_list_t *clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem) {
+void clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem) {
   if (!clause_list_contains(list, elem)) {
-    struct clause_list_t *retval = (struct clause_list_t *)alloc(sizeof(struct clause_list_t));
-    retval->clause = elem;
-    retval->next = list;
-    return retval;
-  } else {
-    return list;
+    list->length++;
+    list->elems = (struct wand_expr_t **)realloc(list->elems, list->length * sizeof(struct wand_expr_t));
+    list->elems[list->length-1] = elem;
   }
 }

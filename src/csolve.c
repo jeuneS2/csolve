@@ -193,9 +193,9 @@ static bool update_solution(size_t size, struct env_t *env, struct constr_t *con
 static bool check_assignment(struct env_t *var, size_t depth) {
   // propagate values
   bool failed =
-    propagate_clauses(var->clauses) == PROP_ERROR ||
+    propagate_clauses(&var->clauses) == PROP_ERROR ||
     (objective_val() != NULL && objective_val()->constr.term.env != NULL &&
-     propagate_clauses(objective_val()->constr.term.env->clauses) == PROP_ERROR);
+     propagate_clauses(&objective_val()->constr.term.env->clauses) == PROP_ERROR);
 
   // update statistics if propagation failed
   if (failed) {

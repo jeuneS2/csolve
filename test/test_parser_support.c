@@ -16,7 +16,7 @@ bool operator==(const struct val_t& lhs, const struct val_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD0(objective_best, domain_t(void));
-  MOCK_METHOD2(clause_list_append, clause_list_t *(clause_list_t*, wand_expr_t*));
+  MOCK_METHOD2(clause_list_append, void(clause_list_t*, wand_expr_t*));
   MOCK_METHOD1(print_fatal, void (const char *));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
   MOCK_METHOD1(free, void(void *));
@@ -33,8 +33,8 @@ domain_t objective_best(void) {
   return MockProxy->objective_best();
 }
 
-clause_list_t *clause_list_append(clause_list_t *list, wand_expr_t *elem) {
-  return MockProxy->clause_list_append(list, elem);
+void clause_list_append(clause_list_t *list, wand_expr_t *elem) {
+  MockProxy->clause_list_append(list, elem);
 }
 
 void print_fatal(const char *fmt, ...) {
@@ -65,8 +65,8 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(VarsFindKey, Find) {
   struct constr_t val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val, NULL, 0, 1 },
-                         { "y", &val, NULL, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val, {0, NULL}, 0, 1 },
+                         { "y", &val, {0, NULL}, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   keytab_add(0);
@@ -84,8 +84,8 @@ TEST(VarsFindKey, Find) {
 
 TEST(VarsFindKey, NotFound) {
   struct constr_t val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val, NULL, 0, 1 },
-                         { "y", &val, NULL, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val, {0, NULL}, 0, 1 },
+                         { "y", &val, {0, NULL}, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   keytab_add(0);
@@ -103,8 +103,8 @@ TEST(VarsFindKey, NotFound) {
 TEST(VarsFindVal, Find) {
   struct constr_t val1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t val2 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val1, NULL, 0, 1 },
-                         { "y", &val2, NULL, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val1, {0, NULL}, 0, 1 },
+                         { "y", &val2, {0, NULL}, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -124,8 +124,8 @@ TEST(VarsFindVal, NotFound) {
   struct constr_t val1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t val2 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t val3 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val1, NULL, 0, 1 },
-                         { "y", &val2, NULL, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val1, {0, NULL}, 0, 1 },
+                         { "y", &val2, {0, NULL}, 1, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -215,8 +215,8 @@ TEST(VarsCount, Errors) {
 TEST(VarsWeighten, Basic) {
   struct constr_t X = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t Y = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &X, NULL, 0, 0 },
-                         { "y", &Y, NULL, 1, 3 } };
+  struct env_t v[2]  = { { "x", &X, {0, NULL}, 0, 0 },
+                         { "y", &Y, {0, NULL}, 1, 3 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -292,17 +292,22 @@ TEST(EnvGenerate, Basic) {
 }
 
 TEST(EnvFree, Basic) {
+  struct wand_expr_t w;
+  struct wand_expr_t *x [1] = { &w };
+  struct wand_expr_t *y [1] = { &w };
   struct env_t env[2];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = NULL, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = x }, .order = 0, .prio = 3 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = NULL, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = y }, .order = 0, .prio = 4 };
   _vars = env;
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, free((void *)env[0].key));
   EXPECT_CALL(*MockProxy, free((void *)env[1].key));
+  EXPECT_CALL(*MockProxy, free((void *)env[0].clauses.elems));
+  EXPECT_CALL(*MockProxy, free((void *)env[1].clauses.elems));
   EXPECT_CALL(*MockProxy, free((void *)_vars));
   env_free();
   delete(MockProxy);

@@ -391,12 +391,12 @@ TEST(UpdateSolution, Better) {
 
 TEST(CheckAssignment, Infeasible) {
   struct constr_t c = CONSTRAINT_TERM(VALUE(1));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
 
   stats_init();
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
+  EXPECT_CALL(*MockProxy, propagate_clauses(&e.clauses))
     .Times(1)
     .WillRepeatedly(::testing::Return(PROP_ERROR));
   EXPECT_EQ(true, check_assignment(&e, 0));
@@ -406,13 +406,13 @@ TEST(CheckAssignment, Infeasible) {
 
 TEST(CheckAssignment, Feasible) {
   struct constr_t c = CONSTRAINT_TERM(VALUE(1));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
   struct constr_t obj = CONSTRAINT_TERM(VALUE(0));
 
   stats_init();
 
   MockProxy = new Mock();
-  EXPECT_CALL(*MockProxy, propagate_clauses(NULL))
+  EXPECT_CALL(*MockProxy, propagate_clauses(&e.clauses))
     .Times(::testing::AtLeast(1))
     .WillRepeatedly(::testing::Return(PROP_NONE));
   EXPECT_CALL(*MockProxy, objective_val())
@@ -476,7 +476,7 @@ TEST(CheckRestart, True) {
 
 TEST(Step, Activate) {
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(12, 13));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -498,7 +498,7 @@ TEST(Step, Activate) {
 
 TEST(Step, Deactivate) {
   struct constr_t c;
-  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -513,7 +513,7 @@ TEST(Step, Deactivate) {
 
 TEST(Step, Enter) {
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(0, 100));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = NULL, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
   struct step_t s;
   s.var = &e;
 
