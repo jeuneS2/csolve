@@ -62,15 +62,13 @@ static void update_stats(size_t depth) {
 }
 
 // calculate Luby sequence using algorithm by Knuth
-uint64_t fail_threshold_next(void) {
-  uint64_t threshold = _fail_threshold;
+void fail_threshold_next(void) {
   if ((_fail_threshold_counter & -_fail_threshold_counter) == _fail_threshold) {
     _fail_threshold_counter++;
     _fail_threshold = 1;
   } else {
     _fail_threshold <<= 1;
   }
-  return threshold;
 }
 
 void shared_init(int32_t workers_max) {
@@ -213,7 +211,7 @@ static bool check_restart(void) {
 
     if (_fail_count > _fail_threshold * strategy_restart_frequency()) {
       _fail_count = 0;
-      _fail_threshold = fail_threshold_next();
+      fail_threshold_next();
       stat_inc_restarts();
       return true;
     }

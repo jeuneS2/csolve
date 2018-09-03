@@ -273,21 +273,35 @@ TEST(Shared, Get) {
 TEST(FailThresholdNext, Basic) {
   _fail_threshold = 1;
   _fail_threshold_counter = 1;
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(2, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(2, fail_threshold_next());
-  EXPECT_EQ(4, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(2, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(1, fail_threshold_next());
-  EXPECT_EQ(2, fail_threshold_next());
-  EXPECT_EQ(4, fail_threshold_next());
-  EXPECT_EQ(8, fail_threshold_next());
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(2, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(2, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(4, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(2, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(1, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(2, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(4, _fail_threshold);
+  fail_threshold_next();
+  EXPECT_EQ(8, _fail_threshold);
 }
 
 TEST(UpdateSolution, FalseConstr) {
