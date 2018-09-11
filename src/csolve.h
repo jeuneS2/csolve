@@ -251,7 +251,7 @@ const domain_t min(const domain_t a, const domain_t b);
 const domain_t max(const domain_t a, const domain_t b);
 
 /** Default size of allocation stack */
-#define ALLOC_STACK_SIZE_DEFAULT (16*1024*1024)
+#define ALLOC_STACK_SIZE_DEFAULT (256*1024*1024)
 /** Initialize the allocation stack */
 void alloc_init(size_t size);
 /** Deallocate memory occupied by the allocation stack */
@@ -262,7 +262,7 @@ void *alloc(size_t size);
 void dealloc(void *elem);
 
 /** Default size of bind stack */
-#define BIND_STACK_SIZE_DEFAULT (1024)
+#define BIND_STACK_SIZE_DEFAULT (1024*1024)
 /** Initialize the binding structures */
 void bind_init(size_t size);
 /** Deallocate memory occupied by the bind stack */
@@ -273,7 +273,7 @@ size_t bind(struct val_t *loc, const struct val_t val);
 void unbind(size_t depth);
 
 /** Default size of patch stack */
-#define PATCH_STACK_SIZE_DEFAULT (16*1024)
+#define PATCH_STACK_SIZE_DEFAULT (1024*1024)
 /** Initialize the patching structures */
 void patch_init(size_t size);
 /** Deallocate memory occupied by the patch stack */

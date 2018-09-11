@@ -142,13 +142,13 @@ TEST(PrintHelp, Basic) {
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "Usage: <bar> [<options>] [<file>]\n"
             "Options:\n"
-            "  -b --binds <size>           maximum number of binds (default: 1024)\n"
+            "  -b --binds <size>           maximum number of binds (default: " + std::to_string(BIND_STACK_SIZE_DEFAULT) + ")\n"
             "  -f --prefer-failing <bool>  prefer failing variables when ordering (default: true)\n"
             "  -h --help                   show this message and exit\n"
             "  -j --jobs <int>             number of jobs to run simultaneously (default: 1)\n"
-            "  -m --memory <size>          allocation stack size in bytes (default: 16777216)\n"
+            "  -m --memory <size>          allocation stack size in bytes (default: " + std::to_string(ALLOC_STACK_SIZE_DEFAULT) + ")\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_NONE)\n"
-            "  -p --patches <size>         maximum number of patches (default: 16384)\n"
+            "  -p --patches <size>         maximum number of patches (default: " + std::to_string(PATCH_STACK_SIZE_DEFAULT) + ")\n"
             "  -r --restart-freq <int>     restart frequency when looking for any solution (default: 100), set to 0 to disable\n"
             "  -v --version                print version and exit\n"
             "  -w --weighten <bool>        compute weights of variables for initial order (default: true)\n");
@@ -168,13 +168,13 @@ TEST(ParseOptions, Help) {
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "Usage: <bar> [<options>] [<file>]\n"
             "Options:\n"
-            "  -b --binds <size>           maximum number of binds (default: 1024)\n"
+            "  -b --binds <size>           maximum number of binds (default: " + std::to_string(BIND_STACK_SIZE_DEFAULT) + ")\n"
             "  -f --prefer-failing <bool>  prefer failing variables when ordering (default: true)\n"
             "  -h --help                   show this message and exit\n"
             "  -j --jobs <int>             number of jobs to run simultaneously (default: 1)\n"
-            "  -m --memory <size>          allocation stack size in bytes (default: 16777216)\n"
+            "  -m --memory <size>          allocation stack size in bytes (default: " + std::to_string(ALLOC_STACK_SIZE_DEFAULT) + ")\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_NONE)\n"
-            "  -p --patches <size>         maximum number of patches (default: 16384)\n"
+            "  -p --patches <size>         maximum number of patches (default: " + std::to_string(PATCH_STACK_SIZE_DEFAULT) + ")\n"
             "  -r --restart-freq <int>     restart frequency when looking for any solution (default: 100), set to 0 to disable\n"
             "  -v --version                print version and exit\n"
             "  -w --weighten <bool>        compute weights of variables for initial order (default: true)\n");
