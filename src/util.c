@@ -78,10 +78,12 @@ void dealloc(void *elem) {
 static struct binding_t *_bind_stack;
 static size_t _bind_stack_size;
 static size_t _bind_depth;
+static size_t _bind_level;
 
 void bind_init(size_t size) {
   _bind_stack_size = size;
   _bind_depth = 0;
+  _bind_level = -1;
 
   _bind_stack = (struct binding_t *)malloc(sizeof(struct binding_t) * _bind_stack_size);
   if (_bind_stack == 0) {
@@ -95,27 +97,52 @@ void bind_free(void) {
   _bind_stack_size = 0;
 }
 
-size_t bind(struct val_t *loc, const struct val_t val) {
-  if (loc != NULL) {
+void bind_commit(void) {
+  _bind_depth = 0;
+}
+
+size_t bind_depth(void) {
+  return _bind_depth;
+}
+
+void bind_level_set(size_t level) {
+  _bind_level = level;
+}
+
+size_t bind_level_get(void) {
+  return _bind_level;
+}
+
+void bind(struct env_t *var, const struct val_t val, const struct wand_expr_t *clause) {
+  if (var != NULL) {
     if (_bind_depth < _bind_stack_size) {
-      _bind_stack[_bind_depth].loc = loc;
-      _bind_stack[_bind_depth].val = *loc;
-      *loc = val;
-      return _bind_depth++;
+      _bind_stack[_bind_depth].var = var;
+
+      _bind_stack[_bind_depth].val = var->val->constr.term.val;
+      var->val->constr.term.val = val;
+      _bind_stack[_bind_depth].level = var->level;
+      var->level = _bind_level;
+
+      _bind_stack[_bind_depth].clause = clause;
+      _bind_stack[_bind_depth].prev = var->binds;
+      var->binds = &_bind_stack[_bind_depth];
+
+      _bind_depth++;
     } else {
       print_fatal(ERROR_MSG_TOO_MANY_BINDS);
     }
   } else {
     print_fatal(ERROR_MSG_NULL_BIND);
   }
-  return _bind_stack_size;
 }
 
 void unbind(size_t depth) {
   while (_bind_depth > depth) {
     --_bind_depth;
-    struct val_t *loc = _bind_stack[_bind_depth].loc;
-    *loc = _bind_stack[_bind_depth].val;
+    struct env_t *var = _bind_stack[_bind_depth].var;
+    var->val->constr.term.val = _bind_stack[_bind_depth].val;
+    var->level = _bind_stack[_bind_depth].level;
+    var->binds = _bind_stack[_bind_depth].prev;
   }
 }
 
@@ -140,12 +167,16 @@ void patch_free(void) {
   _patch_stack_size = 0;
 }
 
-size_t patch(struct wand_expr_t *loc, const struct wand_expr_t expr) {
+void patch_commit(void) {
+  _patch_depth = 0;
+}
+
+size_t patch(struct wand_expr_t *loc, struct constr_t *constr) {
   if (loc != NULL) {
     if (_patch_depth < _patch_stack_size) {
       _patch_stack[_patch_depth].loc = loc;
-      _patch_stack[_patch_depth].expr = *loc;
-      *loc = expr;
+      _patch_stack[_patch_depth].constr = loc->constr;
+      loc->constr = constr;
       return _patch_depth++;
     } else {
       print_fatal(ERROR_MSG_TOO_MANY_PATCHES);
@@ -160,7 +191,7 @@ void unpatch(size_t depth) {
   while (_patch_depth > depth) {
     --_patch_depth;
     struct wand_expr_t *loc = _patch_stack[_patch_depth].loc;
-    *loc = _patch_stack[_patch_depth].expr;
+    loc->constr = _patch_stack[_patch_depth].constr;
   }
 }
 
@@ -199,7 +230,7 @@ bool clause_list_contains(struct clause_list_t *list, struct wand_expr_t *elem) 
 void clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem) {
   if (!clause_list_contains(list, elem)) {
     list->length++;
-    list->elems = (struct wand_expr_t **)realloc(list->elems, list->length * sizeof(struct wand_expr_t));
+    list->elems = (struct wand_expr_t **)realloc(list->elems, list->length * sizeof(struct wand_expr_t *));
     list->elems[list->length-1] = elem;
   }
 }

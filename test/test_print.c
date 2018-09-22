@@ -16,7 +16,7 @@ class Mock {
   MOCK_METHOD1(exit, void(int));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -39,8 +39,8 @@ void exit(int code) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
-  return MockProxy->propagate_ ## NAME(constr, val);                    \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \
+  return MockProxy->propagate_ ## NAME(constr, val, clause);            \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
   return MockProxy->normal_ ## NAME(constr);                            \
@@ -152,7 +152,7 @@ TEST(PrintConstr, Wand) {
 
   struct constr_t A = CONSTRAINT_TERM(VALUE(17));
   struct constr_t B = CONSTRAINT_TERM(INTERVAL(23,42));
-  struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
+  struct wand_expr_t E [2] = { { .constr = &A, .orig = &A, .prop_tag = 0 }, { .constr = &B, .orig = &B, .prop_tag = 0 } };
   struct constr_t X = CONSTRAINT_WAND(2, E);
 
   testing::internal::CaptureStderr();

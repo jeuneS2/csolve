@@ -65,6 +65,9 @@ Input : Constraints
           } while (norm != prev && prop != PROP_ERROR);
         }
 
+        bind_commit();
+        patch_commit();
+
         stats_init();
 
         if (prop != PROP_ERROR) {
@@ -84,14 +87,14 @@ Constraints : Constraints Constraint
             { $$->constr.wand.length = $1->constr.wand.length + 1;
               const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
               $$->constr.wand.elems = realloc($1->constr.wand.elems, size);
-              $$->constr.wand.elems[$$->constr.wand.length-1].constr = $2;
-              $$->constr.wand.elems[$$->constr.wand.length-1].prop_tag = 0;
+              $$->constr.wand.elems[$$->constr.wand.length-1] =
+                (struct wand_expr_t) { .constr = $2, .orig = $2, .prop_tag = 0 };
             }
             | Objective
             { $$ = alloc(sizeof(struct constr_t));
               *$$ = CONSTRAINT_WAND(1, malloc(sizeof(struct wand_expr_t)));
-              $$->constr.wand.elems[0].constr = $1;
-              $$->constr.wand.elems[0].prop_tag = 0;
+              $$->constr.wand.elems[0] =
+                (struct wand_expr_t) { .constr = $1, .orig = $1, .prop_tag = 0 };
             }
 ;
 
@@ -167,8 +170,8 @@ UnaryExpr : PrimaryExpr
                 $$->constr.wand.length++;
                 const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
                 $$->constr.wand.elems = realloc($$->constr.wand.elems, size);
-                $$->constr.wand.elems[$$->constr.wand.length-1].constr = c;
-                $$->constr.wand.elems[$$->constr.wand.length-1].prop_tag = 0;
+                $$->constr.wand.elems[$$->constr.wand.length-1] =
+                  (struct wand_expr_t) { .constr = c, .orig = c, .prop_tag = 0 };
               }
             }
             expr_list_free($3);

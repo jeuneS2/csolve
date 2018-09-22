@@ -32,7 +32,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 // parallelizing data
 static uint32_t _workers_max;
 static uint32_t _worker_id;
-static size_t _worker_min_depth;
+static size_t _worker_min_level;
 static struct shared_t *_shared;
 
 // restarting data
@@ -48,13 +48,13 @@ static void print_stats(FILE *file) {
   stats_print(file);
   fprintf(file, ", SOLUTIONS: %lu\n", shared()->solutions);
   fflush(file);
-  stat_reset_depth_min();
-  stat_reset_depth_max();
+  stat_reset_level_min();
+  stat_reset_level_max();
 }
 
-static void update_stats(size_t depth) {
-  stat_min_depth_min(depth);
-  stat_max_depth_max(depth);
+static void update_stats(size_t level) {
+  stat_min_level_min(level);
+  stat_max_level_max(level);
   stat_inc_calls();
   if (stat_get_calls() % STATS_FREQUENCY == 0) {
     print_stats(stdout);
@@ -80,16 +80,16 @@ void shared_init(int32_t workers_max) {
   shared()->workers = 1;
   shared()->workers_id = 1;
   _worker_id = 1;
-  _worker_min_depth = 0;
+  _worker_min_level = 0;
 }
 
 struct shared_t *shared(void) {
   return _shared;
 }
 
-void worker_spawn(struct val_t *var, size_t depth) {
+void worker_spawn(struct env_t *var, size_t level) {
 
-  if (!is_value(*var) && shared()->workers < _workers_max) {
+  if (!is_value(var->val->constr.term.val) && shared()->workers < _workers_max) {
 
     sema_wait(&shared()->semaphore);
     // avoid race condition
@@ -101,8 +101,8 @@ void worker_spawn(struct val_t *var, size_t depth) {
     int32_t id = ++shared()->workers_id;
     sema_post(&shared()->semaphore);
 
-    domain_t lo = get_lo(*var);
-    domain_t hi = get_hi(*var);
+    domain_t lo = get_lo(var->val->constr.term.val);
+    domain_t hi = get_hi(var->val->constr.term.val);
     domain_t mid = (lo + hi) / 2;
 
     // pick up any children that may have finished
@@ -117,16 +117,18 @@ void worker_spawn(struct val_t *var, size_t depth) {
       // child gets a new id and searches the upper half
       _worker_id = id;
       struct val_t v = (mid+1 == hi) ? VALUE(hi) : INTERVAL(mid+1, hi);
-      bind(var, v);
-      _worker_min_depth = depth;
+      bind_level_set(level);
+      bind(var, v, NULL);
+      _worker_min_level = level;
       // reset stats for child
       stats_init();
-      stat_set_depth_min(depth);
-      stat_set_depth_max(depth);
+      stat_set_level_min(level);
+      stat_set_level_max(level);
     } else {
       // parent searches the lower half
       struct val_t v = (lo == mid) ? VALUE(lo) : INTERVAL(lo, mid);
-      bind(var, v);
+      bind_level_set(level);
+      bind(var, v, NULL);
     }
   }
 }
@@ -188,7 +190,7 @@ static bool update_solution(size_t size, struct env_t *env, struct constr_t *con
   return updated;
 }
 
-static bool check_assignment(struct env_t *var, size_t depth) {
+static bool check_assignment(struct env_t *var, size_t level) {
   // propagate values
   bool failed =
     propagate_clauses(&var->clauses) == PROP_ERROR ||
@@ -198,7 +200,7 @@ static bool check_assignment(struct env_t *var, size_t depth) {
   // update statistics if propagation failed
   if (failed) {
     stat_inc_cuts();
-    stat_add_cut_depth(depth);
+    stat_add_cut_level(level);
   }
 
   return failed;
@@ -237,9 +239,12 @@ static void step_enter(struct step_t *step, domain_t val) {
   // mark how much memory is allocated
   step->alloc_marker = alloc(0);
   // mark patching depth
-  step->patch_depth = patch(NULL, (struct wand_expr_t){ NULL, 0 });
+  step->patch_depth = patch(NULL, NULL);
   // bind variable
-  step->bind_depth = bind(&step->var->val->constr.term.val, VALUE(val));
+  step->bind_depth = bind_depth();
+  if (!is_const(step->var->val)) {
+    bind(step->var, VALUE(val), NULL);
+  }
 }
 
 static void step_leave(struct step_t *step) {
@@ -273,18 +278,18 @@ static domain_t step_val(struct step_t *step) {
   return ((i ^ s) & 1) ? hi - (i >> 1) : lo + (i >> 1);
 }
 
-static void unwind(struct step_t *steps, size_t depth, size_t stop) {
+static void unwind(struct step_t *steps, size_t level, size_t stop) {
   // unwind search steps up to a specified level
-  for (size_t i = depth; i != (stop-1); --i) {
-    step_deactivate(&steps[i]);
+  for (size_t i = level; i != (stop-1); --i) {
     step_leave(&steps[i]);
+    step_deactivate(&steps[i]);
   }
 }
 
 // backtrack by one level
 #define BACKTRACK()                             \
-  if (depth != 0) {                             \
-    depth--;                                    \
+  if (level != 0) {                             \
+    level--;                                    \
     continue;                                   \
   } else {                                      \
     break;                                      \
@@ -293,8 +298,8 @@ static void unwind(struct step_t *steps, size_t depth, size_t stop) {
 // restart the search
 #define RESTART()                               \
   {                                             \
-    unwind(steps, depth, _worker_min_depth);    \
-    depth = _worker_min_depth;                  \
+    unwind(steps, level, _worker_min_level);    \
+    level = _worker_min_level;                  \
     continue;                                   \
   }
 
@@ -310,10 +315,10 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
   // allocate data structure for search steps
   struct step_t *steps = (struct step_t *)calloc(size, sizeof(struct step_t));
 
-  size_t depth = 0;
+  size_t level = 0;
 
   while (true) {
-    if (depth < _worker_min_depth) {
+    if (level < _worker_min_level) {
       EXIT();
     }
 
@@ -323,51 +328,64 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
     }
 
     // check if a better feasible solution is reached
-    if (depth == size) {
+    if (level == size) {
       bool update = update_solution(size, env, constr);
       if (update) {
-        depth--;
+        level--;
         RESTART();
       } else {
         BACKTRACK();
       }
     }
 
-    if (!steps[depth].active) {
+    if (!steps[level].active) {
       // pick a variable
       struct env_t *var = strategy_var_order_pop();
       // spawn a worker if possible
-      worker_spawn(&var->val->constr.term.val, depth);
-      step_activate(&steps[depth], var);
+      worker_spawn(var, level);
+      step_activate(&steps[level], var);
     } else {
       // continue iteration
-      step_leave(&steps[depth]);
-      step_next(&steps[depth]);
+      step_leave(&steps[level]);
+      step_next(&steps[level]);
     }
 
     // check if values for variable are exhausted
-    if (!step_check(&steps[depth])) {
-      step_deactivate(&steps[depth]);
+    if (!step_check(&steps[level])) {
+      step_deactivate(&steps[level]);
       BACKTRACK();
     }
 
     // try next value
-    step_enter(&steps[depth], step_val(&steps[depth]));
+    bind_level_set(level);
+    step_enter(&steps[level], step_val(&steps[level]));
 
     // update objective value
     objective_update_val();
 
-    update_stats(depth);
+    update_stats(level);
 
     // decide whether to move to next variable, stay at current one, or restart
-    bool failed = check_assignment(steps[depth].var, depth);
+    bool failed = check_assignment(steps[level].var, level);
     if (!failed) {
-      steps[depth].var->prio--;
-      depth++;
+      steps[level].var->prio--;
+      level++;
     } else {
-      steps[depth].var->prio++;
+      steps[level].var->prio++;
       if (check_restart()) {
         RESTART();
+      } else if (strategy_create_conflicts()) {
+        prop_result_t p = PROP_ERROR;
+        if (conflict_level() <= level) {
+          unwind(steps, level, level);
+        }
+        while (p == PROP_ERROR && conflict_level() <= level) {
+          unwind(steps, level-1, conflict_level());
+          level = conflict_level();
+          bind_level_set(level-1);
+          p = propagate_clauses(&conflict_var()->clauses);
+        }
+        continue;
       }
     }
   }

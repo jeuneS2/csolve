@@ -123,13 +123,18 @@ size_t var_count(void) {
 void vars_add(const char *key, struct constr_t *val) {
   _var_count++;
   _vars = (struct env_t *)realloc(_vars, sizeof(struct env_t) * _var_count);
-  _vars[_var_count-1].key = (const char *)malloc(strlen(key)+1);
-  strcpy((char *)_vars[_var_count-1].key, key);
-  _vars[_var_count-1].val = val;
-  _vars[_var_count-1].clauses.length = 0;
-  _vars[_var_count-1].clauses.elems = NULL;
-  _vars[_var_count-1].order = SIZE_MAX;
-  _vars[_var_count-1].prio = 0;
+
+  char *k = (char *)malloc(strlen(key)+1);
+  strcpy(k, key);
+
+  _vars[_var_count-1] =
+    (struct env_t){ .key = k,
+                    .val = val,
+                    .binds = NULL,
+                    .clauses = { .length = 0, .elems = NULL },
+                    .order = SIZE_MAX,
+                    .prio = 0,
+                    .level = SIZE_MAX };
 
   keytab_add(_var_count-1);
   valtab_add(_var_count-1);

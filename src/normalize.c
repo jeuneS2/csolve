@@ -266,11 +266,17 @@ struct constr_t *normal_wand(struct constr_t *constr) {
     struct constr_t *o = constr->constr.wand.elems[i].constr;
     struct constr_t *c = o->type->norm(o);
     if (c != o) {
-      patch(&retval->constr.wand.elems[i], (struct wand_expr_t){ c, 0 });
+      patch(&retval->constr.wand.elems[i], c);
     }
   }
 
   return retval;
+}
+
+struct constr_t *normal_confl(struct constr_t *constr) {
+  NORM_EVAL(constr);
+
+  return constr;
 }
 
 struct constr_t *normalize(struct constr_t *constr) {

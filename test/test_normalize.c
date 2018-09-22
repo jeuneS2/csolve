@@ -40,11 +40,11 @@ bool operator==(const struct wand_expr_t& lhs, const struct wand_expr_t& rhs) {
 class Mock {
  public:
   MOCK_METHOD1(alloc, void *(size_t));
-  MOCK_METHOD2(patch, size_t(struct wand_expr_t *, const struct wand_expr_t));
+  MOCK_METHOD2(patch, size_t(struct wand_expr_t *, struct constr_t *));
   MOCK_METHOD1(print_fatal, void (const char *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t));
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
 
@@ -54,8 +54,8 @@ void *alloc(size_t size) {
   return MockProxy->alloc(size);
 }
 
-size_t patch(struct wand_expr_t *loc, const struct wand_expr_t val) {
-  return MockProxy->patch(loc, val);
+size_t patch(struct wand_expr_t *loc, struct constr_t *constr) {
+  return MockProxy->patch(loc, constr);
 }
 
 void print_fatal(const char *fmt, ...) {
@@ -66,8 +66,8 @@ void print_fatal(const char *fmt, ...) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
-  return MockProxy->propagate_ ## NAME(constr, val);                    \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \
+  return MockProxy->propagate_ ## NAME(constr, val, clause);            \
 }
 CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
@@ -728,7 +728,7 @@ TEST(NormalizeOr, HalfNot) {
 TEST(NormalizeWand, Basic) {
   struct constr_t A = CONSTRAINT_TERM(VALUE(0));
   struct constr_t B = CONSTRAINT_TERM(VALUE(1));
-  struct wand_expr_t E [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
+  struct wand_expr_t E [2] = { { .constr = &A, .orig = &A, .prop_tag = 0 }, { .constr = &B, .orig = &B, .prop_tag = 0 } };
   struct constr_t X = CONSTRAINT_WAND(2, E);
 
   MockProxy = new Mock();
@@ -741,11 +741,11 @@ TEST(NormalizeWand, Patch) {
   struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 1));
   struct constr_t X = CONSTRAINT_EXPR(OR, &A, &B);
-  struct wand_expr_t E [5] = { { .constr = &A, .prop_tag = 0 },
-                               { .constr = &X, .prop_tag = 0 },
-                               { .constr = &B, .prop_tag = 0 },
-                               { .constr = &C, .prop_tag = 0 },
-                               { .constr = &X, .prop_tag = 0 } };
+  struct wand_expr_t E [5] = { { .constr = &A, .orig = &A, .prop_tag = 0 },
+                               { .constr = &X, .orig = &X, .prop_tag = 0 },
+                               { .constr = &B, .orig = &B, .prop_tag = 0 },
+                               { .constr = &C, .orig = &C, .prop_tag = 0 },
+                               { .constr = &X, .orig = &X, .prop_tag = 0 } };
   struct constr_t Y = CONSTRAINT_WAND(5, E);
   struct constr_t V, W;
 
@@ -754,9 +754,9 @@ TEST(NormalizeWand, Patch) {
     .Times(2)
     .WillOnce(::testing::Return(&W))
     .WillOnce(::testing::Return(&V));
-  EXPECT_CALL(*MockProxy, patch(&Y.constr.wand.elems[1], (struct wand_expr_t){ &W, 0}))
+  EXPECT_CALL(*MockProxy, patch(&Y.constr.wand.elems[1], &W))
     .Times(1);
-  EXPECT_CALL(*MockProxy, patch(&Y.constr.wand.elems[4], (struct wand_expr_t){ &V, 0}))
+  EXPECT_CALL(*MockProxy, patch(&Y.constr.wand.elems[4], &V))
     .Times(1);
   EXPECT_CALL(*MockProxy, eval_or(&X))
     .Times(2)

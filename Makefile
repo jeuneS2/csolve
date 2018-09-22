@@ -21,6 +21,7 @@ HEADERS= \
 	src/parser_support.h
 SRC= \
 	src/arith.c \
+	src/conflict.c \
 	src/constr_types.c \
 	src/csolve.c \
 	src/eval.c \

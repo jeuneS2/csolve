@@ -12,7 +12,7 @@ class Mock {
   MOCK_METHOD1(print_fatal, void (const char *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -31,8 +31,8 @@ void print_fatal(const char *fmt, ...) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
-  return MockProxy->propagate_ ## NAME(constr, val);                    \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \
+  return MockProxy->propagate_ ## NAME(constr, val, clause);            \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
   return MockProxy->normal_ ## NAME(constr);                            \
@@ -94,11 +94,17 @@ TEST(VarCmp, SmallestDomain) {
   struct env_t env[3];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(5, 7));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 4, .level = 0 };
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[2] = { .key = "c", .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 5 };
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 5, .level = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -124,12 +130,18 @@ TEST(VarCmp, LargestDomain) {
 
   struct env_t env[3];
 
-  struct constr_t a = CONSTRAINT_TERM(INTERVAL(5, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 3 };
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 4, .level = 0 };
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[2] = { .key = "c", .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 5 };
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 5, .level = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -156,11 +168,17 @@ TEST(VarCmp, SmallestValue) {
   struct env_t env[3];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 4, .level = 0 };
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[2] = { .key = "c", .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 5 };
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 5, .level = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -187,11 +205,17 @@ TEST(VarCmp, LargestValue) {
   struct env_t env[3];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 4, .level = 0 };
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[2] = { .key = "c", .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 5 };
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 5, .level = 0 };
 
   _prefer_failing = false;
   EXPECT_GT(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -218,11 +242,17 @@ TEST(VarCmp, None) {
   struct env_t env[3];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 4, .level = 0 };
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[2] = { .key = "c", .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 5 };
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 5, .level = 0 };
 
   _prefer_failing = false;
   EXPECT_EQ(strategy_var_cmp(&env[0], &env[1]), 0);
@@ -250,11 +280,17 @@ TEST(VarCmp, Error) {
   struct env_t env[3];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 4, .level = 0 };
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[2] = { .key = "c", .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 5 };
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 5, .level = 0 };
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER)).Times(1);

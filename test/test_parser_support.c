@@ -22,7 +22,7 @@ class Mock {
   MOCK_METHOD1(free, void(void *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -55,8 +55,8 @@ void free(void *ptr) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
-  return MockProxy->propagate_ ## NAME(constr, val);                    \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \
+  return MockProxy->propagate_ ## NAME(constr, val, clause);            \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
   return MockProxy->normal_ ## NAME(constr);                            \
@@ -65,8 +65,8 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(VarsFindKey, Find) {
   struct constr_t val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val, {0, NULL}, 0, 1 },
-                         { "y", &val, {0, NULL}, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val, NULL, {0, NULL}, 0, 1, 0 },
+                         { "y", &val, NULL, {0, NULL}, 1, 0, 0 } };
   _vars = &v[0];
   _var_count = 2;
   keytab_add(0);
@@ -84,8 +84,8 @@ TEST(VarsFindKey, Find) {
 
 TEST(VarsFindKey, NotFound) {
   struct constr_t val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val, {0, NULL}, 0, 1 },
-                         { "y", &val, {0, NULL}, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val, NULL, {0, NULL}, 0, 1, 0 },
+                         { "y", &val, NULL, {0, NULL}, 1, 0, 0 } };
   _vars = &v[0];
   _var_count = 2;
   keytab_add(0);
@@ -103,8 +103,8 @@ TEST(VarsFindKey, NotFound) {
 TEST(VarsFindVal, Find) {
   struct constr_t val1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t val2 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val1, {0, NULL}, 0, 1 },
-                         { "y", &val2, {0, NULL}, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val1, NULL, {0, NULL}, 0, 1, 0 },
+                         { "y", &val2, NULL, {0, NULL}, 1, 0, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -124,8 +124,8 @@ TEST(VarsFindVal, NotFound) {
   struct constr_t val1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t val2 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t val3 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &val1, {0, NULL}, 0, 1 },
-                         { "y", &val2, {0, NULL}, 1, 0 } };
+  struct env_t v[2]  = { { "x", &val1, NULL, {0, NULL}, 0, 1, 0 },
+                         { "y", &val2, NULL, {0, NULL}, 1, 0, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -215,8 +215,8 @@ TEST(VarsCount, Errors) {
 TEST(VarsWeighten, Basic) {
   struct constr_t X = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
   struct constr_t Y = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
-  struct env_t v[2]  = { { "x", &X, {0, NULL}, 0, 0 },
-                         { "y", &Y, {0, NULL}, 1, 3 } };
+  struct env_t v[2]  = { { "x", &X, NULL, {0, NULL}, 0, 0, 0 },
+                         { "y", &Y, NULL, {0, NULL}, 1, 3, 0 } };
   _vars = &v[0];
   _var_count = 2;
   valtab_add(0);
@@ -298,9 +298,13 @@ TEST(EnvFree, Basic) {
   struct env_t env[2];
 
   struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
-  env[0] = { .key = "a", .val = &a, .clauses = { .length = 0, .elems = x }, .order = 0, .prio = 3 };
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = x },
+             .order = 0, .prio = 3, .level = 0 };
   struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
-  env[1] = { .key = "b", .val = &b, .clauses = { .length = 0, .elems = y }, .order = 0, .prio = 4 };
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = y },
+             .order = 0, .prio = 4, .level = 0 };
   _vars = env;
 
   MockProxy = new Mock();

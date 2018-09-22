@@ -14,7 +14,7 @@ class Mock {
  public:
   MOCK_METHOD1(print_fatal, void (const char *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -26,8 +26,8 @@ void print_fatal(const char *fmt, ...) {
 }
 
 #define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
-prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
-  return MockProxy->propagate_ ## NAME(constr, val);                    \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \
+  return MockProxy->propagate_ ## NAME(constr, val, clause);            \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
   return MockProxy->normal_ ## NAME(constr);                            \
@@ -380,39 +380,39 @@ TEST(EvalWand, Basic) {
   struct constr_t B = CONSTRAINT_TERM(VALUE(1));
   struct constr_t C = CONSTRAINT_TERM(INTERVAL(0, 1));
 
-  struct wand_expr_t E1 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
+  struct wand_expr_t E1 [2] = { { .constr = &A, .orig = &A, .prop_tag = 0 }, { .constr = &A, .orig = &A, .prop_tag = 0 } };
   struct constr_t X1 = CONSTRAINT_WAND(2, E1);
   EXPECT_EQ(VALUE(0), eval_wand(&X1));
 
-  struct wand_expr_t E2 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
+  struct wand_expr_t E2 [2] = { { .constr = &A, .orig = &A, .prop_tag = 0 }, { .constr = &B, .orig = &B, .prop_tag = 0 } };
   struct constr_t X2 = CONSTRAINT_WAND(2, E2);
   EXPECT_EQ(VALUE(0), eval_wand(&X2));
 
-  struct wand_expr_t E3 [2] = { { .constr = &B, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
+  struct wand_expr_t E3 [2] = { { .constr = &B, .orig = &B, .prop_tag = 0 }, { .constr = &A, .orig = &A, .prop_tag = 0 } };
   struct constr_t X3 = CONSTRAINT_WAND(2, E3);
   EXPECT_EQ(VALUE(0), eval_wand(&X3));
 
-  struct wand_expr_t E4 [2] = { { .constr = &B, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
+  struct wand_expr_t E4 [2] = { { .constr = &B, .orig = &B, .prop_tag = 0 }, { .constr = &B, .orig = &B, .prop_tag = 0 } };
   struct constr_t X4 = CONSTRAINT_WAND(2, E4);
   EXPECT_EQ(VALUE(1), eval_wand(&X4));
 
-  struct wand_expr_t E5 [2] = { { .constr = &A, .prop_tag = 0 }, { .constr = &C, .prop_tag = 0 } };
+  struct wand_expr_t E5 [2] = { { .constr = &A, .orig = &A, .prop_tag = 0 }, { .constr = &C, .orig = &C, .prop_tag = 0 } };
   struct constr_t X5 = CONSTRAINT_WAND(2, E5);
   EXPECT_EQ(VALUE(0), eval_wand(&X5));
 
-  struct wand_expr_t E6 [2] = { { .constr = &C, .prop_tag = 0 }, { .constr = &A, .prop_tag = 0 } };
+  struct wand_expr_t E6 [2] = { { .constr = &C, .orig = &C, .prop_tag = 0 }, { .constr = &A, .orig = &A, .prop_tag = 0 } };
   struct constr_t X6 = CONSTRAINT_WAND(2, E6);
   EXPECT_EQ(VALUE(0), eval_wand(&X6));
 
-  struct wand_expr_t E7 [2] = { { .constr = &B, .prop_tag = 0 }, { .constr = &C, .prop_tag = 0 } };
+  struct wand_expr_t E7 [2] = { { .constr = &B, .orig = &B, .prop_tag = 0 }, { .constr = &C, .orig = &C, .prop_tag = 0 } };
   struct constr_t X7 = CONSTRAINT_WAND(2, E7);
   EXPECT_EQ(INTERVAL(0, 1), eval_wand(&X7));
 
-  struct wand_expr_t E8 [2] = { { .constr = &C, .prop_tag = 0 }, { .constr = &B, .prop_tag = 0 } };
+  struct wand_expr_t E8 [2] = { { .constr = &C, .orig = &C, .prop_tag = 0 }, { .constr = &B, .orig = &B, .prop_tag = 0 } };
   struct constr_t X8 = CONSTRAINT_WAND(2, E8);
   EXPECT_EQ(INTERVAL(0, 1), eval_wand(&X8));
 
-  struct wand_expr_t E9 [2] = { { .constr = &C, .prop_tag = 0 }, { .constr = &C, .prop_tag = 0 } };
+  struct wand_expr_t E9 [2] = { { .constr = &C, .orig = &C, .prop_tag = 0 }, { .constr = &C, .orig = &C, .prop_tag = 0 } };
   struct constr_t X9 = CONSTRAINT_WAND(2, E9);
   EXPECT_EQ(INTERVAL(0, 1), eval_wand(&X9));
 }

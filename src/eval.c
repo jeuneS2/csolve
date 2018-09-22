@@ -192,3 +192,19 @@ const struct val_t eval_wand(const struct constr_t *constr) {
 
   return INTERVAL(0, 1);
 }
+
+const struct val_t eval_confl(const struct constr_t *constr) {
+  for (size_t i = 0; i < constr->constr.confl.length; i++) {
+    struct confl_elem_t *c = &constr->constr.confl.elems[i];
+    const struct val_t v = c->var->type->eval(c->var);
+    if (is_value(v)) {
+      if (get_lo(v) != get_lo(c->val)) {
+        return VALUE(1);
+      }
+    } else {
+      return INTERVAL(0, 1);
+    }
+  }
+
+  return INTERVAL(0, 1);
+}

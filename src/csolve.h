@@ -70,8 +70,11 @@ static inline bool is_false(struct val_t v) {
 
 /** Binding entry */
 struct binding_t {
-  struct val_t *loc; ///< Location of bound value
-  struct val_t val; ///< Original value of bound value (for unbinding)
+  struct env_t *var; ///< Bound variable
+  struct val_t val; ///< Original value of bound variable (for unbinding)
+  size_t level; ///< Original binding level of variable (for unbinding)
+  const struct wand_expr_t *clause; ///< Clause that inferred the binding
+  struct binding_t *prev; ///< Previous binding for this variable
 };
 
 /** Propagation result type */
@@ -87,7 +90,14 @@ typedef uint64_t prop_tag_t;
 /** Type for a wide-and element */
 struct wand_expr_t {
   struct constr_t *constr; ///< The constraint
+  struct constr_t *orig; ///< The original/unpatched constrained
   prop_tag_t prop_tag; ///< Propagation tag
+};
+
+/** Type for conflict element */
+struct confl_elem_t {
+  struct val_t val; ///< Conflict value
+  struct constr_t *var; ///< Conflict variable
 };
 
 /** Type representing a constraint */
@@ -110,6 +120,11 @@ struct constr_t {
       size_t length; ///< Number of sub-expressions
       struct wand_expr_t *elems; ///< Sub-expressions
     } wand; ///< Wide-and node
+    /** Conflict node type */
+    struct confl_t {
+      size_t length; ///< Number of elements in conflict
+      struct confl_elem_t *elems; ///< Conflict elements
+    } confl; ///< Conflict node
   } constr; ///< Constraint
 };
 
@@ -134,7 +149,9 @@ struct constr_t {
   /** Logical or */                             \
   F(OR,   or,   '|')                            \
   /** Wide and */                               \
-  F(WAND, wand, '#')
+  F(WAND, wand, 'A')                            \
+  /** Conflict */                               \
+  F(CONFL, confl, 'C')
 
 /** Supported operators */
 #define CONSTR_TYPE_OPS(UPNAME, NAME, OP)       \
@@ -146,7 +163,7 @@ enum operator_t {
 /** Constraint type */
 struct constr_type_t {
   const struct val_t (*eval)(const struct constr_t *constr); ///< Evaluation function
-  prop_result_t (*prop)(struct constr_t *constr, const struct val_t val); ///< Propagation function
+  prop_result_t (*prop)(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause); ///< Propagation function
   struct constr_t * (*norm)(struct constr_t *constr); ///< Normalization function
   const enum operator_t op;
 };
@@ -180,10 +197,15 @@ static inline bool is_const(struct constr_t *c) {
   ((struct constr_t) {                                                  \
     .type = &CONSTR_WAND, .constr = { .wand = { .length = L, .elems = E } } } )
 
+/** Create a wide-and constraint */
+#define CONSTRAINT_CONFL(L, E)                                          \
+  ((struct constr_t) {                                                  \
+    .type = &CONSTR_CONFL, .constr = { .confl = { .length = L, .elems = E } } } )
+
 /** Patching entry */
 struct patching_t {
   struct wand_expr_t *loc; ///< Location of patched sub-expressions
-  struct wand_expr_t expr; ///< Original value of patched sub-expressions (for unpatching)
+  struct constr_t *constr; ///< Original value of patched sub-expressions (for unpatching)
 };
 
 /** Type holding information for a solving step */
@@ -208,9 +230,11 @@ struct clause_list_t {
 struct env_t {
   const char *key; ///< Key (identifier) of variable
   struct constr_t *val; ///< Value of variable
+  struct binding_t *binds; ///< bindings of this variable
   struct clause_list_t clauses; ///< Clauses affected by this value
   size_t order; ///< Position in variable ordering
   int64_t prio; ///< Priority of this variable
+  size_t level; ///< Assignment level of this variable
 };
 
 /** Types of objective functions */
@@ -267,8 +291,16 @@ void dealloc(void *elem);
 void bind_init(size_t size);
 /** Deallocate memory occupied by the bind stack */
 void bind_free(void);
-/** Bind a variable (at location loc) to a specific value */
-size_t bind(struct val_t *loc, const struct val_t val);
+/** Make current bindings permanent */
+void bind_commit(void);
+/** Get the current bind depth */
+size_t bind_depth(void);
+/** Set the level for subsequent binds */
+void bind_level_set(size_t level);
+/** Set the current bind level */
+size_t bind_level_get();
+/** Bind a variable to a specific value */
+void bind(struct env_t *var, const struct val_t val, const struct wand_expr_t *clause);
 /** Undo variable binds down to a given depth */
 void unbind(size_t depth);
 
@@ -278,8 +310,10 @@ void unbind(size_t depth);
 void patch_init(size_t size);
 /** Deallocate memory occupied by the patch stack */
 void patch_free(void);
+/** Make current patches permanent */
+void patch_commit(void);
 /** Patch a wide-and sub-expression (at location loc) */
-size_t patch(struct wand_expr_t *loc, const struct wand_expr_t expr);
+size_t patch(struct wand_expr_t *loc, struct constr_t *constr);
 /** Undo patches down to a given depth */
 void unpatch(size_t depth);
 
@@ -300,7 +334,7 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_EVAL_FUNCS)
 
 /** Propagation functions for different constraint types */
 #define CONSTR_TYPE_PROP_FUNCS(UPNAME, NAME, OP)                    \
-  prop_result_t propagate_ ## NAME(struct constr_t *constr, const struct val_t val);
+  prop_result_t propagate_ ## NAME(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause);
 CONSTR_TYPE_LIST(CONSTR_TYPE_PROP_FUNCS)
 
 /** Normalization functions for different constraint types */
@@ -315,6 +349,15 @@ struct constr_t *normalize(struct constr_t *constr);
 prop_result_t propagate(struct constr_t *constr);
 /** Propagate updates to a list of clauses */
 prop_result_t propagate_clauses(const struct clause_list_t *clauses);
+
+/** Create a conflict clause */
+void conflict_create(struct env_t *var, const struct wand_expr_t *clause);
+/** Get level of last generated conflict */
+size_t conflict_level(void);
+/** Get variable of last generated conflict */
+struct env_t *conflict_var(void);
+/** Reset information about last generated conflict */
+void conflict_reset(void);
 
 /** Initialize objective function type */
 void objective_init(enum objective_t o, volatile domain_t *best);
@@ -333,6 +376,13 @@ void objective_update_val(void);
 
 /** Find solutions */
 void solve(size_t size, struct env_t *env, struct constr_t *constr);
+
+/** Whether to create conflict clauses as default */
+#define STRATEGY_CREATE_CONFLICTS_DEFAULT true
+/** Set whether to create conflict clauses */
+void strategy_create_conflicts_init(bool create_conflicts);
+/** Get whether to create conflict clauses */
+bool strategy_create_conflicts(void);
 
 /** Whether to prefer failing variables as default */
 #define STRATEGY_PREFER_FAILING_DEFAULT true
@@ -396,10 +446,11 @@ const char *main_name(void);
     F(calls,     uint64_t, 0,        "CALLS: %lu, ")                    \
     F(cuts,      uint64_t, 0,        "CUTS: %lu, ")                     \
     F(props,     uint64_t, 0,        "PROPS: %lu, ")                    \
+    F(confl,     uint64_t, 0,        "CONFL: %lu, ")                    \
     F(restarts,  uint64_t, 0,        "RESTARTS: %lu, ")                 \
-    F(depth_min, size_t,   SIZE_MAX, "DEPTH: %lu")                      \
-    F(depth_max, size_t,   0,        "/%lu, ")                          \
-    F(cut_depth, uint64_t, 0,        "AVG DEPTH: %f, ", (double)cut_depth/cuts) \
+    F(level_min, size_t,   SIZE_MAX, "LEVEL: %lu")                      \
+    F(level_max, size_t,   0,        "/%lu, ")                          \
+    F(cut_level, uint64_t, 0,        "AVG LEVEL: %f, ", (double)cut_level/cuts) \
     F(alloc_max, size_t,   0,        "MEMORY: %lu")
 
 /** Statistic counter variable */

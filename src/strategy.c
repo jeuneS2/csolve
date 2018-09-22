@@ -23,11 +23,20 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
+static bool _create_conflicts;
 static bool _prefer_failing;
 static bool _compute_weights;
 static uint64_t _restart_frequency;
 static enum order_t _order;
 
+
+void strategy_create_conflicts_init(bool create_conflicts) {
+  _create_conflicts = create_conflicts;
+}
+
+bool strategy_create_conflicts(void) {
+  return _create_conflicts;
+}
 
 void strategy_prefer_failing_init(bool prefer_failing) {
   _prefer_failing = prefer_failing;

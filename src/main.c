@@ -46,6 +46,12 @@ void yyset_in(FILE *);
     "-b --binds <size>           maximum number of binds (default: %d)\n", \
     BIND_STACK_SIZE_DEFAULT)                                            \
                                                                         \
+  F('c', "conflicts", required_argument, "c:",                          \
+    { strategy_create_conflicts_init(parse_bool(optarg)); },            \
+    { strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT); }, \
+    "-c --conflicts <bool>       create conflict clauses (default: %s)\n", \
+    STRATEGY_CREATE_CONFLICTS_DEFAULT ? STR(true) : STR(false))         \
+                                                                        \
   F('f', "prefer-failing", required_argument, "f:",                     \
     { strategy_prefer_failing_init(parse_bool(optarg)); },              \
     { strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT); }, \

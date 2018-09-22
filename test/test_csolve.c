@@ -22,20 +22,25 @@ class Mock {
   MOCK_METHOD1(alloc, void *(size_t));
   MOCK_METHOD1(dealloc, void(void *));
   MOCK_METHOD0(cache_clean, void(void));
-  MOCK_METHOD2(bind, size_t(struct val_t *, const struct val_t));
+  MOCK_METHOD0(bind_depth, size_t(void));
+  MOCK_METHOD1(bind_level_set, void(size_t));
+  MOCK_METHOD3(bind, void(struct env_t *, const struct val_t, const struct wand_expr_t *));
   MOCK_METHOD1(unbind, void(size_t));
-  MOCK_METHOD2(patch, size_t(struct wand_expr_t *, const struct wand_expr_t));
+  MOCK_METHOD2(patch, size_t(struct wand_expr_t *, struct constr_t *));
   MOCK_METHOD1(unpatch, void(size_t));
   MOCK_METHOD1(sema_init, void(sem_t *));
   MOCK_METHOD1(sema_wait, void(sem_t *));
   MOCK_METHOD1(sema_post, void(sem_t *));
   MOCK_METHOD1(normal, struct constr_t *(struct constr_t *));
   MOCK_METHOD1(propagate_clauses, prop_result_t(const struct clause_list_t *));
+  MOCK_METHOD0(conflict_level, size_t(void));
+  MOCK_METHOD0(conflict_var, struct env_t *(void));
   MOCK_METHOD0(objective, enum objective_t(void));
   MOCK_METHOD0(objective_better, bool(void));
   MOCK_METHOD0(objective_update_best, void(void));
   MOCK_METHOD0(objective_update_val, void(void));
   MOCK_METHOD0(objective_val, struct constr_t*(void));
+  MOCK_METHOD0(strategy_create_conflicts, bool(void));
   MOCK_METHOD0(strategy_restart_frequency, uint64_t(void));
   MOCK_METHOD0(strategy_var_order_pop, struct env_t *(void));
   MOCK_METHOD1(strategy_var_order_push, void(struct env_t *));
@@ -43,7 +48,7 @@ class Mock {
   MOCK_METHOD3(print_solution, void(FILE *, size_t, struct env_t *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
   MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD2(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -62,16 +67,24 @@ void cache_clean(void) {
   MockProxy->cache_clean();
 }
 
-size_t bind(struct val_t *loc, const struct val_t val) {
-  return MockProxy->bind(loc, val);
+size_t bind_depth(void) {
+  return MockProxy->bind_depth();
+}
+
+ void bind_level_set(size_t level) {
+  MockProxy->bind_level_set(level);
+}
+
+ void bind(struct env_t *var, const struct val_t val, const struct wand_expr_t *clause) {
+  MockProxy->bind(var, val, clause);
 }
 
 void unbind(size_t depth) {
   MockProxy->unbind(depth);
 }
 
-size_t patch(struct wand_expr_t *loc, const struct wand_expr_t val) {
-  return MockProxy->patch(loc, val);
+size_t patch(struct wand_expr_t *loc, struct constr_t *constr) {
+  return MockProxy->patch(loc, constr);
 }
 
 void unpatch(size_t depth) {
@@ -98,8 +111,20 @@ prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
   return MockProxy->propagate_clauses(clauses);
 }
 
+size_t conflict_level(void) {
+  return MockProxy->conflict_level();
+}
+
+struct env_t *conflict_var(void) {
+  return MockProxy->conflict_var();
+}
+
 enum objective_t objective(void) {
   return MockProxy->objective();
+}
+
+bool strategy_create_conflicts(void) {
+  return MockProxy->strategy_create_conflicts();
 }
 
 uint64_t strategy_restart_frequency(void) {
@@ -142,8 +167,8 @@ void print_solution(FILE *file, size_t size, struct env_t *env) {
 const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
-prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val) { \
-  return MockProxy->propagate_ ## NAME(constr, val);                    \
+prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \
+  return MockProxy->propagate_ ## NAME(constr, val, clause);            \
 }                                                                       \
 struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
   return MockProxy->normal_ ## NAME(constr);                            \
@@ -154,26 +179,26 @@ TEST(Stats, Init) {
   stats_init();
   EXPECT_EQ(0, calls);
   EXPECT_EQ(0, cuts);
-  EXPECT_EQ(0, cut_depth);
+  EXPECT_EQ(0, cut_level);
   EXPECT_EQ(0, restarts);
-  EXPECT_EQ(SIZE_MAX, depth_min);
-  EXPECT_EQ(0, depth_max);
+  EXPECT_EQ(SIZE_MAX, level_min);
+  EXPECT_EQ(0, level_max);
   EXPECT_EQ(0, alloc_max);
 }
 
 TEST(Stats, Update) {
   stats_init();
   update_stats(17);
-  EXPECT_EQ(depth_min, 17);
-  EXPECT_EQ(depth_max, 17);
+  EXPECT_EQ(level_min, 17);
+  EXPECT_EQ(level_max, 17);
   EXPECT_EQ(calls, 1);
   update_stats(16);
-  EXPECT_EQ(depth_min, 16);
-  EXPECT_EQ(depth_max, 17);
+  EXPECT_EQ(level_min, 16);
+  EXPECT_EQ(level_max, 17);
   EXPECT_EQ(calls, 2);
   update_stats(18);
-  EXPECT_EQ(depth_min, 16);
-  EXPECT_EQ(depth_max, 18);
+  EXPECT_EQ(level_min, 16);
+  EXPECT_EQ(level_max, 18);
   EXPECT_EQ(calls, 3);
 }
 
@@ -185,10 +210,11 @@ TEST(Stats, Print) {
   calls = STATS_FREQUENCY-1;
   cuts = 3;
   props = 4;
+  confl = 5;
   restarts = 6;
-  depth_min = 7;
-  depth_max = 8;
-  cut_depth = 9;
+  level_min = 7;
+  level_max = 8;
+  cut_level = 9;
   alloc_max = 10;
   _shared->solutions = 11;
 
@@ -196,9 +222,9 @@ TEST(Stats, Print) {
   testing::internal::CaptureStdout();
   update_stats(7);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
-  EXPECT_EQ(SIZE_MAX, depth_min);
-  EXPECT_EQ(0, depth_max);
+  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(SIZE_MAX, level_min);
+  EXPECT_EQ(0, level_max);
 }
 
 TEST(PrintStats, Stdout) {
@@ -209,10 +235,11 @@ TEST(PrintStats, Stdout) {
   calls = 2;
   cuts = 3;
   props = 4;
+  confl = 5;
   restarts = 6;
-  depth_min = 7;
-  depth_max = 8;
-  cut_depth = 9;
+  level_min = 7;
+  level_max = 8;
+  cut_level = 9;
   alloc_max = 10;
   _shared->solutions = 11;
 
@@ -220,9 +247,9 @@ TEST(PrintStats, Stdout) {
   testing::internal::CaptureStdout();
   print_stats(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
-  EXPECT_EQ(SIZE_MAX, depth_min);
-  EXPECT_EQ(0, depth_max);
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(SIZE_MAX, level_min);
+  EXPECT_EQ(0, level_max);
 }
 
 TEST(PrintStats, Stderr) {
@@ -233,10 +260,11 @@ TEST(PrintStats, Stderr) {
   calls = 2;
   cuts = 3;
   props = 4;
+  confl = 5;
   restarts = 6;
-  depth_min = 7;
-  depth_max = 8;
-  cut_depth = 9;
+  level_min = 7;
+  level_max = 8;
+  cut_level = 9;
   alloc_max = 10;
   _shared->solutions = 11;
 
@@ -244,9 +272,9 @@ TEST(PrintStats, Stderr) {
   testing::internal::CaptureStderr();
   print_stats(stderr);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, RESTARTS: 6, DEPTH: 7/8, AVG DEPTH: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
-  EXPECT_EQ(SIZE_MAX, depth_min);
-  EXPECT_EQ(0, depth_max);
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(SIZE_MAX, level_min);
+  EXPECT_EQ(0, level_max);
 }
 
 TEST(Shared, Init) {
@@ -259,7 +287,7 @@ TEST(Shared, Init) {
   EXPECT_EQ(1, shared()->workers);
   EXPECT_EQ(1, shared()->workers_id);
   EXPECT_EQ(1, _worker_id);
-  EXPECT_EQ(0, _worker_min_depth);
+  EXPECT_EQ(0, _worker_min_level);
   delete(MockProxy);
 }
 
@@ -405,7 +433,9 @@ TEST(UpdateSolution, Better) {
 
 TEST(CheckAssignment, Infeasible) {
   struct constr_t c = CONSTRAINT_TERM(VALUE(1));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
 
   stats_init();
 
@@ -420,7 +450,9 @@ TEST(CheckAssignment, Infeasible) {
 
 TEST(CheckAssignment, Feasible) {
   struct constr_t c = CONSTRAINT_TERM(VALUE(1));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
   struct constr_t obj = CONSTRAINT_TERM(VALUE(0));
 
   stats_init();
@@ -490,7 +522,9 @@ TEST(CheckRestart, True) {
 
 TEST(Step, Activate) {
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(12, 13));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -512,7 +546,9 @@ TEST(Step, Activate) {
 
 TEST(Step, Deactivate) {
   struct constr_t c;
-  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
   struct step_t s;
 
   MockProxy = new Mock();
@@ -527,7 +563,9 @@ TEST(Step, Deactivate) {
 
 TEST(Step, Enter) {
   struct constr_t c = CONSTRAINT_TERM(INTERVAL(0, 100));
-  struct env_t e = { .key = NULL, .val = &c, .clauses = { .length = 0, .elems = NULL }, .order = 0, .prio = 0 };
+  struct env_t e = { .key = NULL, .val = &c, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
   struct step_t s;
   s.var = &e;
 
@@ -537,12 +575,14 @@ TEST(Step, Enter) {
   EXPECT_CALL(*MockProxy, alloc(0))
     .Times(1)
     .WillOnce(::testing::Return(&marker));
-  EXPECT_CALL(*MockProxy, patch(NULL, (struct wand_expr_t){ NULL, 0 }))
+  EXPECT_CALL(*MockProxy, patch(NULL, NULL))
     .Times(1)
     .WillOnce(::testing::Return(17));
-  EXPECT_CALL(*MockProxy, bind(&c.constr.term.val, VALUE(42)))
+  EXPECT_CALL(*MockProxy, bind_depth())
     .Times(1)
     .WillOnce(::testing::Return(23));
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(42), NULL))
+    .Times(1);
   step_enter(&s, 42);
   EXPECT_EQ(&marker, s.alloc_marker);
   EXPECT_EQ(23, s.bind_depth);
