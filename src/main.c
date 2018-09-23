@@ -92,6 +92,12 @@ void yyset_in(FILE *);
     "-r --restart-freq <int>     restart frequency when looking for any solution (default: %u), set to 0 to disable\n", \
     STRATEGY_RESTART_FREQUENCY_DEFAULT)                                 \
                                                                         \
+  F('t', "time", required_argument, "t:",                               \
+    { timeout_init(parse_int(optarg)); },                               \
+    { timeout_init(TIME_MAX_DEFAULT); },                                \
+    "-t --time <int>             maximum solving time in seconds (default: %u), set to 0 to disable\n", \
+    TIME_MAX_DEFAULT)                                                   \
+                                                                        \
   F('v', "version", no_argument, "v",                                   \
     { print_version(stdout); exit(EXIT_SUCCESS); }, ,                   \
     "-v --version                print version and exit\n")             \

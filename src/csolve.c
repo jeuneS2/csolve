@@ -35,6 +35,9 @@ static uint32_t _worker_id;
 static size_t _worker_min_level;
 static struct shared_t *_shared;
 
+// timeout data
+static uint32_t _time_max;
+
 // restarting data
 static uint32_t _fail_count = 0;
 static uint64_t _fail_threshold = 1;
@@ -71,7 +74,7 @@ void fail_threshold_next(void) {
   }
 }
 
-void shared_init(int32_t workers_max) {
+void shared_init(uint32_t workers_max) {
   _workers_max = workers_max;
   _shared = (struct shared_t *)mmap(NULL, sizeof(struct shared_t),
                                     PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS,
@@ -79,6 +82,7 @@ void shared_init(int32_t workers_max) {
   sema_init(&shared()->semaphore);
   shared()->workers = 1;
   shared()->workers_id = 1;
+  shared()->timeout = false;
   _worker_id = 1;
   _worker_min_level = 0;
 }
@@ -154,9 +158,27 @@ void worker_die(void) {
     print_stats(stdout);
   }
 
-  if (_worker_id == 1 && shared()->solutions == 0) {
-    fprintf(stdout, "NO SOLUTION FOUND\n");
+  if (_worker_id == 1) {
+    if (shared()->timeout) {
+      fprintf(stdout, "TIMEOUT\n");
+    }
+    if (shared()->solutions == 0) {
+      fprintf(stdout, "NO SOLUTION FOUND\n");
+    }
   }
+}
+
+void timeout_init(uint32_t time_max) {
+  _time_max = time_max;
+}
+
+static void timeout(int signal) {
+  shared()->timeout = true;
+}
+
+static void timeout_start(void) {
+  signal(SIGALRM, timeout);
+  alarm(_time_max);
 }
 
 // algorithm helper functions
@@ -312,12 +334,15 @@ static void unwind(struct step_t *steps, size_t level, size_t stop) {
 // search algorithm core
 void solve(size_t size, struct env_t *env, struct constr_t *constr) {
 
+  // start timeout
+  timeout_start();
+
   // allocate data structure for search steps
   struct step_t *steps = (struct step_t *)calloc(size, sizeof(struct step_t));
 
   size_t level = 0;
 
-  while (true) {
+  while (!shared()->timeout) {
     if (level < _worker_min_level) {
       EXIT();
     }

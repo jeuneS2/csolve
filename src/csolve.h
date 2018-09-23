@@ -261,6 +261,7 @@ struct shared_t {
   volatile uint32_t workers_id; ///< Number of generated workers
   volatile domain_t objective_best; ///< The current best objective value
   volatile uint64_t solutions; ///< Number of solutions found
+  volatile bool     timeout; ///< Whether timeout has occurred
 };
 
 /** Negate a value */
@@ -421,9 +422,14 @@ void strategy_var_order_update(struct env_t *e);
 /** How many workers to use by default */
 #define WORKERS_MAX_DEFAULT 1
 /** Initialize the shared data area */
-void shared_init(int32_t workers_max);
+void shared_init(uint32_t workers_max);
 /** Return pointer to the shared data area */
 struct shared_t *shared(void);
+
+/** Default timeout */
+#define TIME_MAX_DEFAULT 0
+/** Initialize the timeout data */
+void timeout_init(uint32_t time_max);
 
 /** Print value */
 void print_val(FILE *file, const struct val_t val);
