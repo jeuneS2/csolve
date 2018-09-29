@@ -219,7 +219,7 @@ void sema_post(sem_t *sema) {
 
 // functions to manipulate clause lists
 bool clause_list_contains(struct clause_list_t *list, struct wand_expr_t *elem) {
-  for (size_t i = 0; i < list->length; i++) {
+  for (size_t i = 0, l = list->length; i < l; i++) {
     if (list->elems[i] == elem) {
       return true;
     }

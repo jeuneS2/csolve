@@ -262,7 +262,7 @@ struct constr_t *normal_or(struct constr_t *constr) {
 struct constr_t *normal_wand(struct constr_t *constr) {
   struct constr_t *retval = constr;
 
-  for (size_t i = 0; i < constr->constr.wand.length; i++) {
+  for (size_t i = 0, l = constr->constr.wand.length; i < l; i++) {
     struct constr_t *o = constr->constr.wand.elems[i].constr;
     struct constr_t *c = o->type->norm(o);
     if (c != o) {

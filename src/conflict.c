@@ -62,7 +62,7 @@ void conflict_reset(void) {
 void conflict_seen_reset(void) {
   for (size_t i = 0; i < SEEN_ARRAY_WIDTH; i++) {
     _seen[i].length = 0;
-  }  
+  }
 }
 
 uint32_t conflict_seen_hash(void *elem) {
@@ -71,7 +71,7 @@ uint32_t conflict_seen_hash(void *elem) {
 
 bool conflict_seen(void *elem) {
   struct seen_array_t *arr = &_seen[conflict_seen_hash(elem) % SEEN_ARRAY_WIDTH];
-  for (size_t i = 0; i < arr->length; i++) {
+  for (size_t i = 0, l = arr->length; i < l; i++) {
     if (arr->elems[i] == elem) {
       return true;
     }
@@ -129,12 +129,12 @@ confl_result_t conflict_add_constr(struct env_t *var, struct constr_t *confl, st
       }
     }
   } else if (IS_TYPE(WAND, constr)) {
-    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+    for (size_t i = 0, l = constr->constr.wand.length; i < l; i++) {
       confl_result_t c = conflict_add_constr(var, confl, constr->constr.wand.elems[i].constr);
       CHECK(c);
     }
   } else if (IS_TYPE(CONFL, constr)) {
-    for (size_t i = 0; i < constr->constr.confl.length; i++) {
+    for (size_t i = 0, l = constr->constr.confl.length; i < l; i++) {
       confl_result_t c = conflict_add_constr(var, confl, constr->constr.confl.elems[i].var);
       CHECK(c);
     }
@@ -187,7 +187,7 @@ void conflict_update(struct constr_t *confl) {
   if (confl->constr.confl.length != 0) {
     _conflict_level = 0;
     _conflict_var = confl->constr.confl.elems[0].var->constr.term.env;
-    for (size_t i = 0; i < confl->constr.confl.length; i++) {
+    for (size_t i = 0, l = confl->constr.confl.length; i < l; i++) {
       size_t level = confl->constr.confl.elems[i].var->constr.term.env->level;
       if (level < _conflict_max_level && level+1 > _conflict_level) {
         _conflict_level = level+1;
@@ -204,7 +204,7 @@ void conflict_create(struct env_t *var, const struct wand_expr_t *clause) {
   conflict_seen_reset();
   conflict_reset();
   _conflict_max_level = 0;
-  
+
   confl_result_t c1 = conflict_add_constr(var, confl, clause->orig);
   if (c1 == CONFL_ERROR) {
     return;
@@ -215,10 +215,10 @@ void conflict_create(struct env_t *var, const struct wand_expr_t *clause) {
   }
 
   conflict_update(confl);
-  
+
   struct wand_expr_t *c = (struct wand_expr_t *)malloc(sizeof(struct wand_expr_t));
   *c = (struct wand_expr_t){ .constr = confl, .orig = confl, .prop_tag = 0 };
-  for (size_t i = 0; i < confl->constr.confl.length; i++) {
+  for (size_t i = 0, l = confl->constr.confl.length; i < l; i++) {
     clause_list_append(&confl->constr.confl.elems[i].var->constr.term.env->clauses, c);
   }
 

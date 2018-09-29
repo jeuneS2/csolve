@@ -175,7 +175,7 @@ const struct val_t eval_or(const struct constr_t *constr) {
 const struct val_t eval_wand(const struct constr_t *constr) {
   bool all_true = true;
 
-  for (size_t i = 0; i < constr->constr.wand.length; i++) {
+  for (size_t i = 0, l = constr->constr.wand.length; i < l; i++) {
     const struct constr_t *c = constr->constr.wand.elems[i].constr;
     struct val_t val = c->type->eval(c);
     if (is_false(val)) {
@@ -194,7 +194,7 @@ const struct val_t eval_wand(const struct constr_t *constr) {
 }
 
 const struct val_t eval_confl(const struct constr_t *constr) {
-  for (size_t i = 0; i < constr->constr.confl.length; i++) {
+  for (size_t i = 0, l = constr->constr.confl.length; i < l; i++) {
     struct confl_elem_t *c = &constr->constr.confl.elems[i];
     const struct val_t v = c->var->type->eval(c->var);
     if (is_value(v)) {

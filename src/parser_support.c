@@ -236,7 +236,7 @@ void clauses_init(struct constr_t *constr, struct wand_expr_t *clause) {
       clause_list_append(&e->clauses, clause);
     }
   } else if (IS_TYPE(WAND, constr)) {
-    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+    for (size_t i = 0, l = constr->constr.wand.length; i < l; i++) {
       struct wand_expr_t *c = clause;
       if (clause == NULL && !IS_TYPE(WAND, constr->constr.wand.elems[i].constr)) {
         c = &constr->constr.wand.elems[i];

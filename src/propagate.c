@@ -259,7 +259,7 @@ prop_result_t propagate_or(struct constr_t *constr, const struct val_t val, cons
 prop_result_t propagate_wand(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause) {
   prop_result_t r = PROP_NONE;
   if (is_true(val)) {
-    for (size_t i = 0; i < constr->constr.wand.length; i++) {
+    for (size_t i = 0, l = constr->constr.wand.length; i < l; i++) {
       struct constr_t *c = constr->constr.wand.elems[i].constr;
       prop_result_t p = c->type->prop(c, val, clause);
       CHECK(p);
@@ -271,11 +271,11 @@ prop_result_t propagate_wand(struct constr_t *constr, const struct val_t val, co
 
 prop_result_t propagate_confl(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause) {
   struct confl_elem_t *p = NULL;
-  
-  for (size_t i = 0; i < constr->constr.confl.length; i++) {
+
+  for (size_t i = 0, l = constr->constr.confl.length; i < l; i++) {
 
     struct confl_elem_t *c = &constr->constr.confl.elems[i];
-    const struct val_t v = c->var->type->eval(c->var);
+    const struct val_t v = c->var->constr.term.val;
 
     if (is_value(v)) {
       if (get_lo(v) != get_lo(c->val)) {
@@ -299,7 +299,7 @@ prop_result_t propagate_confl(struct constr_t *constr, const struct val_t val, c
       return p->var->type->prop(p->var, INTERVAL(get_lo(v), add(get_hi(v), neg(1))), clause);
     }
   }
-  
+
   return PROP_NONE;
 }
 
@@ -323,8 +323,8 @@ prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
   if (clauses->length > 0) {
     conflict_reset();
   }
-  
-  for (size_t i = 0; i < clauses->length; i++) {
+
+  for (size_t i = 0, l = clauses->length; i < l; i++) {
     struct wand_expr_t *clause = clauses->elems[i];
     if (clause->prop_tag > tag) {
       continue;
