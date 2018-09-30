@@ -165,7 +165,7 @@ struct constr_type_t {
   const struct val_t (*eval)(const struct constr_t *constr); ///< Evaluation function
   prop_result_t (*prop)(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause); ///< Propagation function
   struct constr_t * (*norm)(struct constr_t *constr); ///< Normalization function
-  const enum operator_t op;
+  const enum operator_t op; ///< Operator
 };
 
 /** Supported constraint type variables */
@@ -276,7 +276,7 @@ const domain_t min(const domain_t a, const domain_t b);
 const domain_t max(const domain_t a, const domain_t b);
 
 /** Default size of allocation stack */
-#define ALLOC_STACK_SIZE_DEFAULT (256*1024*1024)
+#define ALLOC_STACK_SIZE_DEFAULT (128*1024*1024)
 /** Initialize the allocation stack */
 void alloc_init(size_t size);
 /** Deallocate memory occupied by the allocation stack */
@@ -351,6 +351,12 @@ prop_result_t propagate(struct constr_t *constr);
 /** Propagate updates to a list of clauses */
 prop_result_t propagate_clauses(const struct clause_list_t *clauses);
 
+/** Default size of conflict allocation stack */
+#define CONFLICT_ALLOC_STACK_SIZE_DEFAULT (128*1024*1024)
+/** Initialize the conflict allocation stack */
+void conflict_alloc_init(size_t size);
+/** Deallocate memory occupied by the conflict allocation stack */
+void conflict_alloc_free(void);
 /** Create a conflict clause */
 void conflict_create(struct env_t *var, const struct wand_expr_t *clause);
 /** Get level of last generated conflict */
@@ -449,15 +455,16 @@ const char *main_name(void);
 
 /** List of statistic counters */
 #define STAT_LIST(F)                                                    \
-    F(calls,     uint64_t, 0,        "CALLS: %lu, ")                    \
-    F(cuts,      uint64_t, 0,        "CUTS: %lu, ")                     \
-    F(props,     uint64_t, 0,        "PROPS: %lu, ")                    \
-    F(confl,     uint64_t, 0,        "CONFL: %lu, ")                    \
-    F(restarts,  uint64_t, 0,        "RESTARTS: %lu, ")                 \
-    F(level_min, size_t,   SIZE_MAX, "LEVEL: %lu")                      \
-    F(level_max, size_t,   0,        "/%lu, ")                          \
-    F(cut_level, uint64_t, 0,        "AVG LEVEL: %f, ", (double)cut_level/cuts) \
-    F(alloc_max, size_t,   0,        "MEMORY: %lu")
+  F(calls,      uint64_t, 0,        "CALLS: %lu, ")                     \
+  F(cuts,       uint64_t, 0,        "CUTS: %lu, ")                      \
+  F(props,      uint64_t, 0,        "PROPS: %lu, ")                     \
+  F(confl,      uint64_t, 0,        "CONFL: %lu, ")                     \
+  F(restarts,   uint64_t, 0,        "RESTARTS: %lu, ")                  \
+  F(level_min,  size_t,   SIZE_MAX, "LEVEL: %lu")                       \
+  F(level_max,  size_t,   0,        "/%lu, ")                           \
+  F(cut_level,  uint64_t, 0,        "AVG LEVEL: %f, ", (double)cut_level/cuts) \
+  F(alloc_max,  size_t,   0,        "MEM: %lu, ")                       \
+  F(calloc_max, size_t,   0,        "CMEM: %lu")                        \
 
 /** Statistic counter variable */
 #define STAT_EXTVAR(NAME, TYPE, RESET_VAL, ...)    \

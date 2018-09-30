@@ -20,11 +20,23 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 #include "csolve.h"
 
 static size_t _conflict_max_level;
 static size_t _conflict_level;
 static struct env_t *_conflict_var;
+
+
+typedef bool confl_result_t;
+#define CONFL_ERROR false
+#define CONFL_OK    true
+
+#define CHECK(VAR)          \
+  if (VAR == CONFL_ERROR) { \
+    return CONFL_ERROR;     \
+  }
+
 
 #define SEEN_ARRAY_LENGTH_MAX 1024
 struct seen_array_t {
@@ -35,14 +47,43 @@ struct seen_array_t {
 #define SEEN_ARRAY_WIDTH 64
 static struct seen_array_t _seen[SEEN_ARRAY_WIDTH];
 
-typedef bool confl_result_t;
-#define CONFL_ERROR false
-#define CONFL_OK    true
 
-#define CHECK(VAR)          \
-  if (VAR == CONFL_ERROR) { \
-    return CONFL_ERROR;     \
+#define ALLOC_ALIGNMENT 8
+static char *_alloc_stack;
+static size_t _alloc_stack_size;
+static size_t _alloc_stack_pointer;
+
+void conflict_alloc_init(size_t size) {
+  _alloc_stack_size = size;
+  _alloc_stack_pointer = 0;
+
+  _alloc_stack = (char *)malloc(_alloc_stack_size);
+  if (_alloc_stack == 0) {
+    print_fatal("%s", strerror(errno));
   }
+}
+
+void conflict_alloc_free(void) {
+  free(_alloc_stack);
+  _alloc_stack = NULL;
+  _alloc_stack_size = 0;
+}
+
+void *conflict_alloc(void *ptr, size_t size) {
+  // get new pointer or reuse
+  char *p = ptr == NULL ? &_alloc_stack[_alloc_stack_pointer] : ptr;
+  // align size
+  size_t sz = (size + (ALLOC_ALIGNMENT-1)) & ~(ALLOC_ALIGNMENT-1);
+  // allocate memory
+  if (&p[sz] < &_alloc_stack[_alloc_stack_size]) {
+    _alloc_stack_pointer = &p[sz] - &_alloc_stack[0];
+    stat_max_calloc_max(_alloc_stack_pointer);
+    return (void *)p;
+  } else {
+    print_fatal(ERROR_MSG_OUT_OF_MEMORY);
+  }
+  return NULL;
+}
 
 confl_result_t conflict_add_var(struct env_t *var, struct constr_t *confl);
 
@@ -95,10 +136,10 @@ confl_result_t conflict_add_elem(struct env_t *var, struct constr_t *confl, stru
       get_lo(constr->constr.term.val) < 0) {
     return CONFL_ERROR;
   }
-  
+
   size_t length = ++confl->constr.confl.length;
   const size_t size = length * sizeof(struct confl_elem_t);
-  confl->constr.confl.elems = realloc(confl->constr.confl.elems, size);
+  confl->constr.confl.elems = conflict_alloc(confl->constr.confl.elems, size);
   confl->constr.confl.elems[length-1] =
     (struct confl_elem_t) { .val = constr->constr.term.val, .var = constr };
 
@@ -116,7 +157,7 @@ confl_result_t conflict_add_constr(struct env_t *var, struct constr_t *confl, st
   }
   confl_result_t a = conflict_seen_add(constr);
   CHECK(a);
-  
+
   if (IS_TYPE(TERM, constr)) {
     if (constr->constr.term.env != NULL && constr->constr.term.env != var) {
       if (constr->constr.term.env->level < bind_level_get()
@@ -198,7 +239,7 @@ void conflict_update(struct constr_t *confl) {
 }
 
 void conflict_create(struct env_t *var, const struct wand_expr_t *clause) {
-  struct constr_t *confl = (struct constr_t *)malloc(sizeof(struct constr_t));
+  struct constr_t *confl = (struct constr_t *)conflict_alloc(NULL, sizeof(struct constr_t));
   *confl = CONSTRAINT_CONFL(0, NULL);
 
   conflict_seen_reset();
@@ -216,7 +257,7 @@ void conflict_create(struct env_t *var, const struct wand_expr_t *clause) {
 
   conflict_update(confl);
 
-  struct wand_expr_t *c = (struct wand_expr_t *)malloc(sizeof(struct wand_expr_t));
+  struct wand_expr_t *c = (struct wand_expr_t *)conflict_alloc(NULL, sizeof(struct wand_expr_t));
   *c = (struct wand_expr_t){ .constr = confl, .orig = confl, .prop_tag = 0 };
   for (size_t i = 0, l = confl->constr.confl.length; i < l; i++) {
     clause_list_append(&confl->constr.confl.elems[i].var->constr.term.env->clauses, c);

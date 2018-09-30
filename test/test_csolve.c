@@ -216,13 +216,14 @@ TEST(Stats, Print) {
   level_max = 8;
   cut_level = 9;
   alloc_max = 10;
-  _shared->solutions = 11;
+  calloc_max = 11;
+  _shared->solutions = 12;
 
   std::string output;
   testing::internal::CaptureStdout();
   update_stats(7);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
   EXPECT_EQ(0, level_max);
 }
@@ -241,13 +242,14 @@ TEST(PrintStats, Stdout) {
   level_max = 8;
   cut_level = 9;
   alloc_max = 10;
-  _shared->solutions = 11;
+  calloc_max = 11;
+  _shared->solutions = 12;
 
   std::string output;
   testing::internal::CaptureStdout();
   print_stats(stdout);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
   EXPECT_EQ(0, level_max);
 }
@@ -266,13 +268,14 @@ TEST(PrintStats, Stderr) {
   level_max = 8;
   cut_level = 9;
   alloc_max = 10;
-  _shared->solutions = 11;
+  calloc_max = 11;
+  _shared->solutions = 12;
 
   std::string output;
   testing::internal::CaptureStderr();
   print_stats(stderr);
   output = testing::internal::GetCapturedStderr();
-  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEMORY: 10, SOLUTIONS: 11\n");
+  EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
   EXPECT_EQ(0, level_max);
 }

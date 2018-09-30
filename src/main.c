@@ -74,6 +74,12 @@ void yyset_in(FILE *);
     "-m --memory <size>          allocation stack size in bytes (default: %d)\n", \
     ALLOC_STACK_SIZE_DEFAULT)                                           \
                                                                         \
+  F('M', "confl-memory", required_argument, "M:",                       \
+    { conflict_alloc_init(parse_size(optarg)); },                       \
+    { conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT); },        \
+    "-M --confl-memory <size>    conflict allocation stack size in bytes (default: %d)\n", \
+    CONFLICT_ALLOC_STACK_SIZE_DEFAULT)                                           \
+                                                                        \
   F('o', "order", required_argument, "o:",                              \
     { strategy_order_init(parse_order(optarg)); },                      \
     { strategy_order_init(STRATEGY_ORDER_DEFAULT); },                   \
@@ -256,6 +262,7 @@ void cleanup() {
   bind_free();
   patch_free();
   alloc_free();
+  conflict_alloc_free();
 }
 
 int main(int argc, char **argv) {

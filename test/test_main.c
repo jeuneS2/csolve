@@ -16,6 +16,8 @@ class Mock {
   MOCK_METHOD0(patch_free, void(void));
   MOCK_METHOD1(shared_init, void(uint32_t));
   MOCK_METHOD1(timeout_init, void(uint32_t));
+  MOCK_METHOD1(conflict_alloc_init, void(size_t));
+  MOCK_METHOD0(conflict_alloc_free, void(void));
   MOCK_METHOD1(strategy_create_conflicts_init, void(bool));
   MOCK_METHOD1(strategy_prefer_failing_init, void(bool));
   MOCK_METHOD1(strategy_compute_weights_init, void(bool));
@@ -64,6 +66,14 @@ void shared_init(uint32_t workers) {
 
 void timeout_init(uint32_t time) {
   MockProxy->timeout_init(time);
+}
+
+void conflict_alloc_init(size_t size) {
+  MockProxy->conflict_alloc_init(size);
+}
+
+void conflict_alloc_free(void) {
+  MockProxy->conflict_alloc_free();
 }
 
 void strategy_create_conflicts_init(bool create_conflicts) {
@@ -158,6 +168,7 @@ TEST(PrintHelp, Basic) {
             "  -h --help                   show this message and exit\n"
             "  -j --jobs <int>             number of jobs to run simultaneously (default: " + std::to_string(WORKERS_MAX_DEFAULT) + ")\n"
             "  -m --memory <size>          allocation stack size in bytes (default: " + std::to_string(ALLOC_STACK_SIZE_DEFAULT) + ")\n"
+            "  -M --confl-memory <size>    conflict allocation stack size in bytes (default: " + std::to_string(CONFLICT_ALLOC_STACK_SIZE_DEFAULT) + ")\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_NONE)\n"
             "  -p --patches <size>         maximum number of patches (default: " + std::to_string(PATCH_STACK_SIZE_DEFAULT) + ")\n"
             "  -r --restart-freq <int>     restart frequency when looking for any solution (default: " + std::to_string(STRATEGY_RESTART_FREQUENCY_DEFAULT) + "), set to 0 to disable\n"
@@ -186,6 +197,7 @@ TEST(ParseOptions, Help) {
             "  -h --help                   show this message and exit\n"
             "  -j --jobs <int>             number of jobs to run simultaneously (default: " + std::to_string(WORKERS_MAX_DEFAULT) + ")\n"
             "  -m --memory <size>          allocation stack size in bytes (default: " + std::to_string(ALLOC_STACK_SIZE_DEFAULT) + ")\n"
+            "  -M --confl-memory <size>    conflict allocation stack size in bytes (default: " + std::to_string(CONFLICT_ALLOC_STACK_SIZE_DEFAULT) + ")\n"
             "  -o --order <order>          how to order variables during solving (default: ORDER_NONE)\n"
             "  -p --patches <size>         maximum number of patches (default: " + std::to_string(PATCH_STACK_SIZE_DEFAULT) + ")\n"
             "  -r --restart-freq <int>     restart frequency when looking for any solution (default: " + std::to_string(STRATEGY_RESTART_FREQUENCY_DEFAULT) + "), set to 0 to disable\n"
@@ -226,6 +238,7 @@ TEST(ParseOptions, Stdout) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -244,6 +257,7 @@ TEST(ParseOptions, Stdout) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -264,6 +278,7 @@ TEST(ParseOptions, NonExistentFile) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -285,6 +300,7 @@ TEST(ParseOptions, Bind) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -306,6 +322,7 @@ TEST(ParseOptions, Alloc) {
   EXPECT_CALL(*MockProxy, alloc_init(1234)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -327,6 +344,7 @@ TEST(ParseOptions, Jobs) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(7)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -348,6 +366,7 @@ TEST(ParseOptions, Order) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(ORDER_LARGEST_VALUE)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -369,6 +388,7 @@ TEST(ParseOptions, PreferFailing) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(false)).Times(1);
@@ -388,6 +408,7 @@ TEST(ParseOptions, PreferFailing) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(true)).Times(1);
@@ -409,6 +430,7 @@ TEST(ParseOptions, Restarts) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -430,6 +452,7 @@ TEST(ParseOptions, Weighten) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -449,6 +472,7 @@ TEST(ParseOptions, Weighten) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_CREATE_CONFLICTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -529,6 +553,7 @@ TEST(Cleanup, Basic) {
   EXPECT_CALL(*MockProxy, bind_free()).Times(1);
   EXPECT_CALL(*MockProxy, patch_free()).Times(1);
   EXPECT_CALL(*MockProxy, alloc_free()).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_free()).Times(1);
   cleanup();
   delete(MockProxy);
 }
@@ -545,6 +570,7 @@ TEST(Main, Basic) {
   EXPECT_CALL(*MockProxy, alloc_init(ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, shared_init(WORKERS_MAX_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, timeout_init(TIME_MAX_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_init(CONFLICT_ALLOC_STACK_SIZE_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_order_init(STRATEGY_ORDER_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_create_conflicts_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
@@ -555,6 +581,7 @@ TEST(Main, Basic) {
   EXPECT_CALL(*MockProxy, bind_free()).Times(1);
   EXPECT_CALL(*MockProxy, patch_free()).Times(1);
   EXPECT_CALL(*MockProxy, alloc_free()).Times(1);
+  EXPECT_CALL(*MockProxy, conflict_alloc_free()).Times(1);
   EXPECT_EQ(EXIT_SUCCESS, main(argc, (char **)argv));
   EXPECT_STREQ("<xxx>", _main_name);
   delete(MockProxy);
