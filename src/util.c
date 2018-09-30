@@ -66,8 +66,7 @@ void *alloc(size_t size) {
 
 void dealloc(void *elem) {
   size_t pointer = (char *)elem - &_alloc_stack[0];
-  if ((pointer & (ALLOC_ALIGNMENT-1)) == 0 &&
-      pointer >= 0 && pointer <= _alloc_stack_pointer) {
+  if ((pointer & (ALLOC_ALIGNMENT-1)) == 0 && pointer <= _alloc_stack_pointer) {
     _alloc_stack_pointer = pointer;
   } else {
     print_fatal(ERROR_MSG_WRONG_DEALLOC);
