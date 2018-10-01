@@ -199,7 +199,7 @@ static bool update_solution(size_t size, struct env_t *env, struct constr_t *con
     if (!found_any() && objective_better()) {
 
       objective_update_best();
-      fprintf(stderr, "#%d: ", _worker_id);
+      fprintf(stdout, "#%d: ", _worker_id);
       print_solution(stdout, size, env);
       shared()->solutions++;
 

@@ -426,9 +426,9 @@ TEST(UpdateSolution, Better) {
     .Times(::testing::AtLeast(1));
   EXPECT_CALL(*MockProxy, print_solution(stdout, 0, env))
     .Times(1);
-  testing::internal::CaptureStderr();
+  testing::internal::CaptureStdout();
   EXPECT_EQ(true, update_solution(0, env, &C));
-  output = testing::internal::GetCapturedStderr();
+  output = testing::internal::GetCapturedStdout();
   EXPECT_EQ("#17: ", output);
   EXPECT_EQ(1, s.solutions);
   delete(MockProxy);
