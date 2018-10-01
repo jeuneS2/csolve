@@ -85,6 +85,15 @@ void *conflict_alloc(void *ptr, size_t size) {
   return NULL;
 }
 
+void conflict_dealloc(void *ptr) {
+  size_t pointer = (char *)ptr - &_alloc_stack[0];
+  if ((pointer & (ALLOC_ALIGNMENT-1)) == 0 && pointer <= _alloc_stack_pointer) {
+    _alloc_stack_pointer = pointer;
+  } else {
+    print_fatal(ERROR_MSG_WRONG_DEALLOC);
+  }
+}
+
 confl_result_t conflict_add_var(struct env_t *var, struct constr_t *confl);
 
 size_t conflict_level(void) {
@@ -248,10 +257,12 @@ void conflict_create(struct env_t *var, const struct wand_expr_t *clause) {
 
   confl_result_t c1 = conflict_add_constr(var, confl, clause->orig);
   if (c1 == CONFL_ERROR) {
+    conflict_dealloc(confl);
     return;
   }
   confl_result_t c2 = conflict_add_var(var, confl);
   if (c2 == CONFL_ERROR) {
+    conflict_dealloc(confl);
     return;
   }
 
