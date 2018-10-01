@@ -82,13 +82,13 @@ test/coverage-report.xml: test/xunit-report.xml
 coverage: test/coverage-report.xml
 
 fuzz/csolve: ${SRC} ${HEADERS}
-	${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC} -lpthread
+	AFL_HARDEN=1 ${FUZZ_CC} ${FUZZ_CFLAGS} -o $@ ${SRC} -lpthread
 
 fuzz: fuzz/csolve
 	if [ -e fuzz/findings ]; then \
-		AFL_SKIP_CPUFREQ=1 afl-fuzz -m 128 -t 1000+ -i fuzz/inputs -o fuzz/findings -- $<; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -i - -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
 	else \
-		AFL_SKIP_CPUFREQ=1 afl-fuzz -m 128 -t 1000+ -i - -o fuzz/findings -- $<; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -i fuzz/inputs -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
 	fi
 
 doc/doxygen: ${SRC} ${HEADERS} doxygen.config
