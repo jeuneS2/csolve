@@ -521,5 +521,7 @@ void stats_print(FILE *file);
 #define ERROR_MSG_INVALID_SIZE_ARG          "invalid size argument: %s"
 /** Error message when encountering invalid ordering strategy */
 #define ERROR_MSG_INVALID_STRATEGY_ORDER    "invalid ordering strategy: %02x"
+/** Error message when an unbounded variable is encountered */
+#define ERROR_MSG_UNBOUNDED_VARIABLE        "unbounded variable: %s"
 
 #endif

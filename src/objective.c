@@ -29,7 +29,7 @@ static volatile domain_t *_objective_best;
 
 void objective_init(enum objective_t o, volatile domain_t *best) {
   _objective = o;
-  _objective_val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  _objective_val = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN+1, DOMAIN_MAX-1));
   _objective_best = best;
   switch (o) {
   case OBJ_ANY:

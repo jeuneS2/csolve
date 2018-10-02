@@ -194,6 +194,10 @@ void vars_weighten(struct constr_t *constr, int32_t weight) {
 
 struct env_t *env_generate(void) {
   for (size_t i = 0; i < _var_count; i++) {
+    struct val_t val = _vars[i].val->constr.term.val;
+    if (get_lo(val) == DOMAIN_MIN || get_hi(val) == DOMAIN_MAX) {
+      print_fatal(ERROR_MSG_UNBOUNDED_VARIABLE, _vars[i].key);
+    }
     _vars[i].val->constr.term.env = &_vars[i];
   }
 
