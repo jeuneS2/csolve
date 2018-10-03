@@ -86,9 +86,9 @@ fuzz/csolve: ${SRC} ${HEADERS}
 
 fuzz: fuzz/csolve
 	if [ -e fuzz/findings ]; then \
-		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -i - -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -x fuzz/dict -i - -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
 	else \
-		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -i fuzz/inputs -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -x fuzz/dict -i fuzz/inputs -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
 	fi
 
 doc/doxygen: ${SRC} ${HEADERS} doxygen.config
