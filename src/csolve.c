@@ -190,6 +190,10 @@ static inline bool is_restartable(void) {
   return objective() == OBJ_ANY && strategy_restart_frequency() > 0;
 }
 
+static inline bool is_solution_restartable(void) {
+  return objective() != OBJ_ALL;
+}
+
 static bool update_solution(size_t size, struct env_t *env, struct constr_t *constr) {
   bool updated = false;
 
@@ -308,6 +312,20 @@ static void unwind(struct step_t *steps, size_t level, size_t stop) {
   }
 }
 
+static size_t conflict_backtrack(struct step_t *steps, size_t level) {
+  prop_result_t p = PROP_ERROR;
+  if (conflict_level() <= level) {
+    unwind(steps, level, level);
+  }
+  while (p == PROP_ERROR && conflict_level() <= level) {
+    unwind(steps, level-1, conflict_level());
+    level = conflict_level();
+    bind_level_set(level-1);
+    p = propagate_clauses(&conflict_var()->clauses);
+  }
+  return level;
+}
+
 // backtrack by one level
 #define BACKTRACK()                             \
   if (level != 0) {                             \
@@ -315,6 +333,13 @@ static void unwind(struct step_t *steps, size_t level, size_t stop) {
     continue;                                   \
   } else {                                      \
     break;                                      \
+  }
+
+// backtrack to conflict level
+#define CONFLICT_BACKTRACK()                    \
+  {                                             \
+    level = conflict_backtrack(steps, level);   \
+    continue;                                   \
   }
 
 // restart the search
@@ -355,7 +380,7 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
     // check if a better feasible solution is reached
     if (level == size) {
       bool update = update_solution(size, env, constr);
-      if (update) {
+      if (update && is_solution_restartable()) {
         level--;
         RESTART();
       } else {
@@ -400,17 +425,7 @@ void solve(size_t size, struct env_t *env, struct constr_t *constr) {
       if (check_restart()) {
         RESTART();
       } else if (strategy_create_conflicts()) {
-        prop_result_t p = PROP_ERROR;
-        if (conflict_level() <= level) {
-          unwind(steps, level, level);
-        }
-        while (p == PROP_ERROR && conflict_level() <= level) {
-          unwind(steps, level-1, conflict_level());
-          level = conflict_level();
-          bind_level_set(level-1);
-          p = propagate_clauses(&conflict_var()->clauses);
-        }
-        continue;
+        CONFLICT_BACKTRACK();
       }
     }
   }
