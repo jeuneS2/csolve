@@ -11,6 +11,11 @@ TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -D_DEFAULT_SOURCE
 
 FUZZ_CC=afl-gcc
 FUZZ_CFLAGS=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -O2
+FUZZ_FLAGS=-b32 -p32 -m16k -M1k -r2
+
+FUZZCOV_CC=gcc
+FUZZCOV_CFLAGS=${CFLAGS} -fprofile-arcs -ftest-coverage
+FUZZCOV_FLAGS=${FUZZ_FLAGS}
 
 SONAR=/mnt/work/sonar/sonarqube-6.7.2/bin/linux-x86-64/sonar.sh
 SONAR_RUNNER=/mnt/work/sonar/sonar-runner-2.4/bin/sonar-runner
@@ -86,10 +91,16 @@ fuzz/csolve: ${SRC} ${HEADERS}
 
 fuzz: fuzz/csolve
 	if [ -e fuzz/findings ]; then \
-		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -x fuzz/dict -i - -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -x fuzz/dict -i - -o fuzz/findings -- $< ${FUZZ_FLAGS}; \
 	else \
-		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -x fuzz/dict -i fuzz/inputs -o fuzz/findings -- $< -b32 -p32 -m16k -M1k; \
+		AFL_SKIP_CPUFREQ=1 afl-fuzz -t 1000+ -x fuzz/dict -i fuzz/inputs -o fuzz/findings -- $< ${FUZZ_FLAGS}; \
 	fi
+
+fuzz/csolve-cov: ${SRC} ${HEADERS}
+	${FUZZCOV_CC} ${FUZZCOV_CFLAGS} -o $@ ${SRC} -lpthread
+
+fuzz_cov: fuzz/csolve-cov fuzz/findings
+	afl-cov -e "$< ${FUZZCOV_FLAGS} < AFL_FILE" -c . -d fuzz/findings --cover-corpus --overwrite --enable-branch-coverage --lcov-exclude-pattern="'/usr/include/*' '*/test/*' '*/googletest/*'"
 
 doc/doxygen: ${SRC} ${HEADERS} doxygen.config
 	mkdir -p doc; doxygen doxygen.config
@@ -97,7 +108,7 @@ doc/doxygen: ${SRC} ${HEADERS} doxygen.config
 doc: doc/doxygen
 
 clean:
-	rm -rf csolve fuzz/csolve test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
+	rm -rf csolve fuzz/csolve fuzz/csolve-cov fuzz/findings test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
 
 sonar_start:
 	${SONAR} start
