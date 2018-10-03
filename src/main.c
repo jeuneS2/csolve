@@ -36,6 +36,8 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #define GIGA (KILO * KILO * KILO)
 
 void yyset_in(FILE *);
+FILE *yyget_in(void);
+int yylex_destroy(void);
 
 #define OPTIONS_MAX 0x100
 
@@ -134,7 +136,7 @@ void print_usage(FILE *file) {
 
 #define OPTION_HELP(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...) \
   fprintf(file, "  " __VA_ARGS__);
-  
+
 void print_help(FILE *file) {
   print_usage(file);
   fprintf(file, "Options:\n");
@@ -217,7 +219,7 @@ void parse_options(int argc, char **argv) {
     OPTION_LIST(OPTION_LONG)
     {0, 0, 0, 0 }
   };
-  
+
   bool seen [OPTIONS_MAX];
   for (size_t i = 0; i < sizeof(seen)/sizeof(seen[0]); i++) {
     seen[i] = false;
@@ -263,6 +265,9 @@ void cleanup() {
   patch_free();
   alloc_free();
   conflict_alloc_free();
+  strategy_var_order_free();
+  fclose(yyget_in());
+  yylex_destroy();
 }
 
 int main(int argc, char **argv) {

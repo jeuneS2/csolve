@@ -7,7 +7,9 @@ namespace _main {
 class Mock {
  public:
   MOCK_METHOD0(yyparse, int(void));
+  MOCK_METHOD0(yyget_in, FILE *(void));
   MOCK_METHOD1(yyset_in, void(FILE *));
+  MOCK_METHOD0(yylex_destroy, int(void));
   MOCK_METHOD1(alloc_init, void(size_t));
   MOCK_METHOD0(alloc_free, void(void));
   MOCK_METHOD1(bind_init, void(size_t));
@@ -23,6 +25,7 @@ class Mock {
   MOCK_METHOD1(strategy_compute_weights_init, void(bool));
   MOCK_METHOD1(strategy_restart_frequency_init, void(uint64_t));
   MOCK_METHOD1(strategy_order_init, void(enum order_t));
+  MOCK_METHOD0(strategy_var_order_free, void(void));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
@@ -32,8 +35,16 @@ int yyparse() {
   return MockProxy->yyparse();
 }
 
+FILE *yyget_in(void) {
+  return MockProxy->yyget_in();
+}
+
 void yyset_in(FILE *file) {
   MockProxy->yyset_in(file);
+}
+
+int yylex_destroy() {
+  return MockProxy->yylex_destroy();
 }
 
 void alloc_init(size_t size) {
@@ -94,6 +105,10 @@ void strategy_restart_frequency_init(uint64_t restart_frequency) {
 
 void strategy_order_init(enum order_t order) {
   MockProxy->strategy_order_init(order);
+}
+
+void strategy_var_order_free(void) {
+  MockProxy->strategy_var_order_free();
 }
 
 void print_fatal(const char *fmt, ...) {
@@ -549,17 +564,27 @@ TEST(ParseSize, Error) {
 }
 
 TEST(Cleanup, Basic) {
+  char *c;
+  size_t s;
+  FILE *f = open_memstream(&c, &s);
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, bind_free()).Times(1);
   EXPECT_CALL(*MockProxy, patch_free()).Times(1);
   EXPECT_CALL(*MockProxy, alloc_free()).Times(1);
   EXPECT_CALL(*MockProxy, conflict_alloc_free()).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_var_order_free()).Times(1);
+  EXPECT_CALL(*MockProxy, yyget_in()).Times(1).WillRepeatedly(::testing::Return(f));
+  EXPECT_CALL(*MockProxy, yylex_destroy()).Times(1);
   cleanup();
   delete(MockProxy);
 }
 
 TEST(Main, Basic) {
   _main_name = "<xxx>";
+
+  char *c;
+  size_t s;
+  FILE *f = open_memstream(&c, &s);
 
   int argc = 1;
   const char *argv [argc] = { "<xxx>" };
@@ -582,6 +607,9 @@ TEST(Main, Basic) {
   EXPECT_CALL(*MockProxy, patch_free()).Times(1);
   EXPECT_CALL(*MockProxy, alloc_free()).Times(1);
   EXPECT_CALL(*MockProxy, conflict_alloc_free()).Times(1);
+  EXPECT_CALL(*MockProxy, strategy_var_order_free()).Times(1);
+  EXPECT_CALL(*MockProxy, yyget_in()).Times(1).WillRepeatedly(::testing::Return(f));
+  EXPECT_CALL(*MockProxy, yylex_destroy()).Times(1);
   EXPECT_EQ(EXIT_SUCCESS, main(argc, (char **)argv));
   EXPECT_STREQ("<xxx>", _main_name);
   delete(MockProxy);

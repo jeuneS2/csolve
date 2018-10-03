@@ -418,6 +418,8 @@ uint64_t strategy_restart_frequency(void);
 void strategy_order_init(enum order_t order);
 /** Initialize the variable ordering */
 void strategy_var_order_init(size_t size, struct env_t *env);
+/** Free memory used by the variable ordering */
+void strategy_var_order_free(void);
 /** Pick a variable according to the chosen strategy */
 struct env_t *strategy_var_order_pop(void);
 /** Put back variable into ordering */

@@ -136,6 +136,10 @@ void strategy_var_order_init(size_t size, struct env_t *env) {
   }
 }
 
+void strategy_var_order_free(void) {
+  free(_var_order);
+}
+
 static void strategy_var_order_swap(size_t pos1, size_t pos2) {
   struct env_t *t = _var_order[pos1];
   _var_order[pos1] = _var_order[pos2];
