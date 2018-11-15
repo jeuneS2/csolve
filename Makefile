@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS_STD=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE
+CFLAGS_STD=-std=c99 -pedantic -Wall -Wno-format-extra-args -D_DEFAULT_SOURCE
 CFLAGS=${CFLAGS_STD} -O3 -flto -g
 PROF_CFLAGS=${CFLAGS_STD} -O1 -fprofile-arcs -ftest-coverage -pg -no-pie
 LEX=flex
