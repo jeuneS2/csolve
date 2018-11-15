@@ -1,5 +1,7 @@
 CC=gcc
-CFLAGS=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -O3 -flto -g # -fprofile-arcs -ftest-coverage -pg -no-pie
+CFLAGS_STD=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE
+CFLAGS=${CFLAGS_STD} -O3 -flto -g
+PROF_CFLAGS=${CFLAGS_STD} -O1 -fprofile-arcs -ftest-coverage -pg -no-pie
 LEX=flex
 LFLAGS=-8 -F
 YACC=bison
@@ -10,11 +12,11 @@ TEST_CXX=g++
 TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -D_DEFAULT_SOURCE -DGTEST_HAS_PTHREAD=1 -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
 
 FUZZ_CC=afl-gcc
-FUZZ_CFLAGS=-std=c99 -pedantic -Wall -D_DEFAULT_SOURCE -O2
+FUZZ_CFLAGS=${CFLAGS_STD} -O2
 FUZZ_FLAGS=-b32 -p32 -m16k -M1k -r2
 
 FUZZCOV_CC=gcc
-FUZZCOV_CFLAGS=${CFLAGS} -fprofile-arcs -ftest-coverage
+FUZZCOV_CFLAGS=${FUZZ_CFLAGS} -fprofile-arcs -ftest-coverage
 FUZZCOV_FLAGS=${FUZZ_FLAGS}
 
 SONAR=/mnt/work/sonar/sonarqube-6.7.2/bin/linux-x86-64/sonar.sh
@@ -66,6 +68,9 @@ src/parser.c src/parser.h: src/parser.y
 
 csolve: ${SRC} ${HEADERS}
 	${CC} ${CFLAGS} -o $@ ${SRC} -lpthread
+
+csolve-prof: ${SRC} ${HEADERS}
+	${CC} ${PROF_CFLAGS} -o $@ ${SRC} -lpthread
 
 googletest/googlemock/libgmock.a googletest/googlemock/gtest/libgtest.a: ${GTEST_HOME}
 	mkdir -p googletest; cd googletest; cmake ${GTEST_HOME}; ${MAKE}
