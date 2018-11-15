@@ -539,11 +539,11 @@ TEST(ParseOrder, Error) {
 }
 
 TEST(ParseSize, Basic) {
-  EXPECT_EQ(7, parse_size("7"));
-  EXPECT_EQ(10*1024, parse_size("10k"));
-  EXPECT_EQ(12*1024, parse_size("12K"));
-  EXPECT_EQ(0x10*1024*1024, parse_size("0x10m"));
-  EXPECT_EQ(0x11*1024*1024, parse_size("0x11M"));
+  EXPECT_EQ(7U, parse_size("7"));
+  EXPECT_EQ(10U*1024, parse_size("10k"));
+  EXPECT_EQ(12U*1024, parse_size("12K"));
+  EXPECT_EQ(0x10U*1024*1024, parse_size("0x10m"));
+  EXPECT_EQ(0x11U*1024*1024, parse_size("0x11M"));
   EXPECT_EQ(02ULL*1024*1024*1024, parse_size("02g"));
   EXPECT_EQ(03ULL*1024*1024*1024, parse_size("03G"));
 }

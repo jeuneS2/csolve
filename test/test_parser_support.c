@@ -148,7 +148,7 @@ TEST(VarsAdd, Basic) {
   struct constr_t v1;
   vars_add(k1, &v1);
   EXPECT_NE((struct env_t *)NULL, _vars);
-  EXPECT_EQ(1, _var_count);
+  EXPECT_EQ(1U, _var_count);
   EXPECT_NE(k1, _vars[0].key);
   EXPECT_STREQ(k1, _vars[0].key);
   EXPECT_EQ(&v1, _vars[0].val);

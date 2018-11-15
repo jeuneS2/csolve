@@ -29,13 +29,13 @@ void print_fatal(const char *fmt, ...) {
 TEST(Bind, Init) {
   _bind_stack = NULL;
   bind_init(123);
-  EXPECT_EQ(123, _bind_stack_size);
+  EXPECT_EQ(123U, _bind_stack_size);
   EXPECT_NE((struct binding_t *)NULL, _bind_stack);
   free(_bind_stack);
 
   _bind_stack = NULL;
   bind_init(17);
-  EXPECT_EQ(17, _bind_stack_size);
+  EXPECT_EQ(17U, _bind_stack_size);
   EXPECT_NE((struct binding_t *)NULL, _bind_stack);
   free(_bind_stack);
 }
@@ -43,7 +43,7 @@ TEST(Bind, Init) {
 TEST(Bind, Free) {
   bind_init(64);
   bind_free();
-  EXPECT_EQ(0, _bind_stack_size);
+  EXPECT_EQ(0U, _bind_stack_size);
   EXPECT_EQ((struct binding_t *)NULL, _bind_stack);
 }
 
@@ -58,7 +58,7 @@ TEST(Bind, Success) {
   MockProxy = new Mock();
   _bind_depth = 23;
   bind(&loc, VALUE(17), NULL);
-  EXPECT_EQ(24, _bind_depth);
+  EXPECT_EQ(24U, _bind_depth);
   EXPECT_EQ(loc.val->constr.term.val, VALUE(17));
   delete(MockProxy);
 }
@@ -103,7 +103,7 @@ TEST(Unbind, Sucess) {
   unbind(17);
   EXPECT_EQ(loc1.val, &c1);
   EXPECT_EQ(loc2.val, &c2);
-  EXPECT_EQ(17, _bind_depth);
+  EXPECT_EQ(17U, _bind_depth);
   delete(MockProxy);
 }
 

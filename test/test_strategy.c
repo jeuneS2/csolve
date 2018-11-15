@@ -69,16 +69,16 @@ TEST(ComputeWeigths, Get) {
 
 TEST(RestartFrequency, Init) {
   strategy_restart_frequency_init(17);
-  EXPECT_EQ(17, _restart_frequency);
+  EXPECT_EQ(17U, _restart_frequency);
   strategy_restart_frequency_init(23);
-  EXPECT_EQ(23, _restart_frequency);
+  EXPECT_EQ(23U, _restart_frequency);
 }
 
 TEST(RestartFrequency, Get) {
   _restart_frequency = 17;
-  EXPECT_EQ(17, strategy_restart_frequency());
+  EXPECT_EQ(17U, strategy_restart_frequency());
   _restart_frequency = 23;
-  EXPECT_EQ(23, strategy_restart_frequency());
+  EXPECT_EQ(23U, strategy_restart_frequency());
 }
 
 TEST(Order, Init) {

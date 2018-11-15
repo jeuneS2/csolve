@@ -25,13 +25,13 @@ void print_fatal(const char *fmt, ...) {
 TEST(Alloc, Init) {
   _alloc_stack = NULL;
   alloc_init(123);
-  EXPECT_EQ(123, _alloc_stack_size);
+  EXPECT_EQ(123U, _alloc_stack_size);
   EXPECT_NE((char *)NULL, _alloc_stack);
   free(_alloc_stack);
 
   _alloc_stack = NULL;
   alloc_init(17);
-  EXPECT_EQ(17, _alloc_stack_size);
+  EXPECT_EQ(17U, _alloc_stack_size);
   EXPECT_NE((char *)NULL, _alloc_stack);
   free(_alloc_stack);
 }
@@ -39,7 +39,7 @@ TEST(Alloc, Init) {
 TEST(Alloc, Free) {
   alloc_init(64);
   alloc_free();
-  EXPECT_EQ(0, _alloc_stack_size);
+  EXPECT_EQ(0U, _alloc_stack_size);
   EXPECT_EQ((char *)NULL, _alloc_stack);
 }
 
@@ -52,7 +52,7 @@ TEST(Alloc, Success) {
   EXPECT_EQ(&_alloc_stack[ptr], alloc(23));
   ptr += 23+1;
   EXPECT_EQ(ptr, _alloc_stack_pointer);
-  EXPECT_EQ(64, alloc_max);
+  EXPECT_EQ(64U, alloc_max);
 
   EXPECT_EQ(&_alloc_stack[ptr], alloc(17));
   ptr += 17+7;
@@ -73,7 +73,7 @@ TEST(Dealloc, Success) {
   alloc_init(1024);
   _alloc_stack_pointer = 64;
   dealloc(&_alloc_stack[24]);
-  EXPECT_EQ(24, _alloc_stack_pointer);
+  EXPECT_EQ(24U, _alloc_stack_pointer);
 }
 
 TEST(Dealloc, Fail) {

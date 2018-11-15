@@ -763,7 +763,7 @@ TEST(NormalizeWand, Patch) {
     .WillOnce(::testing::Return(VALUE(1)))
     .WillOnce(::testing::Return(VALUE(1)));
   EXPECT_EQ(&Y, normal_wand(&Y));
-  EXPECT_EQ(5, Y.constr.wand.length);
+  EXPECT_EQ(5U, Y.constr.wand.length);
   EXPECT_EQ(E, Y.constr.wand.elems);
   EXPECT_EQ(&A, Y.constr.wand.elems[0].constr);
   EXPECT_EQ(&X, Y.constr.wand.elems[1].constr);

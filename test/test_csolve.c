@@ -177,29 +177,29 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
 TEST(Stats, Init) {
   stats_init();
-  EXPECT_EQ(0, calls);
-  EXPECT_EQ(0, cuts);
-  EXPECT_EQ(0, cut_level);
-  EXPECT_EQ(0, restarts);
+  EXPECT_EQ(0U, calls);
+  EXPECT_EQ(0U, cuts);
+  EXPECT_EQ(0U, cut_level);
+  EXPECT_EQ(0U, restarts);
   EXPECT_EQ(SIZE_MAX, level_min);
-  EXPECT_EQ(0, level_max);
-  EXPECT_EQ(0, alloc_max);
+  EXPECT_EQ(0U, level_max);
+  EXPECT_EQ(0U, alloc_max);
 }
 
 TEST(Stats, Update) {
   stats_init();
   update_stats(17);
-  EXPECT_EQ(level_min, 17);
-  EXPECT_EQ(level_max, 17);
-  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(level_min, 17U);
+  EXPECT_EQ(level_max, 17U);
+  EXPECT_EQ(calls, 1U);
   update_stats(16);
-  EXPECT_EQ(level_min, 16);
-  EXPECT_EQ(level_max, 17);
-  EXPECT_EQ(calls, 2);
+  EXPECT_EQ(level_min, 16U);
+  EXPECT_EQ(level_max, 17U);
+  EXPECT_EQ(calls, 2U);
   update_stats(18);
-  EXPECT_EQ(level_min, 16);
-  EXPECT_EQ(level_max, 18);
-  EXPECT_EQ(calls, 3);
+  EXPECT_EQ(level_min, 16U);
+  EXPECT_EQ(level_max, 18U);
+  EXPECT_EQ(calls, 3U);
 }
 
 TEST(Stats, Print) {
@@ -225,7 +225,7 @@ TEST(Stats, Print) {
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
-  EXPECT_EQ(0, level_max);
+  EXPECT_EQ(0U, level_max);
 }
 
 TEST(PrintStats, Stdout) {
@@ -251,7 +251,7 @@ TEST(PrintStats, Stdout) {
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
-  EXPECT_EQ(0, level_max);
+  EXPECT_EQ(0U, level_max);
 }
 
 TEST(PrintStats, Stderr) {
@@ -277,7 +277,7 @@ TEST(PrintStats, Stderr) {
   output = testing::internal::GetCapturedStderr();
   EXPECT_EQ(output, "#1: CALLS: 2, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
-  EXPECT_EQ(0, level_max);
+  EXPECT_EQ(0U, level_max);
 }
 
 TEST(Shared, Init) {
@@ -285,12 +285,12 @@ TEST(Shared, Init) {
   EXPECT_CALL(*MockProxy, sema_init(testing::_))
     .Times(1);
   shared_init(7);
-  EXPECT_EQ(7, _workers_max);
+  EXPECT_EQ(7U, _workers_max);
   EXPECT_NE((struct shared_t *)NULL, _shared);
-  EXPECT_EQ(1, shared()->workers);
-  EXPECT_EQ(1, shared()->workers_id);
-  EXPECT_EQ(1, _worker_id);
-  EXPECT_EQ(0, _worker_min_level);
+  EXPECT_EQ(1U, shared()->workers);
+  EXPECT_EQ(1U, shared()->workers_id);
+  EXPECT_EQ(1U, _worker_id);
+  EXPECT_EQ(0U, _worker_min_level);
   delete(MockProxy);
 }
 
@@ -304,35 +304,35 @@ TEST(Shared, Get) {
 TEST(FailThresholdNext, Basic) {
   _fail_threshold = 1;
   _fail_threshold_counter = 1;
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(2, _fail_threshold);
+  EXPECT_EQ(2U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(2, _fail_threshold);
+  EXPECT_EQ(2U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(4, _fail_threshold);
+  EXPECT_EQ(4U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(2, _fail_threshold);
+  EXPECT_EQ(2U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(1, _fail_threshold);
+  EXPECT_EQ(1U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(2, _fail_threshold);
+  EXPECT_EQ(2U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(4, _fail_threshold);
+  EXPECT_EQ(4U, _fail_threshold);
   fail_threshold_next();
-  EXPECT_EQ(8, _fail_threshold);
+  EXPECT_EQ(8U, _fail_threshold);
 }
 
 TEST(UpdateSolution, FalseConstr) {
@@ -430,7 +430,7 @@ TEST(UpdateSolution, Better) {
   EXPECT_EQ(true, update_solution(0, env, &C));
   output = testing::internal::GetCapturedStdout();
   EXPECT_EQ("#17: ", output);
-  EXPECT_EQ(1, s.solutions);
+  EXPECT_EQ(1U, s.solutions);
   delete(MockProxy);
 }
 
@@ -447,7 +447,7 @@ TEST(CheckAssignment, Infeasible) {
     .Times(1)
     .WillRepeatedly(::testing::Return(PROP_ERROR));
   EXPECT_EQ(true, check_assignment(&e, 0));
-  EXPECT_EQ(1, cuts);
+  EXPECT_EQ(1U, cuts);
   delete(MockProxy);
 }
 
@@ -504,7 +504,7 @@ TEST(CheckRestart, False) {
   _fail_count = 1;
   _fail_threshold = 10;
   EXPECT_EQ(false, check_restart());
-  EXPECT_EQ(2, _fail_count);
+  EXPECT_EQ(2U, _fail_count);
   delete(MockProxy);
 }
 
@@ -519,7 +519,7 @@ TEST(CheckRestart, True) {
   _fail_count = 10;
   _fail_threshold = 1;
   EXPECT_EQ(true, check_restart());
-  EXPECT_EQ(0, _fail_count);
+  EXPECT_EQ(0U, _fail_count);
   delete(MockProxy);
 }
 
@@ -542,8 +542,8 @@ TEST(Step, Activate) {
   EXPECT_EQ(true, s.active);
   EXPECT_EQ(&e, s.var);
   EXPECT_EQ(INTERVAL(12, 13), s.bounds);
-  EXPECT_EQ(0, s.iter);
-  EXPECT_EQ(0, s.seed);
+  EXPECT_EQ(0U, s.iter);
+  EXPECT_EQ(0U, s.seed);
   delete(MockProxy);
 }
 
@@ -588,8 +588,8 @@ TEST(Step, Enter) {
     .Times(1);
   step_enter(&s, 42);
   EXPECT_EQ(&marker, s.alloc_marker);
-  EXPECT_EQ(23, s.bind_depth);
-  EXPECT_EQ(17, s.patch_depth);
+  EXPECT_EQ(23U, s.bind_depth);
+  EXPECT_EQ(17U, s.patch_depth);
   delete(MockProxy);
 }
 
@@ -620,7 +620,7 @@ TEST(Step, Next) {
 
   MockProxy = new Mock();
   step_next(&s);
-  EXPECT_EQ(s.iter, 24);
+  EXPECT_EQ(s.iter, 24U);
   delete(MockProxy);
 }
 
