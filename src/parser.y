@@ -161,17 +161,15 @@ UnaryExpr : PrimaryExpr
             for (struct expr_list_t *l = $3; l != NULL; l = l->next) {
               for (struct expr_list_t *k = l->next; k != NULL; k = k->next) {
                 struct constr_t *a = alloc(sizeof(struct constr_t));
-                *a = CONSTRAINT_EXPR(LT, l->expr, k->expr);
+                *a = CONSTRAINT_EXPR(EQ, l->expr, k->expr);
                 struct constr_t *b = alloc(sizeof(struct constr_t));
-                *b = CONSTRAINT_EXPR(LT, k->expr, l->expr);
-                struct constr_t *c = alloc(sizeof(struct constr_t));
-                *c = CONSTRAINT_EXPR(OR, a, b);
+                *b = CONSTRAINT_EXPR(NOT, a, NULL);
 
                 $$->constr.wand.length++;
                 const size_t size = $$->constr.wand.length * sizeof(struct wand_expr_t);
                 $$->constr.wand.elems = realloc($$->constr.wand.elems, size);
                 $$->constr.wand.elems[$$->constr.wand.length-1] =
-                  (struct wand_expr_t) { .constr = c, .orig = c, .prop_tag = 0 };
+                  (struct wand_expr_t) { .constr = b, .orig = b, .prop_tag = 0 };
               }
             }
             expr_list_free($3);
@@ -255,11 +253,9 @@ EqualExpr : RelatExpr
           }
           | EqualExpr NEQ RelatExpr
           { struct constr_t *a = alloc(sizeof(struct constr_t));
-            *a = CONSTRAINT_EXPR(LT, $1, $3);
-            struct constr_t *b = alloc(sizeof(struct constr_t));
-            *b = CONSTRAINT_EXPR(LT, $3, $1);
+            *a = CONSTRAINT_EXPR(EQ, $1, $3);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(OR, a, b);
+            *$$ = CONSTRAINT_EXPR(NOT, a, NULL);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_NOT_EQUAL / max(1, vars_count($$)));
             }

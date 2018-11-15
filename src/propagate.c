@@ -79,6 +79,34 @@ prop_result_t propagate_eq(struct constr_t *constr, const struct val_t val, cons
     CHECK(q);
 
     return p + q;
+  } else if (is_false(val)) {
+    struct val_t lval = l->type->eval(l);
+    struct val_t rval = r->type->eval(r);
+
+    prop_result_t p = PROP_NONE;
+    prop_result_t q = PROP_NONE;
+
+    if (is_value(lval) && get_lo(lval) != DOMAIN_MIN && get_lo(lval) != DOMAIN_MAX) {
+      if (get_lo(lval) == get_lo(rval)) {
+        p = r->type->prop(r, INTERVAL(get_lo(lval) + 1, DOMAIN_MAX), clause);
+        CHECK(p);
+      } else if (get_lo(lval) == get_hi(rval)) {
+        p = r->type->prop(r, INTERVAL(DOMAIN_MIN, get_lo(lval) - 1), clause);
+        CHECK(p);
+      }
+    }
+
+    if (is_value(rval) && get_lo(rval) != DOMAIN_MIN && get_lo(rval) != DOMAIN_MAX) {
+      if (get_lo(rval) == get_lo(lval)) {
+        q = l->type->prop(l, INTERVAL(get_lo(rval) + 1, DOMAIN_MAX), clause);
+        CHECK(q);
+      } else if (get_lo(rval) == get_hi(lval)) {
+        q = l->type->prop(l, INTERVAL(DOMAIN_MIN, get_lo(rval) - 1), clause);
+        CHECK(q);
+      }
+    }
+
+    return p + q;
   }
 
   return PROP_NONE;
@@ -90,12 +118,18 @@ prop_result_t propagate_lt(struct constr_t *constr, const struct val_t val, cons
 
   if (is_true(val)) {
     struct val_t lval = l->type->eval(l);
-    prop_result_t p = r->type->prop(r, INTERVAL(add(get_lo(lval), 1), DOMAIN_MAX), clause);
-    CHECK(p);
+    prop_result_t p = PROP_NONE;
+    if (get_lo(lval) != DOMAIN_MIN && get_lo(lval) != DOMAIN_MAX) {
+      p = r->type->prop(r, INTERVAL(get_lo(lval) + 1, DOMAIN_MAX), clause);
+      CHECK(p);
+    }
 
     struct val_t rval = r->type->eval(r);
-    prop_result_t q = l->type->prop(l, INTERVAL(DOMAIN_MIN, add(get_hi(rval), neg(1))), clause);
-    CHECK(q);
+    prop_result_t q = PROP_NONE;
+    if (get_hi(rval) != DOMAIN_MIN && get_hi(rval) != DOMAIN_MAX) {
+      q = l->type->prop(l, INTERVAL(DOMAIN_MIN, get_hi(rval) - 1), clause);
+      CHECK(q);
+    }
 
     return p + q;
 
@@ -292,11 +326,11 @@ prop_result_t propagate_confl(struct constr_t *constr, const struct val_t val, c
 
   if (p != NULL) {
     const struct val_t v = p->var->type->eval(p->var);
-    if (get_lo(v) == get_lo(p->val)) {
-      return p->var->type->prop(p->var, INTERVAL(add(get_lo(v), 1), get_hi(v)), clause);
+    if (get_lo(v) == get_lo(p->val) && get_lo(v) != DOMAIN_MIN && get_lo(v) != DOMAIN_MAX) {
+      return p->var->type->prop(p->var, INTERVAL(get_lo(v) + 1, DOMAIN_MAX), clause);
     }
-    if (get_hi(v) == get_hi(p->val)) {
-      return p->var->type->prop(p->var, INTERVAL(get_lo(v), add(get_hi(v), neg(1))), clause);
+    if (get_hi(v) == get_hi(p->val) && get_hi(v) != DOMAIN_MIN && get_hi(v) != DOMAIN_MAX) {
+      return p->var->type->prop(p->var, INTERVAL(DOMAIN_MIN, get_hi(v) - 1), clause);
     }
   }
 
