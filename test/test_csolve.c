@@ -206,8 +206,9 @@ TEST(Stats, Print) {
   struct shared_t s;
   _shared = &s;
 
+  stats_frequency_init(1000);
   _worker_id = 1;
-  calls = STATS_FREQUENCY-1;
+  calls = stats_frequency()-1;
   cuts = 3;
   props = 4;
   confl = 5;
@@ -223,7 +224,7 @@ TEST(Stats, Print) {
   testing::internal::CaptureStdout();
   update_stats(7);
   output = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(output, "#1: CALLS: " STRVAL(STATS_FREQUENCY) ", CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
+  EXPECT_EQ(output, "#1: CALLS: 1000, CUTS: 3, PROPS: 4, CONFL: 5, RESTARTS: 6, LEVEL: 7/8, AVG LEVEL: 3.000000, MEM: 10, CMEM: 11, SOLUTIONS: 12\n");
   EXPECT_EQ(SIZE_MAX, level_min);
   EXPECT_EQ(0U, level_max);
 }

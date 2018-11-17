@@ -493,6 +493,13 @@ void stats_init(void);
 /** Print statistics */
 void stats_print(FILE *file);
 
+/** Default statistics printing frequency */
+#define STATS_FREQUENCY_DEFAULT 10000
+/** Set statistics printing frequency */
+void stats_frequency_init(uint64_t freq);
+/** Get statistics printing frequency */
+uint64_t stats_frequency(void);
+
 /** Error message for errors in the lexer */
 #define ERROR_MSG_LEXER_ERROR               "invalid input `%c' in line %u"
 /** Error message for errors in the parser */

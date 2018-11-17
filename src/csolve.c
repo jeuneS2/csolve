@@ -44,8 +44,6 @@ static uint64_t _fail_threshold = 1;
 static uint64_t _fail_threshold_counter = 1;
 
 // statistics
-#define STATS_FREQUENCY 10000
-
 static void print_stats(FILE *file) {
   fprintf(file, "#%d: ", _worker_id);
   stats_print(file);
@@ -59,7 +57,7 @@ static void update_stats(size_t level) {
   stat_min_level_min(level);
   stat_max_level_max(level);
   stat_inc_calls();
-  if (stat_get_calls() % STATS_FREQUENCY == 0) {
+  if ((stats_frequency() != 0) && (stat_get_calls() % stats_frequency() == 0)) {
     print_stats(stdout);
   }
 }

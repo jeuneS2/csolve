@@ -21,6 +21,8 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdio.h>
 #include "csolve.h"
 
+static uint64_t _stats_frequency;
+
 #define STAT_VAR(NAME, TYPE, RESET_VAL, ...)    \
   TYPE NAME;
 
@@ -38,4 +40,12 @@ void stats_init(void) {
 
 void stats_print(FILE *file) {
   STAT_LIST(STAT_PRINT)
+}
+
+void stats_frequency_init(uint64_t freq) {
+  _stats_frequency = freq;
+}
+
+uint64_t stats_frequency(void) {
+  return _stats_frequency;
 }

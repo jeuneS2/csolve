@@ -100,6 +100,12 @@ int yylex_destroy(void);
     "-r --restart-freq <int>     restart frequency when looking for any solution (default: %u), set to 0 to disable\n", \
     STRATEGY_RESTART_FREQUENCY_DEFAULT)                                 \
                                                                         \
+  F('s', "stats-freq", required_argument, "s:",                         \
+    { stats_frequency_init(parse_int(optarg)); },                       \
+    { stats_frequency_init(STATS_FREQUENCY_DEFAULT); },                 \
+    "-s --stats-freq <int>       statistics printing frequency (default: %u), set to 0 to disable\n", \
+    STATS_FREQUENCY_DEFAULT)                                            \
+                                                                        \
   F('t', "time", required_argument, "t:",                               \
     { timeout_init(parse_int(optarg)); },                               \
     { timeout_init(TIME_MAX_DEFAULT); },                                \

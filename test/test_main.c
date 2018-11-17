@@ -26,6 +26,7 @@ class Mock {
   MOCK_METHOD1(strategy_restart_frequency_init, void(uint64_t));
   MOCK_METHOD1(strategy_order_init, void(enum order_t));
   MOCK_METHOD0(strategy_var_order_free, void(void));
+  MOCK_METHOD1(stats_frequency_init, void(uint64_t));
   MOCK_METHOD1(print_fatal, void (const char *));
 };
 
@@ -111,6 +112,10 @@ void strategy_var_order_free(void) {
   MockProxy->strategy_var_order_free();
 }
 
+void stats_frequency_init(uint64_t freq) {
+  MockProxy->stats_frequency_init(freq);
+}
+
 void print_fatal(const char *fmt, ...) {
   MockProxy->print_fatal(fmt);
 }
@@ -187,6 +192,7 @@ TEST(PrintHelp, Basic) {
             "  -o --order <order>          how to order variables during solving (default: ORDER_NONE)\n"
             "  -p --patches <size>         maximum number of patches (default: " + std::to_string(PATCH_STACK_SIZE_DEFAULT) + ")\n"
             "  -r --restart-freq <int>     restart frequency when looking for any solution (default: " + std::to_string(STRATEGY_RESTART_FREQUENCY_DEFAULT) + "), set to 0 to disable\n"
+            "  -s --stats-freq <int>       statistics printing frequency (default: " + std::to_string(STATS_FREQUENCY_DEFAULT) + "), set to 0 to disable\n"
             "  -t --time <int>             maximum solving time in seconds (default: " + std::to_string(TIME_MAX_DEFAULT) + "), set to 0 to disable\n"
             "  -v --version                print version and exit\n"
             "  -w --weighten <bool>        compute weights of variables for initial order (default: true)\n");
@@ -216,6 +222,7 @@ TEST(ParseOptions, Help) {
             "  -o --order <order>          how to order variables during solving (default: ORDER_NONE)\n"
             "  -p --patches <size>         maximum number of patches (default: " + std::to_string(PATCH_STACK_SIZE_DEFAULT) + ")\n"
             "  -r --restart-freq <int>     restart frequency when looking for any solution (default: " + std::to_string(STRATEGY_RESTART_FREQUENCY_DEFAULT) + "), set to 0 to disable\n"
+            "  -s --stats-freq <int>       statistics printing frequency (default: " + std::to_string(STATS_FREQUENCY_DEFAULT) + "), set to 0 to disable\n"
             "  -t --time <int>             maximum solving time in seconds (default: " + std::to_string(TIME_MAX_DEFAULT) + "), set to 0 to disable\n"
             "  -v --version                print version and exit\n"
             "  -w --weighten <bool>        compute weights of variables for initial order (default: true)\n");
@@ -259,6 +266,7 @@ TEST(ParseOptions, Stdout) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc1, (char **)argv1);
   delete(MockProxy);
@@ -278,6 +286,7 @@ TEST(ParseOptions, Stdout) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc2, (char **)argv2);
   delete(MockProxy);
@@ -299,6 +308,7 @@ TEST(ParseOptions, NonExistentFile) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, print_fatal("%s: %s")).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
@@ -321,6 +331,7 @@ TEST(ParseOptions, Bind) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
@@ -343,6 +354,7 @@ TEST(ParseOptions, Alloc) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
@@ -365,6 +377,7 @@ TEST(ParseOptions, Jobs) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
@@ -387,6 +400,7 @@ TEST(ParseOptions, Order) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
@@ -409,6 +423,7 @@ TEST(ParseOptions, PreferFailing) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(false)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc1, (char **)argv1);
   delete(MockProxy);
@@ -429,6 +444,7 @@ TEST(ParseOptions, PreferFailing) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(true)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc2, (char **)argv2);
   delete(MockProxy);
@@ -451,6 +467,7 @@ TEST(ParseOptions, Restarts) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(1234)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc, (char **)argv);
   delete(MockProxy);
@@ -473,6 +490,7 @@ TEST(ParseOptions, Weighten) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(false)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc1, (char **)argv1);
   delete(MockProxy);
@@ -493,6 +511,7 @@ TEST(ParseOptions, Weighten) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(true)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   parse_options(argc2, (char **)argv2);
   delete(MockProxy);
@@ -601,6 +620,7 @@ TEST(Main, Basic) {
   EXPECT_CALL(*MockProxy, strategy_prefer_failing_init(STRATEGY_PREFER_FAILING_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_compute_weights_init(STRATEGY_COMPUTE_WEIGHTS_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, strategy_restart_frequency_init(STRATEGY_RESTART_FREQUENCY_DEFAULT)).Times(1);
+  EXPECT_CALL(*MockProxy, stats_frequency_init(STATS_FREQUENCY_DEFAULT)).Times(1);
   EXPECT_CALL(*MockProxy, yyset_in(stdin)).Times(1);
   EXPECT_CALL(*MockProxy, yyparse()).Times(1);
   EXPECT_CALL(*MockProxy, bind_free()).Times(1);
