@@ -1,4 +1,4 @@
-/* Copyright 2018 Wolfgang Puffitsch
+/* Copyright 2018-2019 Wolfgang Puffitsch
 
 This file is part of CSolve.
 
@@ -299,7 +299,7 @@ size_t bind_depth(void);
 /** Set the level for subsequent binds */
 void bind_level_set(size_t level);
 /** Set the current bind level */
-size_t bind_level_get();
+size_t bind_level_get(void);
 /** Bind a variable to a specific value */
 void bind(struct env_t *var, const struct val_t val, const struct wand_expr_t *clause);
 /** Undo variable binds down to a given depth */

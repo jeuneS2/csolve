@@ -39,6 +39,20 @@ struct constr_t *normal_ ## NAME(struct constr_t *constr) {             \
 }
 CONSTR_TYPE_LIST(CONSTR_TYPE_CMOCKS)
 
+TEST(CreateConflicts, Init) {
+  strategy_create_conflicts_init(true);
+  EXPECT_EQ(true, _create_conflicts);
+  strategy_create_conflicts_init(false);
+  EXPECT_EQ(false, _create_conflicts);
+}
+
+TEST(CreateConflicts, Get) {
+  _create_conflicts = true;
+  EXPECT_EQ(true, strategy_create_conflicts());
+  _create_conflicts = false;
+  EXPECT_EQ(false, strategy_create_conflicts());
+}
+
 TEST(PreferFailing, Init) {
   strategy_prefer_failing_init(true);
   EXPECT_EQ(true, _prefer_failing);
@@ -296,6 +310,262 @@ TEST(VarCmp, Error) {
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_STRATEGY_ORDER)).Times(1);
   strategy_var_cmp(&env[2], &env[1]);
   delete(MockProxy);
+}
+
+TEST(VarOrder, Parent) {
+  EXPECT_EQ(parent(1), 0);
+  EXPECT_EQ(parent(2), 0);
+  EXPECT_EQ(parent(3), 1);
+  EXPECT_EQ(parent(4), 1);
+  EXPECT_EQ(parent(5), 2);
+  EXPECT_EQ(parent(6), 2);
+}
+
+TEST(VarOrder, Left) {
+  EXPECT_EQ(left(0), 1);
+  EXPECT_EQ(left(1), 3);
+  EXPECT_EQ(left(2), 5);
+  EXPECT_EQ(left(3), 7);
+}
+
+TEST(VarOrder, Right) {
+  EXPECT_EQ(right(0), 2);
+  EXPECT_EQ(right(1), 4);
+  EXPECT_EQ(right(2), 6);
+  EXPECT_EQ(right(3), 8);
+}
+
+TEST(VarOrder, Swap) {
+  struct env_t env[3];
+
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 1, .prio = 4, .level = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 2, .prio = 5, .level = 0 };
+
+  struct env_t *v[3];
+  _var_order = v;
+  _var_order[0] = &env[0];
+  _var_order[1] = &env[1];
+  _var_order[2] = &env[2];
+
+  MockProxy = new Mock();
+  strategy_var_order_swap(0, 2);
+  EXPECT_EQ(_var_order[0], &env[2]);
+  EXPECT_EQ(0U, env[2].order);
+  EXPECT_EQ(_var_order[1], &env[1]);
+  EXPECT_EQ(1U, env[1].order);
+  EXPECT_EQ(_var_order[2], &env[0]);
+  EXPECT_EQ(2U, env[0].order);
+  delete(MockProxy);
+}
+
+TEST(VarOrder, Up) {
+  _order = ORDER_NONE;
+  _prefer_failing = true;
+
+  struct env_t env[3];
+
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 1, .prio = 4, .level = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 2, .prio = 5, .level = 0 };
+
+  _var_order_size = 3;
+
+  struct env_t *v[_var_order_size];
+  _var_order = v;
+  _var_order[0] = &env[0];
+  _var_order[1] = &env[1];
+  _var_order[2] = &env[2];
+
+  MockProxy = new Mock();
+  strategy_var_order_up(1);
+  EXPECT_EQ(_var_order[0], &env[1]);
+  EXPECT_EQ(_var_order[1], &env[0]);
+  EXPECT_EQ(_var_order[2], &env[2]);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  strategy_var_order_up(2);
+  EXPECT_EQ(_var_order[0], &env[2]);
+  EXPECT_EQ(_var_order[1], &env[0]);
+  EXPECT_EQ(_var_order[2], &env[1]);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  strategy_var_order_up(1);
+  EXPECT_EQ(_var_order[0], &env[2]);
+  EXPECT_EQ(_var_order[1], &env[0]);
+  EXPECT_EQ(_var_order[2], &env[1]);
+  delete(MockProxy);
+}
+
+TEST(VarOrder, Down) {
+  _order = ORDER_NONE;
+  _prefer_failing = true;
+
+  struct env_t env[3];
+
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 1, .prio = 4, .level = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 2, .prio = 5, .level = 0 };
+
+  _var_order_size = 3;
+
+  struct env_t *v[_var_order_size];
+  _var_order = v;
+  _var_order[0] = &env[0];
+  _var_order[1] = &env[1];
+  _var_order[2] = &env[2];
+
+  MockProxy = new Mock();
+  strategy_var_order_down(1);
+  EXPECT_EQ(_var_order[0], &env[0]);
+  EXPECT_EQ(_var_order[1], &env[1]);
+  EXPECT_EQ(_var_order[2], &env[2]);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  strategy_var_order_down(2);
+  EXPECT_EQ(_var_order[0], &env[0]);
+  EXPECT_EQ(_var_order[1], &env[1]);
+  EXPECT_EQ(_var_order[2], &env[2]);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  strategy_var_order_down(0);
+  EXPECT_EQ(_var_order[0], &env[2]);
+  EXPECT_EQ(_var_order[1], &env[1]);
+  EXPECT_EQ(_var_order[2], &env[0]);
+  delete(MockProxy);
+}
+
+TEST(VarOrder, Push) {
+  _order = ORDER_NONE;
+  _prefer_failing = true;
+
+  struct env_t env[3];
+
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = SIZE_MAX, .prio = 3, .level = 0 };
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = SIZE_MAX, .prio = 4, .level = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = SIZE_MAX, .prio = 5, .level = 0 };
+
+  _var_order_size = 0;
+  struct env_t *v[_var_order_size];
+  _var_order = v;
+
+  strategy_var_order_push(&env[0]);
+  EXPECT_EQ(_var_order_size, 1);
+  EXPECT_EQ(_var_order[0], &env[0]);
+
+  strategy_var_order_push(&env[1]);
+  EXPECT_EQ(_var_order_size, 2);
+  EXPECT_EQ(_var_order[0], &env[1]);
+  EXPECT_EQ(_var_order[1], &env[0]);
+
+  strategy_var_order_push(&env[2]);
+  EXPECT_EQ(_var_order_size, 3);
+  EXPECT_EQ(_var_order[0], &env[2]);
+  EXPECT_EQ(_var_order[1], &env[0]);
+  EXPECT_EQ(_var_order[2], &env[1]);
+}
+
+TEST(VarOrder, Pop) {
+  _order = ORDER_NONE;
+  _prefer_failing = true;
+
+  struct env_t env[3];
+
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = SIZE_MAX, .prio = 3, .level = 0 };
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = SIZE_MAX, .prio = 4, .level = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = SIZE_MAX, .prio = 5, .level = 0 };
+
+  _var_order_size = 3;
+  struct env_t *v[_var_order_size];
+  _var_order = v;
+  _var_order[0] = &env[2];
+  _var_order[1] = &env[0];
+  _var_order[2] = &env[1];
+
+  EXPECT_EQ(strategy_var_order_pop(), &env[2]);
+  EXPECT_EQ(strategy_var_order_pop(), &env[1]);
+  EXPECT_EQ(strategy_var_order_pop(), &env[0]);
+}
+
+TEST(VarOrder, Update) {
+  _order = ORDER_NONE;
+  _prefer_failing = true;
+
+  struct env_t env[3];
+
+  struct constr_t a = CONSTRAINT_TERM(INTERVAL(1, 27));
+  env[0] = { .key = "a", .val = &a, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 0, .prio = 3, .level = 0 };
+  struct constr_t b = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[1] = { .key = "b", .val = &b, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 1, .prio = 4, .level = 0 };
+  struct constr_t c = CONSTRAINT_TERM(INTERVAL(3, 17));
+  env[2] = { .key = "c", .val = &c, .binds = NULL,
+             .clauses = { .length = 0, .elems = NULL },
+             .order = 2, .prio = 5, .level = 0 };
+
+  _var_order_size = 3;
+  struct env_t *v[_var_order_size];
+  _var_order = v;
+  _var_order[0] = &env[0];
+  _var_order[1] = &env[1];
+  _var_order[2] = &env[2];
+
+  strategy_var_order_update(&env[1]);
+  EXPECT_EQ(_var_order[0], &env[2]);
+  EXPECT_EQ(_var_order[1], &env[0]);
+  EXPECT_EQ(_var_order[2], &env[1]);
 }
 
 }

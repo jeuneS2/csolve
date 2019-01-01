@@ -47,12 +47,14 @@ TESTS= \
 	test/test_alloc.c \
 	test/test_arith.c \
 	test/test_bind.c \
+	test/test_conflict.c \
 	test/test_csolve.c \
 	test/test_eval.c \
 	test/test_main.c \
 	test/test_normalize.c \
 	test/test_objective.c \
 	test/test_parser_support.c \
+	test/test_patch.c \
 	test/test_print.c \
 	test/test_propagate.c \
 	test/test_sema.c \
@@ -87,7 +89,7 @@ test/xunit-report.xml: test/test
 test: test/xunit-report.xml
 
 test/coverage-report.xml: test/xunit-report.xml
-	gcovr -r ${CURDIR} -e "test/*" -x -o test/coverage-report.xml
+	gcovr -r "${CURDIR}/test" -f "src/*" -x -o test/coverage-report.xml
 
 coverage: test/coverage-report.xml
 
@@ -113,7 +115,7 @@ doc/doxygen: ${SRC} ${HEADERS} doxygen.config
 doc: doc/doxygen
 
 clean:
-	rm -rf csolve fuzz/csolve fuzz/csolve-cov fuzz/findings test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
+	rm -rf csolve csolve-prof fuzz/csolve fuzz/csolve-cov fuzz/findings test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
 
 sonar_start:
 	${SONAR} start

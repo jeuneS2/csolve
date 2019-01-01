@@ -1,4 +1,4 @@
-/* Copyright 2018 Wolfgang Puffitsch
+/* Copyright 2018-2019 Wolfgang Puffitsch
 
 This file is part of CSolve.
 
@@ -29,34 +29,43 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/wait.h>
 #include "csolve.h"
 
-// parallelizing data
+// maximum number of active worker processes
 static uint32_t _workers_max;
+// ID of current worker process
 static uint32_t _worker_id;
+// minimum search level for current worker process
 static size_t _worker_min_level;
+
+// pointer to shared data structure
 static struct shared_t *_shared;
 
 // timeout data
 static uint32_t _time_max;
 
-// restarting data
+// number of fails since last restart
 static uint32_t _fail_count = 0;
+// threshold for when to restart next
 static uint64_t _fail_threshold = 1;
+// counter to calculate Luby sequence for restart threshold
 static uint64_t _fail_threshold_counter = 1;
 
-// statistics
+// print statistics
 static void print_stats(FILE *file) {
   fprintf(file, "#%d: ", _worker_id);
   stats_print(file);
   fprintf(file, ", SOLUTIONS: %lu\n", shared()->solutions);
   fflush(file);
+  // reset minimum/maximum search level
   stat_reset_level_min();
   stat_reset_level_max();
 }
 
+// update statistics
 static void update_stats(size_t level) {
   stat_min_level_min(level);
   stat_max_level_max(level);
   stat_inc_calls();
+  // print statistics periodically
   if ((stats_frequency() != 0) && (stat_get_calls() % stats_frequency() == 0)) {
     print_stats(stdout);
   }
@@ -72,6 +81,7 @@ void fail_threshold_next(void) {
   }
 }
 
+// initialize shared data
 void shared_init(uint32_t workers_max) {
   _workers_max = workers_max;
   _shared = (struct shared_t *)mmap(NULL, sizeof(struct shared_t),
@@ -85,12 +95,16 @@ void shared_init(uint32_t workers_max) {
   _worker_min_level = 0;
 }
 
+// return pointer to shared data
 struct shared_t *shared(void) {
   return _shared;
 }
 
+// spawn a new worker process
 void worker_spawn(struct env_t *var, size_t level) {
 
+  // spawn a new worker only if the current variable does not have a
+  // value yet and there may be room for new workers
   if (!is_value(var->val->constr.term.val) && shared()->workers < _workers_max) {
 
     sema_wait(&shared()->semaphore);
@@ -103,6 +117,7 @@ void worker_spawn(struct env_t *var, size_t level) {
     int32_t id = ++shared()->workers_id;
     sema_post(&shared()->semaphore);
 
+    // split interval of variable in half
     domain_t lo = get_lo(var->val->constr.term.val);
     domain_t hi = get_hi(var->val->constr.term.val);
     domain_t mid = (lo + hi) / 2;
@@ -135,6 +150,7 @@ void worker_spawn(struct env_t *var, size_t level) {
   }
 }
 
+// wait for all child processes to terminate
 void await_children(void) {
   for (;;) {
     int status;
@@ -145,17 +161,21 @@ void await_children(void) {
   }
 }
 
+// let this worker process die
 void worker_die(void) {
   sema_wait(&shared()->semaphore);
   shared()->workers--;
   sema_post(&shared()->semaphore);
 
+  // wait for all children before actually dying
   await_children();
 
+  // print final statistics
   if (stat_get_calls() > 0) {
     print_stats(stdout);
   }
 
+  // print termination information when "main" process dies
   if (_worker_id == 1) {
     if (shared()->timeout) {
       fprintf(stdout, "TIMEOUT\n");
@@ -166,38 +186,46 @@ void worker_die(void) {
   }
 }
 
+// initialize solving timeout
 void timeout_init(uint32_t time_max) {
   _time_max = time_max;
 }
 
+// signal timeout through shared data structure
 static void timeout(int signal) {
   shared()->timeout = true;
 }
 
+// start the solving timeout
 static void timeout_start(void) {
   signal(SIGALRM, timeout);
   alarm(_time_max);
 }
 
-// algorithm helper functions
+// check whether a solution was found when looking for any solution
 static inline bool found_any(void) {
   return objective() == OBJ_ANY && shared()->solutions > 0;
 }
 
+// check whether the search can be restarted at any point
 static inline bool is_restartable(void) {
   return objective() == OBJ_ANY && strategy_restart_frequency() > 0;
 }
 
+// check whether the search can be restarted when a new solution is found
 static inline bool is_solution_restartable(void) {
   return objective() != OBJ_ALL;
 }
 
+// update the current solution
 static bool update_solution(size_t size, struct env_t *env, struct constr_t *constr) {
   bool updated = false;
 
+  // only update solution if it is actually valid
   if (is_true(constr->type->eval(constr))) {
     sema_wait(&shared()->semaphore);
 
+    // only print solution if it is actually better (inside semaphore to avoid race)
     if (!found_any() && objective_better()) {
 
       objective_update_best();
@@ -214,6 +242,7 @@ static bool update_solution(size_t size, struct env_t *env, struct constr_t *con
   return updated;
 }
 
+// check the assignment of a value to a variable
 static bool check_assignment(struct env_t *var, size_t level) {
   // propagate values
   bool failed =
@@ -230,8 +259,8 @@ static bool check_assignment(struct env_t *var, size_t level) {
   return failed;
 }
 
+// check whether search should restart
 static bool check_restart(void) {
-  // check whether search should restart
   if (is_restartable()) {
     _fail_count++;
 
@@ -245,8 +274,8 @@ static bool check_restart(void) {
   return false;
 }
 
+// set up iteration for a search step
 static void step_activate(struct step_t *step, struct env_t *var) {
-  // set up iteration
   step->active = true;
   step->var = var;
   step->bounds = var->val->constr.term.val;
@@ -254,11 +283,13 @@ static void step_activate(struct step_t *step, struct env_t *var) {
   step->seed = is_restartable() ? rand() : 0;
 }
 
+// tear down iteration for a search step
 static void step_deactivate(struct step_t *step){
   strategy_var_order_push(step->var);
   step->active = false;
 }
 
+// enter a search step
 static void step_enter(struct step_t *step, domain_t val) {
   // mark how much memory is allocated
   step->alloc_marker = alloc(0);
@@ -271,6 +302,7 @@ static void step_enter(struct step_t *step, domain_t val) {
   }
 }
 
+// leave a search step
 static void step_leave(struct step_t *step) {
   // unbind variable
   unbind(step->bind_depth);
@@ -280,19 +312,21 @@ static void step_leave(struct step_t *step) {
   dealloc(step->alloc_marker);
 }
 
+// advance iteration for a search step
 static void step_next(struct step_t *step) {
   // continue with next iteration
   step->iter++;
 }
 
+// check if search space for this variable is exhausted
 static bool step_check(struct step_t *step) {
-  // check if search space for this variable is exhausted
   udomain_t i = step->iter;
   domain_t lo = get_lo(step->bounds);
   domain_t hi = get_hi(step->bounds);
   return i <= (udomain_t)(hi - lo);
 }
 
+// get value to assign in this search step to the variable
 static domain_t step_val(struct step_t *step) {
   // search from the edges of the interval
   udomain_t i = step->iter;
@@ -302,6 +336,7 @@ static domain_t step_val(struct step_t *step) {
   return ((i ^ s) & 1) ? hi - (i >> 1) : lo + (i >> 1);
 }
 
+// unwind the search stack down to a certain level
 static void unwind(struct step_t *steps, size_t level, size_t stop) {
   // unwind search steps up to a specified level
   for (size_t i = level; i != (stop-1); --i) {
@@ -310,11 +345,14 @@ static void unwind(struct step_t *steps, size_t level, size_t stop) {
   }
 }
 
+// back-track search process until a conflict can be resolved
 static size_t conflict_backtrack(struct step_t *steps, size_t level) {
   prop_result_t p = PROP_ERROR;
+  // unwind search stack down to the conflict level
   if (conflict_level() <= level) {
     unwind(steps, level, level);
   }
+  // keep backtracking while there are (new) conflicts
   while (p == PROP_ERROR && conflict_level() <= level) {
     unwind(steps, level-1, conflict_level());
     level = conflict_level();

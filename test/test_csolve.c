@@ -656,4 +656,35 @@ TEST(Step, Val) {
   EXPECT_NE(v1, v2);
 }
 
+TEST(Val, IsValue) {
+  EXPECT_EQ(is_value(VALUE(7)), true);
+  EXPECT_EQ(is_value(INTERVAL(7, 8)), false);
+}
+
+TEST(Val, IsTrue) {
+  EXPECT_EQ(is_true(VALUE(7)), true);
+  EXPECT_EQ(is_true(VALUE(0)), false);
+  EXPECT_EQ(is_true(INTERVAL(7, 8)), true);
+  EXPECT_EQ(is_true(INTERVAL(0, 1)), false);
+  EXPECT_EQ(is_true(INTERVAL(-4, -3)), true);
+}
+
+TEST(Val, IsFalse) {
+  EXPECT_EQ(is_false(VALUE(7)), false);
+  EXPECT_EQ(is_false(VALUE(0)), true);
+  EXPECT_EQ(is_false(INTERVAL(7, 8)), false);
+  EXPECT_EQ(is_false(INTERVAL(0, 1)), false);
+  EXPECT_EQ(is_false(INTERVAL(-4, -3)), false);
+}
+
+TEST(Constr, IsConst) {
+  struct constr_t A = CONSTRAINT_TERM(VALUE(2));
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(-3, 1));
+  struct constr_t X = CONSTRAINT_EXPR(LT, &B, &A);
+
+  EXPECT_EQ(is_const(&A), true);
+  EXPECT_EQ(is_const(&B), false);
+  EXPECT_EQ(is_const(&X), false);
+}
+
 }

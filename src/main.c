@@ -1,4 +1,4 @@
-/* Copyright 2018 Wolfgang Puffitsch
+/* Copyright 2018-2019 Wolfgang Puffitsch
 
 This file is part of CSolve.
 
@@ -19,6 +19,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <getopt.h>
 #include <errno.h>
 #include <semaphore.h>
@@ -28,19 +29,24 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "parser.h"
 #include "version.h"
 
+// macros to convert defines to strings
 #define STR(X) #X
 #define STRVAL(X) STR(X)
 
+// definitions of suffixes
 #define KILO 1024
 #define MEGA (KILO * KILO)
 #define GIGA (KILO * KILO * KILO)
 
+// declarations for functions provided by the lexer
 void yyset_in(FILE *);
 FILE *yyget_in(void);
 int yylex_destroy(void);
 
+// maximum number of options, enough to accept one byte
 #define OPTIONS_MAX 0x100
 
+// list of all options
 #define OPTION_LIST(F)                                                  \
   F('b', "binds", required_argument, "b:",                              \
     { bind_init(parse_size(optarg)); },                                 \
@@ -125,120 +131,154 @@ int yylex_destroy(void);
 
 static const char *_main_name;
 
+// return the name of the program
 const char *main_name() {
   return _main_name;
 }
 
-void print_version(FILE *file) {
+// print the program version
+static void print_version(FILE *file) {
   fprintf(file, "%s\n", VERSION);
   fprintf(file, "%s\n", COPYRIGHT);
   fprintf(file, "This is free software; see the source for copying conditions.  There is NO\n"
                 "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
 }
 
-void print_usage(FILE *file) {
+// print the basic program usage
+static void print_usage(FILE *file) {
   fprintf(file, "Usage: %s [<options>] [<file>]\n", _main_name);
 }
 
+// macro to print the help text from an entry in the option list
 #define OPTION_HELP(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...) \
   fprintf(file, "  " __VA_ARGS__);
 
-void print_help(FILE *file) {
+// print the full help text
+static void print_help(FILE *file) {
   print_usage(file);
   fprintf(file, "Options:\n");
   OPTION_LIST(OPTION_HELP)
 }
 
-bool parse_bool(const char *str) {
+// parse a string to a boolean
+static bool parse_bool(const char *str) {
   if (strcmp(str, STR(true)) == 0) {
     return true;
-  } else if (strcmp(str, STR(false)) == 0) {
-    return false;
-  } else {
-    print_fatal(ERROR_MSG_INVALID_BOOL_ARG, str);
   }
+  if (strcmp(str, STR(false)) == 0) {
+    return false;
+  }
+
+  // die if the string could not be parsed
+  print_fatal(ERROR_MSG_INVALID_BOOL_ARG, str);
   return false;
 }
 
-int32_t parse_int(const char *str) {
+// parse a string to an integer
+static int32_t parse_int(const char *str) {
   char *endptr;
   int32_t size = strtol(str, &endptr, 0);
+
   if (endptr[0] == '\0') {
     return size;
-  } else {
-    print_fatal(ERROR_MSG_INVALID_INT_ARG, str);
   }
+
+  // die if the string could not be parsed
+  print_fatal(ERROR_MSG_INVALID_INT_ARG, str);
   return 0;
 }
 
-enum order_t parse_order(const char *str) {
+// parse a string to a variable ordering
+static enum order_t parse_order(const char *str) {
   if (strcmp(str, "none") == 0) {
     return ORDER_NONE;
-  } else if (strcmp(str, "smallest-domain") == 0) {
-    return ORDER_SMALLEST_DOMAIN;
-  } else if (strcmp(str, "largest-domain") == 0) {
-    return ORDER_LARGEST_DOMAIN;
-  } else if (strcmp(str, "smallest-value") == 0) {
-    return ORDER_SMALLEST_VALUE;
-  } else if (strcmp(str, "largest-value") == 0) {
-    return ORDER_LARGEST_VALUE;
-  } else {
-    print_fatal(ERROR_MSG_INVALID_ORDER_ARG, str);
   }
+  if (strcmp(str, "smallest-domain") == 0) {
+    return ORDER_SMALLEST_DOMAIN;
+  }
+  if (strcmp(str, "largest-domain") == 0) {
+    return ORDER_LARGEST_DOMAIN;
+  }
+  if (strcmp(str, "smallest-value") == 0) {
+    return ORDER_SMALLEST_VALUE;
+  }
+  if (strcmp(str, "largest-value") == 0) {
+    return ORDER_LARGEST_VALUE;
+  }
+
+  // die if the string could not be parsed
+  print_fatal(ERROR_MSG_INVALID_ORDER_ARG, str);
   return ORDER_NONE;
 }
 
-size_t parse_size(const char *str) {
+// parse a string to a size (accepting an integer with a possible k/M/G suffix)
+static size_t parse_size(const char *str) {
   char *endptr;
   size_t size = strtoll(str, &endptr, 0);
+
+  // check if plain integer
   if (endptr[0] == '\0') {
     return size;
-  } else if ((endptr[0] == 'k' || endptr[0] == 'K') && endptr[1] == '\0') {
-    return size * KILO;
-  } else if ((endptr[0] == 'm' || endptr[0] == 'M') && endptr[1] == '\0') {
-    return size * MEGA;
-  } else if ((endptr[0] == 'g' || endptr[0] == 'G') && endptr[1] == '\0') {
-    return size * GIGA;
-  } else {
-    print_fatal(ERROR_MSG_INVALID_SIZE_ARG, str);
   }
+  // check if integer wit k/M/G suffix, ignoring case
+  if (toupper(endptr[0]) == 'K' && endptr[1] == '\0') {
+    return size * KILO;
+  }
+  if (toupper(endptr[0]) == 'M' && endptr[1] == '\0') {
+    return size * MEGA;
+  }
+  if (toupper(endptr[0]) == 'G' && endptr[1] == '\0') {
+    return size * GIGA;
+  }
+
+  // die if the string could not be parsed
+  print_fatal(ERROR_MSG_INVALID_SIZE_ARG, str);
   return 0;
 }
 
-
+// macro to extract the short option from an entry in the option list
 #define OPTION_SHORT(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)       \
   SHORT
 
+// macro to extract the long option from an entry in the option list
 #define OPTION_LONG(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)        \
   { LONG, ARG, 0, VAL },
 
+// macro to perform the matching action for an option
 #define OPTION_MATCH(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)       \
   case VAL: { MATCH; } break;
 
+// macro to perform the default action for an option
 #define OPTION_DEFAULT(VAL, LONG, ARG, SHORT, MATCH, DEFAULT, ...)     \
   if (!seen[VAL]) { DEFAULT; }
 
-void parse_options(int argc, char **argv) {
+// parse all program options
+static void parse_options(int argc, char **argv) {
 
+  // option arrays for getopt
   static const char *short_options = OPTION_LIST(OPTION_SHORT);
   static struct option long_options[] = {
     OPTION_LIST(OPTION_LONG)
     {0, 0, 0, 0 }
   };
 
+  // initialize array of previously seen options
   bool seen [OPTIONS_MAX];
   for (size_t i = 0; i < sizeof(seen)/sizeof(seen[0]); i++) {
     seen[i] = false;
   }
 
+  // iterate over all command-line options
   int c;
   while ((c = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
+    // allow options only once
     if (seen[c % OPTIONS_MAX]) {
       print_usage(stderr);
       exit(EXIT_FAILURE);
     }
     seen[c % OPTIONS_MAX] = true;
 
+    // perform actions when matching an option
     switch(c) {
       OPTION_LIST(OPTION_MATCH);
     default:
@@ -247,15 +287,18 @@ void parse_options(int argc, char **argv) {
     }
   }
 
+  // check that there is at most one additional argument
   if (optind < argc-1) {
     print_usage(stderr);
     exit(EXIT_FAILURE);
   }
 
+  // perform default actions for options not seen previously
   OPTION_LIST(OPTION_DEFAULT);
 
   FILE *in = stdin;
 
+  // open file as needed, otherwise keep stdin
   if (optind == argc-1 && strcmp(argv[optind], "-") != 0) {
     in = fopen(argv[optind], "r");
     if (in == NULL) {
@@ -266,7 +309,8 @@ void parse_options(int argc, char **argv) {
   yyset_in(in);
 }
 
-void cleanup() {
+// clean up resource allocations
+static void cleanup() {
   bind_free();
   patch_free();
   alloc_free();
@@ -276,6 +320,7 @@ void cleanup() {
   yylex_destroy();
 }
 
+// the main function
 int main(int argc, char **argv) {
   _main_name = argv[0];
 

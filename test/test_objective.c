@@ -203,12 +203,36 @@ TEST(ObjectiveUpdateBest, Basic) {
   domain_t best;
   _objective_best = &best;
 
+  _objective = OBJ_ANY;
+  *_objective_best = -1;
+  _objective_val = CONSTRAINT_TERM(VALUE(17));
+  MockProxy = new Mock();
+  objective_update_best();
+  EXPECT_EQ(-1, *_objective_best);
+  delete(MockProxy);
+
+  _objective = OBJ_ALL;
+  *_objective_best = -1;
+  _objective_val = CONSTRAINT_TERM(VALUE(17));
+  MockProxy = new Mock();
+  objective_update_best();
+  EXPECT_EQ(-1, *_objective_best);
+  delete(MockProxy);
+
   _objective = OBJ_MAX;
   *_objective_best = -1;
   _objective_val = CONSTRAINT_TERM(VALUE(17));
   MockProxy = new Mock();
   objective_update_best();
   EXPECT_EQ(17, *_objective_best);
+  delete(MockProxy);
+
+   _objective = OBJ_MIN;
+  *_objective_best = -1;
+  _objective_val = CONSTRAINT_TERM(VALUE(-17));
+  MockProxy = new Mock();
+  objective_update_best();
+  EXPECT_EQ(-17, *_objective_best);
   delete(MockProxy);
 }
 
@@ -217,6 +241,62 @@ TEST(ObjectiveUpdateBest, Errors) {
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE)).Times(1);
   _objective = (objective_t)-1;
   objective_update_best();
+  delete(MockProxy);
+}
+
+TEST(ObjectiveUpdateVal, AnyAll) {
+  domain_t best;
+  _objective_best = &best;
+  *_objective_best = 99;
+
+  _objective = OBJ_ANY;
+  _objective_val = CONSTRAINT_TERM(VALUE(17));
+  objective_update_val();
+  EXPECT_EQ(_objective_val.constr.term.val, VALUE(17));
+
+  _objective = OBJ_ALL;
+  _objective_val = CONSTRAINT_TERM(VALUE(17));
+  objective_update_val();
+  EXPECT_EQ(_objective_val.constr.term.val, VALUE(17));
+}
+
+TEST(ObjectiveUpdateVal, Min) {
+  domain_t best;
+  _objective_best = &best;
+  _objective = OBJ_MIN;
+
+  *_objective_best = 13;
+  _objective_val = CONSTRAINT_TERM(INTERVAL(0, 17));
+  objective_update_val();
+  EXPECT_EQ(_objective_val.constr.term.val, INTERVAL(0, 12));
+
+  *_objective_best = 77;
+  _objective_val = CONSTRAINT_TERM(INTERVAL(0, 17));
+  objective_update_val();
+  EXPECT_EQ(_objective_val.constr.term.val, INTERVAL(0, 17));
+}
+
+TEST(ObjectiveUpdateVal, Max) {
+  domain_t best;
+  _objective_best = &best;
+  _objective = OBJ_MAX;
+
+  *_objective_best = 13;
+  _objective_val = CONSTRAINT_TERM(INTERVAL(17, 99));
+  objective_update_val();
+  EXPECT_EQ(_objective_val.constr.term.val, INTERVAL(17, 99));
+
+  *_objective_best = 77;
+  _objective_val = CONSTRAINT_TERM(INTERVAL(17, 99));
+  objective_update_val();
+  EXPECT_EQ(_objective_val.constr.term.val, INTERVAL(78, 99));
+}
+
+TEST(ObjectiveUpdateVal, Errors) {
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OBJ_FUNC_TYPE)).Times(1);
+  _objective = (objective_t)-1;
+  objective_update_val();
   delete(MockProxy);
 }
 

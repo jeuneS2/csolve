@@ -1,4 +1,4 @@
-/* Copyright 2018 Wolfgang Puffitsch
+/* Copyright 2018-2019 Wolfgang Puffitsch
 
 This file is part of CSolve.
 
@@ -20,6 +20,6 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #define VERSION_H
 
 #define VERSION   "csolve 0.0.1"
-#define COPYRIGHT "Copyright (C) 2018 Wolfgang Puffitsch"
+#define COPYRIGHT "Copyright (C) 2018-2019 Wolfgang Puffitsch"
 
 #endif

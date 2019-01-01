@@ -291,6 +291,42 @@ TEST(EnvGenerate, Basic) {
   delete(MockProxy);
 }
 
+TEST(EnvGenerate, Unbounded) {
+  _vars = 0;
+  _var_count = 0;
+  struct constr_t v1 = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, 0));
+  vars_add("k1", &v1);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_UNBOUNDED_VARIABLE)).Times(1);
+  env_generate();
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("k1") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&v1) % TABLE_SIZE]));
+  keytab_free();
+  valtab_free();
+  delete(MockProxy);
+
+  _vars = 0;
+  _var_count = 0;
+  struct constr_t v2 = CONSTRAINT_TERM(INTERVAL(0, DOMAIN_MAX));
+  vars_add("k2", &v2);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_UNBOUNDED_VARIABLE)).Times(1);
+  env_generate();
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, free(_keytab[hash_str("k2") % TABLE_SIZE]));
+  EXPECT_CALL(*MockProxy, free(_valtab[hash_val(&v2) % TABLE_SIZE]));
+  keytab_free();
+  valtab_free();
+  delete(MockProxy);
+}
+
 TEST(EnvFree, Basic) {
   struct wand_expr_t w;
   struct wand_expr_t *x [1] = { &w };
@@ -306,6 +342,7 @@ TEST(EnvFree, Basic) {
              .clauses = { .length = 0, .elems = y },
              .order = 0, .prio = 4, .level = 0 };
   _vars = env;
+  _var_count = 2;
 
   MockProxy = new Mock();
   EXPECT_CALL(*MockProxy, free((void *)env[0].key));

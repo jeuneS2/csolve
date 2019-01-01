@@ -193,6 +193,138 @@ TEST(PropagateEq, Value) {
   delete(MockProxy);
 }
 
+TEST(PropagateEq, False) {
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(3, 7));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+  struct constr_t B = CONSTRAINT_TERM(VALUE(3));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(7));
+  struct constr_t M = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t N = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, bind(&e, INTERVAL(4, 7), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, INTERVAL(3, 6), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &M);
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &N);
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+   MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &B, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, INTERVAL(4, 7), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &C, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, INTERVAL(3, 6), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &M, &A);
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &N, &A);
+  EXPECT_EQ(PROP_NONE, propagate_eq(&X, VALUE(0), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateEq, True) {
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(3, 7));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+  struct constr_t B = CONSTRAINT_TERM(VALUE(3));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(7));
+  struct constr_t M = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t N = CONSTRAINT_TERM(VALUE(9));
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &B);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(3), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(7), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &M);
+  EXPECT_EQ(PROP_ERROR, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &A, &N);
+  EXPECT_EQ(PROP_ERROR, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &B, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(3), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &C, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(7), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &M, &A);
+  EXPECT_CALL(*MockProxy, strategy_create_conflicts())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(false));
+  EXPECT_CALL(*MockProxy, strategy_var_order_update(&e))
+    .Times(1);
+  EXPECT_EQ(PROP_ERROR, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &N, &A);
+  EXPECT_CALL(*MockProxy, strategy_create_conflicts())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(false));
+  EXPECT_CALL(*MockProxy, strategy_var_order_update(&e))
+    .Times(1);
+  EXPECT_EQ(PROP_ERROR, propagate_eq(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
 TEST(PropagateEq, Interval) {
   struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 23));
   struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
@@ -237,12 +369,151 @@ TEST(PropagateLt, Value) {
   delete(MockProxy);
 
   MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &B, &A);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
   X = CONSTRAINT_EXPR(LT, &A, &B);
   EXPECT_EQ(PROP_NONE, propagate_lt(&X, INTERVAL(0, 1), NULL));
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(LT, &A, &B);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &B, &A);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateLt, False) {
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(3, 7));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+  struct constr_t B = CONSTRAINT_TERM(VALUE(3));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(7));
+  struct constr_t M = CONSTRAINT_TERM(VALUE(DOMAIN_MAX));
+  struct constr_t N = CONSTRAINT_TERM(VALUE(DOMAIN_MIN));
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &B);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(7), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &M);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &N);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &B, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(3), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &C, &A);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &M, &A);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &N, &A);
+  EXPECT_CALL(*MockProxy, strategy_create_conflicts())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(false));
+  EXPECT_CALL(*MockProxy, strategy_var_order_update(&e))
+    .Times(1);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(0), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateLt, True) {
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(3, 7));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+  struct constr_t B = CONSTRAINT_TERM(VALUE(3));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(7));
+  struct constr_t M = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t N = CONSTRAINT_TERM(VALUE(9));
+  struct constr_t X;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &B);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, INTERVAL(3, 6), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &M);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &A, &N);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &B, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, INTERVAL(4, 7), NULL))
+    .Times(1);
+  EXPECT_EQ(1, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &C, &A);
+  EXPECT_CALL(*MockProxy, strategy_create_conflicts())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(false));
+  EXPECT_CALL(*MockProxy, strategy_var_order_update(&e))
+    .Times(1);
+  EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &M, &A);
+  EXPECT_EQ(PROP_NONE, propagate_lt(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &N, &A);
+  EXPECT_CALL(*MockProxy, strategy_create_conflicts())
+    .Times(::testing::AtLeast(1))
+    .WillRepeatedly(::testing::Return(false));
+  EXPECT_CALL(*MockProxy, strategy_var_order_update(&e))
+    .Times(1);
   EXPECT_EQ(PROP_ERROR, propagate_lt(&X, VALUE(1), NULL));
   delete(MockProxy);
 }
@@ -564,16 +835,43 @@ TEST(PropagateAnd, Value) {
   X = CONSTRAINT_EXPR(AND, &A, &B);
   EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1), NULL));
   delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &B, &A);
+  EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1), NULL));
+  delete(MockProxy);
 }
 
 TEST(PropagateAnd, Interval) {
   struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
   struct constr_t B = CONSTRAINT_TERM(VALUE(0));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(1));
   struct constr_t X;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(AND, &A, &B);
-  EXPECT_EQ(PROP_NONE, propagate_and(&X, VALUE(0), NULL));
+  EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &B, &A);
+  EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(1), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_and(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &C, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(1), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_and(&X, VALUE(1), NULL));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -583,7 +881,24 @@ TEST(PropagateAnd, Interval) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(AND, &A, &B);
-  EXPECT_EQ(PROP_ERROR, propagate_and(&X, VALUE(1), NULL));
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &B, &A);
+  EXPECT_EQ(PROP_NONE, propagate_and(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(0), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_and(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &C, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(0), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_and(&X, VALUE(0), NULL));
   delete(MockProxy);
 }
 
@@ -611,16 +926,43 @@ TEST(PropagateOr, Value) {
   X = CONSTRAINT_EXPR(OR, &A, &B);
   EXPECT_EQ(PROP_ERROR, propagate_or(&X, VALUE(0), NULL));
   delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &B, &A);
+  EXPECT_EQ(PROP_ERROR, propagate_or(&X, VALUE(0), NULL));
+  delete(MockProxy);
 }
 
 TEST(PropagateOr, Interval) {
   struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
   struct constr_t B = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t C = CONSTRAINT_TERM(VALUE(0));
   struct constr_t X;
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OR, &A, &B);
   EXPECT_EQ(PROP_NONE, propagate_or(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &B, &A);
+  EXPECT_EQ(PROP_NONE, propagate_or(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(1), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_or(&X, VALUE(1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &C, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(1), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_or(&X, VALUE(1), NULL));
   delete(MockProxy);
 
   MockProxy = new Mock();
@@ -631,6 +973,23 @@ TEST(PropagateOr, Interval) {
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OR, &A, &B);
   EXPECT_EQ(PROP_ERROR, propagate_or(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &B, &A);
+  EXPECT_EQ(PROP_ERROR, propagate_or(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &A, &C);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(0), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_or(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &C, &A);
+  EXPECT_CALL(*MockProxy, bind(&e, VALUE(0), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_or(&X, VALUE(0), NULL));
   delete(MockProxy);
 }
 
@@ -646,6 +1005,152 @@ TEST(PropagateWand, Basic) {
 
   MockProxy = new Mock();
   EXPECT_EQ(PROP_ERROR, propagate_wand(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateConfl, Basic) {
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct env_t f = { .key = NULL, .val = &B, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  B.constr.term.env = &f;
+
+  struct confl_elem_t E [2] = { { .val = VALUE(0), .var = &A }, { .val = VALUE(1), .var = &B } };
+  struct constr_t X = CONSTRAINT_CONFL(2, E);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, INTERVAL(0, 1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, bind(&f, VALUE(0), NULL)).Times(1);
+  EXPECT_EQ(1, propagate_confl(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateConfl, NonConfl) {
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+
+  struct constr_t B = CONSTRAINT_TERM(VALUE(0));
+  struct env_t f = { .key = NULL, .val = &B, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  B.constr.term.env = &f;
+
+  struct confl_elem_t E [2] = { { .val = VALUE(0), .var = &A }, { .val = VALUE(1), .var = &B } };
+  struct constr_t X = CONSTRAINT_CONFL(2, E);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, INTERVAL(0, 1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateConfl, TwoVars) {
+  struct constr_t A = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct env_t f = { .key = NULL, .val = &B, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  B.constr.term.env = &f;
+
+  struct confl_elem_t E [2] = { { .val = VALUE(0), .var = &A }, { .val = VALUE(1), .var = &B } };
+  struct constr_t X = CONSTRAINT_CONFL(2, E);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, INTERVAL(0, 1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateConfl, DomainMin) {
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct env_t f = { .key = NULL, .val = &B, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  B.constr.term.env = &f;
+
+  struct confl_elem_t E [2] = { { .val = VALUE(0), .var = &A }, { .val = VALUE(DOMAIN_MIN), .var = &B } };
+  struct constr_t X = CONSTRAINT_CONFL(2, E);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, INTERVAL(0, 1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(1), NULL));
+  delete(MockProxy);
+}
+
+TEST(PropagateConfl, DomainMax) {
+  struct constr_t A = CONSTRAINT_TERM(VALUE(0));
+  struct env_t e = { .key = NULL, .val = &A, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  A.constr.term.env = &e;
+
+  struct constr_t B = CONSTRAINT_TERM(INTERVAL(DOMAIN_MIN, DOMAIN_MAX));
+  struct env_t f = { .key = NULL, .val = &B, .binds = NULL,
+                     .clauses = { .length = 0, .elems = NULL },
+                     .order = 0, .prio = 0, .level = 0 };
+  B.constr.term.env = &f;
+
+  struct confl_elem_t E [2] = { { .val = VALUE(0), .var = &A }, { .val = VALUE(DOMAIN_MAX), .var = &B } };
+  struct constr_t X = CONSTRAINT_CONFL(2, E);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, INTERVAL(0, 1), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(0), NULL));
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_EQ(PROP_NONE, propagate_confl(&X, VALUE(1), NULL));
   delete(MockProxy);
 }
 

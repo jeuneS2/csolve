@@ -1,4 +1,4 @@
-/* Copyright 2018 Wolfgang Puffitsch
+/* Copyright 2018-2019 Wolfgang Puffitsch
 
 This file is part of CSolve.
 
@@ -24,6 +24,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <limits.h>
 #include "csolve.h"
 
+// print value
 void print_val(FILE *file, const struct val_t val) {
   if (is_value(val)) {
     fprintf(file, " %d", get_lo(val));
@@ -32,6 +33,7 @@ void print_val(FILE *file, const struct val_t val) {
   }
 }
 
+// print expression
 void print_constr(FILE *file, const struct constr_t *constr) {
   if (IS_TYPE(TERM, constr)) {
     print_val(file, constr->constr.term.val);
@@ -50,6 +52,7 @@ void print_constr(FILE *file, const struct constr_t *constr) {
   }
 }
 
+// print variable environment
 void print_env(FILE *file, size_t size, struct env_t *env) {
   for (size_t i = 0; i < size; i++) {
     fprintf(file, "%s =", env[i].key);
@@ -58,18 +61,21 @@ void print_env(FILE *file, size_t size, struct env_t *env) {
   }
 }
 
+//print solution
 void print_solution(FILE *file, size_t size, struct env_t *env) {
   fprintf(file, "SOLUTION: ");
   print_env(file, size, env);
   fprintf(file, "BEST: %d\n", objective_best());
 }
 
+// helper function to print errors
 static void vprint_error(const char *fmt, va_list ap) {
     fprintf(stderr, "%s: error: ", main_name());
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
 }
 
+// print error message
 void print_error(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -77,6 +83,7 @@ void print_error(const char *fmt, ...) {
     va_end(args);
 }
 
+// print error message and die
 void print_fatal(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
