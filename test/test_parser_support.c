@@ -140,6 +140,13 @@ TEST(VarsFindVal, NotFound) {
   delete(MockProxy);
 }
 
+TEST(VarCount, Basic) {
+  _var_count = 11;
+  EXPECT_EQ(11U, var_count());
+  _var_count = 13;
+  EXPECT_EQ(13U, var_count());
+}
+
 TEST(VarsAdd, Basic) {
   _vars = NULL;
   _var_count = 0;
@@ -381,6 +388,147 @@ TEST(ExprListFree, Basic) {
   EXPECT_CALL(*MockProxy, free(l2)).Times(1);
   EXPECT_CALL(*MockProxy, free(l3)).Times(1);
   expr_list_free(l3);
+  delete(MockProxy);
+}
+
+TEST(ClausesInit, Term) {
+  struct constr_t e1 = CONSTRAINT_TERM(VALUE(1));
+  struct constr_t e2 = CONSTRAINT_TERM(INTERVAL(0, 1));
+
+  struct env_t v[2]  = { { "x", &e1, NULL, {0, NULL}, 0, 0, 0 },
+                         { "y", &e2, NULL, {0, NULL}, 1, 3, 0 } };
+  e1.constr.term.env = &v[0];
+  e2.constr.term.env = &v[1];
+
+  struct wand_expr_t w;
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
+  clauses_init(&e1, NULL);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
+  clauses_init(&e1, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
+  clauses_init(&e2, NULL);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&e2, &w);
+  delete(MockProxy);
+}
+
+TEST(ClausesInit, Wand) {
+  struct constr_t e1 = CONSTRAINT_TERM(VALUE(11));
+  struct constr_t e2 = CONSTRAINT_TERM(INTERVAL(0,1));
+  struct env_t v[2]  = { { "x", &e1, NULL, {0, NULL}, 0, 0, 0 },
+                         { "y", &e2, NULL, {0, NULL}, 1, 3, 0 } };
+  e1.constr.term.env = &v[0];
+  e2.constr.term.env = &v[1];
+
+  struct wand_expr_t E [2] = { { .constr = &e1, .orig = &e1, .prop_tag = 0 }, { .constr = &e2, .orig = &e2, .prop_tag = 0 } };
+  struct constr_t X = CONSTRAINT_WAND(2, E);
+
+  struct wand_expr_t F [2] = { { .constr = &e1, .orig = &e1, .prop_tag = 0 }, { .constr = &X, .orig = &X, .prop_tag = 0 } };
+  struct constr_t Y = CONSTRAINT_WAND(2, F);
+
+  MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &E[1])).Times(1);
+  clauses_init(&Y, NULL);
+  delete(MockProxy);
+}
+
+TEST(ClausesInit, Expr) {
+  struct constr_type_t CONSTR_FOO = { NULL, NULL, NULL, (enum operator_t)-1 };
+
+  struct constr_t e1 = CONSTRAINT_TERM(INTERVAL(2, 3));
+  struct constr_t e2 = CONSTRAINT_TERM(INTERVAL(0, 1));
+  struct constr_t e3 = CONSTRAINT_TERM(VALUE(1));
+
+  struct env_t v[2]  = { { "x", &e1, NULL, {0, NULL}, 0, 0, 0 },
+                         { "y", &e2, NULL, {0, NULL}, 1, 3, 0 } };
+  e1.constr.term.env = &v[0];
+  e2.constr.term.env = &v[1];
+
+  struct constr_t X;
+
+  struct wand_expr_t w;
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
+  clauses_init(&X, NULL);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &e3, &e3);
+  EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(EQ, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(LT, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(ADD, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(MUL, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(AND, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(OR, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(NEG, &e1, NULL);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(NOT, &e1, NULL);
+  EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  clauses_init(&X, &w);
+  delete(MockProxy);
+
+  MockProxy = new Mock();
+  X = CONSTRAINT_EXPR(FOO, NULL, NULL);
+  EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_INVALID_OPERATION)).Times(1);
+  clauses_init(&X, &w);
   delete(MockProxy);
 }
 

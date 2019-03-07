@@ -56,10 +56,21 @@ TEST(Patch, Success) {
 
   MockProxy = new Mock();
   _patch_depth = 23;
-  patch(&loc, &d);
+  EXPECT_EQ(23U, patch(&loc, &d));
   EXPECT_EQ(24U, _patch_depth);
   EXPECT_EQ(loc.constr, &d);
   EXPECT_EQ(loc.orig, &c);
+  delete(MockProxy);
+}
+
+TEST(Patch, Null) {
+  struct constr_t d;
+
+  patch_init(64);
+
+  MockProxy = new Mock();
+  _patch_depth = 23;
+  EXPECT_EQ(23U, patch(NULL, &d));
   delete(MockProxy);
 }
 
@@ -73,6 +84,14 @@ TEST(Patch, Fail) {
   _patch_depth = _patch_stack_size;
   EXPECT_CALL(*MockProxy, print_fatal(ERROR_MSG_TOO_MANY_PATCHES)).Times(1);
   patch(&loc, &c);
+  delete(MockProxy);
+}
+
+TEST(Patch, Commit) {
+  MockProxy = new Mock();
+  _patch_depth = 23;
+  patch_commit();
+  EXPECT_EQ(_patch_depth, 0);
   delete(MockProxy);
 }
 

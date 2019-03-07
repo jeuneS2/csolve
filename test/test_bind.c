@@ -81,6 +81,41 @@ TEST(Bind, Fail) {
   delete(MockProxy);
 }
 
+TEST(Bind, Commit) {
+  MockProxy = new Mock();
+  _bind_depth = 23;
+  bind_commit();
+  EXPECT_EQ(_bind_depth, 0);
+  delete(MockProxy);
+}
+
+TEST(Bind, Depth) {
+  MockProxy = new Mock();
+  _bind_depth = 23;
+  EXPECT_EQ(bind_depth(), 23);
+  _bind_depth = 17;
+  EXPECT_EQ(bind_depth(), 17);
+  delete(MockProxy);
+}
+
+TEST(Bind, LevelSet) {
+  MockProxy = new Mock();
+  bind_level_set(23);
+  EXPECT_EQ(_bind_level, 23);
+  bind_level_set(17);
+  EXPECT_EQ(_bind_level, 17);
+  delete(MockProxy);
+}
+
+TEST(Bind, LevelGet) {
+  MockProxy = new Mock();
+  _bind_level = 23;
+  EXPECT_EQ(bind_level_get(), 23);
+  _bind_level = 17;
+  EXPECT_EQ(bind_level_get(), 17);
+  delete(MockProxy);
+}
+
 TEST(Unbind, Sucess) {
   struct constr_t c1;
   struct env_t loc1 = { .key = "x1", .val = &c1, .binds = NULL,
