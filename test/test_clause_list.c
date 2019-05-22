@@ -66,7 +66,7 @@ TEST(ClauseList, Append) {
   EXPECT_EQ(&w2, list.elems[1]);
 
   clause_list_append(&list, &w1);
-  EXPECT_EQ(2, list.length);
+  EXPECT_EQ(3, list.length);
   EXPECT_EQ(&w1, list.elems[0]);
   EXPECT_EQ(&w2, list.elems[1]);
 }
