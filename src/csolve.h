@@ -325,6 +325,8 @@ void sema_wait(sem_t *sema);
 /** Release a semaphore */
 void sema_post(sem_t *sema);
 
+/** Check whether a clause list already contains an element */
+bool clause_list_contains(struct clause_list_t *list, struct wand_expr_t *elem);
 /** Add an element to a clause list */
 void clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem);
 

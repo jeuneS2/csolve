@@ -265,10 +265,7 @@ bool clause_list_contains(struct clause_list_t *list, struct wand_expr_t *elem) 
 
 // add an element to a clause list
 void clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem) {
-  // only add element if it is not already on the list
-  if (!clause_list_contains(list, elem)) {
-    list->length++;
-    list->elems = (struct wand_expr_t **)realloc(list->elems, list->length * sizeof(struct wand_expr_t *));
-    list->elems[list->length-1] = elem;
-  }
+  list->length++;
+  list->elems = (struct wand_expr_t **)realloc(list->elems, list->length * sizeof(struct wand_expr_t *));
+  list->elems[list->length-1] = elem;
 }

@@ -17,6 +17,7 @@ class Mock {
  public:
   MOCK_METHOD0(objective_best, domain_t(void));
   MOCK_METHOD2(clause_list_append, void(clause_list_t*, wand_expr_t*));
+  MOCK_METHOD2(clause_list_contains, bool(clause_list_t*, wand_expr_t*));
   MOCK_METHOD1(print_fatal, void (const char *));
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
   MOCK_METHOD1(free, void(void *));
@@ -35,6 +36,10 @@ domain_t objective_best(void) {
 
 void clause_list_append(clause_list_t *list, wand_expr_t *elem) {
   MockProxy->clause_list_append(list, elem);
+}
+
+bool clause_list_contains(clause_list_t *list, wand_expr_t *elem) {
+  return MockProxy->clause_list_contains(list, elem);
 }
 
 void print_fatal(const char *fmt, ...) {
@@ -403,21 +408,25 @@ TEST(ClausesInit, Term) {
   struct wand_expr_t w;
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_contains(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
   clauses_init(&e1, NULL);
   delete(MockProxy);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_contains(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
   clauses_init(&e1, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_contains(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
   clauses_init(&e2, NULL);
   delete(MockProxy);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&e2, &w);
   delete(MockProxy);
@@ -438,6 +447,7 @@ TEST(ClausesInit, Wand) {
   struct constr_t Y = CONSTRAINT_WAND(2, F);
 
   MockProxy = new Mock();
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &E[1])).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &E[1])).Times(1);
   clauses_init(&Y, NULL);
   delete(MockProxy);
@@ -461,66 +471,82 @@ TEST(ClausesInit, Expr) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(EQ, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
   clauses_init(&X, NULL);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(EQ, &e3, &e3);
+  EXPECT_CALL(*MockProxy, clause_list_contains(testing::_, testing::_)).Times(0);
   EXPECT_CALL(*MockProxy, clause_list_append(testing::_, testing::_)).Times(0);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(EQ, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(LT, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(ADD, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(MUL, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(AND, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(OR, &e1, &e2);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[1].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[1].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(NEG, &e1, NULL);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(NOT, &e1, NULL);
+  EXPECT_CALL(*MockProxy, clause_list_contains(&v[0].clauses, &w)).Times(1).WillRepeatedly(::testing::Return(false));
   EXPECT_CALL(*MockProxy, clause_list_append(&v[0].clauses, &w)).Times(1);
   clauses_init(&X, &w);
   delete(MockProxy);

@@ -296,7 +296,9 @@ static void clauses_init_term(struct constr_t *constr, struct wand_expr_t *claus
   // add clause to terminal
   if (!is_value(constr->constr.term.val) && clause != NULL) {
     struct env_t *e = constr->constr.term.env;
-    clause_list_append(&e->clauses, clause);
+    if (!clause_list_contains(&e->clauses, clause)) {
+      clause_list_append(&e->clauses, clause);
+    }
   }
 }
 
