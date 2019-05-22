@@ -384,6 +384,14 @@ prop_result_t propagate_wand(struct constr_t *constr, const struct val_t val, co
   return r;
 }
 
+// swap two conflict elements
+static void propagate_confl_swap(struct confl_elem_t *a, struct confl_elem_t *b) {
+  struct confl_elem_t t;
+  t = *a;
+  *a = *b;
+  *b = t;
+}
+
 // find if single non-value variable exists in conflict
 static struct confl_elem_t *propagate_confl_find(struct constr_t *constr) {
   struct confl_elem_t *p = NULL;
@@ -397,6 +405,10 @@ static struct confl_elem_t *propagate_confl_find(struct constr_t *constr) {
     if (is_value(v)) {
       // stop if some variable is different from its conflict value
       if (get_lo(v) != get_lo(c->val)) {
+        if (i > 0) {
+          // swap stopping entry forward
+          propagate_confl_swap(&constr->constr.confl.elems[0], c);
+        }
         return NULL;
       }
     } else {
@@ -405,6 +417,11 @@ static struct confl_elem_t *propagate_confl_find(struct constr_t *constr) {
         p = c;
       } else {
         // stop if there are more than one non-value variables
+        if (i > 1) {
+          // swap stopping entries forward
+          propagate_confl_swap(&constr->constr.confl.elems[0], p);
+          propagate_confl_swap(&constr->constr.confl.elems[1], c);
+        }
         return NULL;
       }
     }
