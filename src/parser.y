@@ -220,23 +220,19 @@ RelatExpr : AddExpr
             }
           }
           | RelatExpr LEQ AddExpr
-          { struct constr_t *v = alloc(sizeof(struct constr_t));
-            *v = CONSTRAINT_TERM(VALUE(1));
-            struct constr_t *c = alloc(sizeof(struct constr_t));
-            *c = CONSTRAINT_EXPR(ADD, $3, v);
+          { struct constr_t *c = alloc(sizeof(struct constr_t));
+            *c = CONSTRAINT_EXPR(LT, $3, $1);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(LT, $1, c);
+            *$$ = CONSTRAINT_EXPR(NOT, c, NULL);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
             }
           }
           | RelatExpr GEQ AddExpr
-          { struct constr_t *v = alloc(sizeof(struct constr_t));
-            *v = CONSTRAINT_TERM(VALUE(1));
-            struct constr_t *c = alloc(sizeof(struct constr_t));
-            *c = CONSTRAINT_EXPR(ADD, $1, v);
+          { struct constr_t *c = alloc(sizeof(struct constr_t));
+            *c = CONSTRAINT_EXPR(LT, $1, $3);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(LT, $3, c);
+            *$$ = CONSTRAINT_EXPR(NOT, c, NULL);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_COMPARE / max(1, vars_count($$)));
             }
@@ -252,10 +248,10 @@ EqualExpr : RelatExpr
             }
           }
           | EqualExpr NEQ RelatExpr
-          { struct constr_t *a = alloc(sizeof(struct constr_t));
-            *a = CONSTRAINT_EXPR(EQ, $1, $3);
+          { struct constr_t *c = alloc(sizeof(struct constr_t));
+            *c = CONSTRAINT_EXPR(EQ, $1, $3);
             $$ = alloc(sizeof(struct constr_t));
-            *$$ = CONSTRAINT_EXPR(NOT, a, NULL);
+            *$$ = CONSTRAINT_EXPR(NOT, c, NULL);
             if (strategy_compute_weights()) {
               vars_weighten($$, WEIGHT_NOT_EQUAL / max(1, vars_count($$)));
             }
