@@ -61,7 +61,7 @@ TESTS= \
 	test/test_sema.c \
 	test/test_strategy.c
 
-all: csolve test coverage doc
+all: csolve test coverage analyze doc
 
 src/lexer.c: src/lexer.l src/parser.h
 	${LEX} ${LFLAGS} -o $@ $<
@@ -115,8 +115,28 @@ doc/doxygen: ${SRC} ${HEADERS} doxygen.config
 
 doc: doc/doxygen
 
+%.compdb_entry: %.c
+	@echo "    {" > $@
+	@echo "        \"command\": \"${CC}  ${CFLAGS} ${CPPFLAGS} -c $<\"," >> $@
+	@echo "        \"directory\": \"${CURDIR}\"," >> $@
+	@echo "        \"file\": \"$<\"" >> $@
+	@echo "    }," >> $@
+
+compile_commands.json: $(addsuffix .compdb_entry, $(basename ${SRC}))
+	@echo "[" > $@
+	@cat $^ >> $@
+	@echo "]" >> $@
+
+clangtidy-report.txt: compile_commands.json ${SRC} ${HEADERS}
+	clang-tidy -checks="*" -header-filter=".*" ${SRC} > $@
+
+valgrind-report.xml: csolve
+	valgrind --xml=yes --xml-file=valgrind-report.xml ./$< examples/sudoku.txt
+
+analyze: clangtidy-report.txt valgrind-report.xml
+
 clean:
-	rm -rf csolve csolve-prof fuzz/csolve fuzz/csolve-cov fuzz/findings test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno doc/doxygen
+	rm -rf csolve csolve-prof fuzz/csolve fuzz/csolve-cov fuzz/findings test/test googletest test/xunit-report.xml test/coverage-report.xml test/*.o test/*.gcda test/*.gcno *.gcda *.gcno src/*.compdb_entry compile_commands.json clangtidy-report.txt valgrind-report.xml doc/doxygen
 
 sonar_start:
 	${SONAR} start
