@@ -40,7 +40,7 @@ static void propagate_term_confl(struct env_t *var, const struct wand_expr_t *cl
 }
 
 // propagate new variable value to all affected clauses
-static prop_result_t propagate_term_recurse(struct env_t *var, const struct wand_expr_t *clause) {
+static prop_result_t propagate_term_recurse(struct env_t *var) {
   // propagate to all affected clauses
   prop_result_t p = propagate_clauses(&var->clauses);
   if (p == PROP_ERROR) {
@@ -74,7 +74,7 @@ prop_result_t propagate_term(struct constr_t *constr, const struct val_t val, co
         // recurse if variable is defined
         bind(var, v, clause);
         stat_inc_props();
-        return propagate_term_recurse(var, clause);
+        return propagate_term_recurse(var);
       } else {
         // just assign value if there is no variable
         constr->constr.term.val = v;
