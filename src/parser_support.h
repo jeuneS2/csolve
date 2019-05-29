@@ -55,6 +55,9 @@ struct expr_list_t *expr_list_append(struct expr_list_t *list, struct constr_t *
 /** Deallocate memory occupied by list of expressions */
 void expr_list_free(struct expr_list_t *list);
 
+/** Free the memory allocated for wide-and nodes in an expression */
+void expr_free(struct constr_t *constr);
+
 /** Initialize clause lists */
 void clauses_init(struct constr_t *constr, struct wand_expr_t *clause);
 

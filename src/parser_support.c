@@ -291,6 +291,49 @@ void expr_list_free(struct expr_list_t *list) {
   }
 }
 
+// free memory for wide-and expression
+static void expr_free_wand(struct constr_t *constr) {
+  for (size_t i = 0; i < constr->constr.wand.length; i++) {
+    expr_free(constr->constr.wand.elems[i].constr);
+  }
+  free(constr->constr.wand.elems);
+}
+
+// free memory for ordinary expressions
+static void expr_free_constr(struct constr_t *constr) {
+  // recurse
+  switch (constr->type->op) {
+  case OP_EQ:
+  case OP_LT:
+  case OP_ADD:
+  case OP_MUL:
+  case OP_AND:
+  case OP_OR:
+    // weighten variables on right side
+    expr_free(constr->constr.expr.r);
+    /* fall through */
+  case OP_NEG:
+  case OP_NOT:
+    // weighten variables on left side
+    expr_free(constr->constr.expr.l);
+    break;
+  default:
+    // die if encountering an unknown operation
+    print_fatal(ERROR_MSG_INVALID_OPERATION, constr->type->op);
+  }
+}
+
+// free the memory allocated for wide-and nodes in an expression
+void expr_free(struct constr_t *constr) {
+  if (IS_TYPE(TERM, constr)) {
+    return;
+  } else if (IS_TYPE(WAND, constr)) {
+    expr_free_wand(constr);
+  } else {
+    expr_free_constr(constr);
+  }
+}
+
 // initialize clause list for terminal
 static void clauses_init_term(struct constr_t *constr, struct wand_expr_t *clause) {
   // add clause to terminal

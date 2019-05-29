@@ -81,6 +81,8 @@ Input : Constraints
 
           env_free();
         }
+
+        expr_free($1);
       }
 
 Constraints : Constraints Constraint
