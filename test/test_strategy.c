@@ -486,7 +486,7 @@ TEST(VarOrder, Push) {
              .order = SIZE_MAX, .prio = 5, .level = 0 };
 
   _var_order_size = 0;
-  struct env_t *v[_var_order_size];
+  struct env_t *v[3];
   _var_order = v;
 
   strategy_var_order_push(&env[0]);
