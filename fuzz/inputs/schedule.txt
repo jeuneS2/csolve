@@ -1,35 +1,34 @@
-# finish as early as possible
-MIN end;
+MIN e;
 
-# task t1: release: 0, WCET 3, deadline 16
-t1_release = 0;
-t1_release <= t1_start;
-t1_end = t1_start + 3;
-t1_end <= t1_release + 16;
+# t1
+t1_r = 0;
+t1_r <= t1_s;
+t1_e = t1_s + 3;
+t1_e <= t1_r + 16;
 
-# task t1: release: 1, WCET 2, deadline 16
-t2_release = 1;
-t2_release <= t2_start;
-t2_end = t2_start + 2;
-t2_end <= t2_release + 16;
+# t2
+t2_r = 1;
+t2_r <= t2_s;
+t2_e = t2_s + 2;
+t2_e <= t2_r + 16;
 
-# task t1: release: 2, WCET 4, deadline 7
-t3_release = 2;
-t3_release <= t3_start;
-t3_end = t3_start + 4;
-t3_end <= t3_release + 7;
+# t3
+t3_r = 2;
+t3_r <= t3_s;
+t3_e = t3_s + 4;
+t3_e <= t3_r + 7;
 
-# precedences: t1->t2, t1->t3
-t1_end <= t2_start;
-t1_end <= t3_start;
+# t1->t2, t1->t3
+t1_e <= t2_s;
+t1_e <= t3_s;
 
-# tasks must not be scheduled at the same time
-t1_start > t2_end | t2_start > t1_end;
-t1_start > t3_end | t3_start > t1_end;
-t2_start > t3_end | t3_start > t2_end;
+# t1!=t2!=t3
+t1_s > t2_e | t2_s > t1_e;
+t1_s > t3_e | t3_s > t1_e;
+t2_s > t3_e | t3_s > t2_e;
 
-# end of schedule
-end >= t1_end;
-end >= t2_end;
-end >= t3_end;
+# end
+e >= t1_e;
+e >= t2_e;
+e >= t3_e;
 
