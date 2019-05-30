@@ -22,8 +22,8 @@ class Mock {
   MOCK_METHOD2(print_val, void(FILE *, struct val_t));
   MOCK_METHOD1(free, void(void *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
-  MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
+  MOCK_METHOD1(eval_ ## NAME, struct val_t(const struct constr_t *)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -57,7 +57,7 @@ void free(void *ptr) {
 }
 
 #define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
-const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
+struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
 prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \

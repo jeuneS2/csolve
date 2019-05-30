@@ -24,7 +24,7 @@ class Mock {
   MOCK_METHOD0(cache_clean, void(void));
   MOCK_METHOD0(bind_depth, size_t(void));
   MOCK_METHOD1(bind_level_set, void(size_t));
-  MOCK_METHOD3(bind, void(struct env_t *, const struct val_t, const struct wand_expr_t *));
+  MOCK_METHOD3(bind, void(struct env_t *, struct val_t, const struct wand_expr_t *));
   MOCK_METHOD1(unbind, void(size_t));
   MOCK_METHOD2(patch, size_t(struct wand_expr_t *, struct constr_t *));
   MOCK_METHOD1(unpatch, void(size_t));
@@ -47,8 +47,8 @@ class Mock {
   MOCK_METHOD1(print_error, void(const char *));
   MOCK_METHOD3(print_solution, void(FILE *, size_t, struct env_t *));
 #define CONSTR_TYPE_MOCKS(UPNAME, NAME, OP) \
-  MOCK_METHOD1(eval_ ## NAME, const struct val_t(const struct constr_t *)); \
-  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, const struct val_t, const struct wand_expr_t *)); \
+  MOCK_METHOD1(eval_ ## NAME, struct val_t(const struct constr_t *)); \
+  MOCK_METHOD3(propagate_ ## NAME, prop_result_t(struct constr_t *, struct val_t, const struct wand_expr_t *)); \
   MOCK_METHOD1(normal_ ## NAME, struct constr_t *(struct constr_t *));
   CONSTR_TYPE_LIST(CONSTR_TYPE_MOCKS)
 };
@@ -75,7 +75,7 @@ size_t bind_depth(void) {
   MockProxy->bind_level_set(level);
 }
 
- void bind(struct env_t *var, const struct val_t val, const struct wand_expr_t *clause) {
+ void bind(struct env_t *var, struct val_t val, const struct wand_expr_t *clause) {
   MockProxy->bind(var, val, clause);
 }
 
@@ -164,7 +164,7 @@ void print_solution(FILE *file, size_t size, struct env_t *env) {
 }
 
 #define CONSTR_TYPE_CMOCKS(UPNAME, NAME, OP)                            \
-const struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
+struct val_t eval_ ## NAME(const struct constr_t *constr) {       \
   return MockProxy->eval_ ## NAME(constr);                              \
 }                                                                       \
 prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause) { \

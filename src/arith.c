@@ -23,7 +23,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 // negate a value, with saturation handling
-const domain_t neg(const domain_t a) {
+domain_t neg(const domain_t a) {
   if (a == DOMAIN_MIN) {
     return DOMAIN_MAX;
   }
@@ -34,7 +34,7 @@ const domain_t neg(const domain_t a) {
 }
 
 // add two values, with saturation handling
-const domain_t add(const domain_t a, const domain_t b) {
+domain_t add(const domain_t a, const domain_t b) {
   if (a == DOMAIN_MIN || b == DOMAIN_MIN) {
     return DOMAIN_MIN;
   }
@@ -50,7 +50,7 @@ const domain_t add(const domain_t a, const domain_t b) {
 }
 
 // multiply two values, with saturation handling
-const domain_t mul(const domain_t a, const domain_t b) {
+domain_t mul(const domain_t a, const domain_t b) {
   if (a == DOMAIN_MIN) {
     return b < 0 ? DOMAIN_MAX : DOMAIN_MIN;
   }
@@ -74,11 +74,11 @@ const domain_t mul(const domain_t a, const domain_t b) {
 }
 
 // take minimum of two values
-const domain_t min(const domain_t a, const domain_t b) {
+domain_t min(const domain_t a, const domain_t b) {
   return a < b ? a : b;
 }
 
 // take maximum of two values
-const domain_t max(const domain_t a, const domain_t b) {
+domain_t max(const domain_t a, const domain_t b) {
   return a > b ? a : b;
 }

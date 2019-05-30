@@ -23,12 +23,12 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include "csolve.h"
 
 // evaluate a terminal
-const struct val_t eval_term(const struct constr_t *constr) {
+struct val_t eval_term(const struct constr_t *constr) {
   return constr->constr.term.val;
 }
 
 // evaluate equality expression
-const struct val_t eval_eq(const struct constr_t *constr) {
+struct val_t eval_eq(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
   const struct constr_t *r = constr->constr.expr.r;
 
@@ -62,7 +62,7 @@ const struct val_t eval_eq(const struct constr_t *constr) {
 }
 
 // evaluate less-than expression
-const struct val_t eval_lt(const struct constr_t *constr) {
+struct val_t eval_lt(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
   const struct constr_t *r = constr->constr.expr.r;
 
@@ -96,7 +96,7 @@ const struct val_t eval_lt(const struct constr_t *constr) {
 }
 
 // evaluate negation expression
-const struct val_t eval_neg(const struct constr_t *constr) {
+struct val_t eval_neg(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
 
   // evaluate sub-expression
@@ -113,7 +113,7 @@ const struct val_t eval_neg(const struct constr_t *constr) {
 }
 
 // evaluate addition expression
-const struct val_t eval_add(const struct constr_t *constr) {
+struct val_t eval_add(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
   const struct constr_t *r = constr->constr.expr.r;
 
@@ -134,7 +134,7 @@ const struct val_t eval_add(const struct constr_t *constr) {
 }
 
 // evaluate multiplication expression
-const struct val_t eval_mul(const struct constr_t *constr) {
+struct val_t eval_mul(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
   const struct constr_t *r = constr->constr.expr.r;
 
@@ -159,7 +159,7 @@ const struct val_t eval_mul(const struct constr_t *constr) {
 }
 
 // evaluate logical not expression
-const struct val_t eval_not(const struct constr_t *constr) {
+struct val_t eval_not(const struct constr_t *constr) {
   const struct constr_t *l = constr->constr.expr.l;
 
   // evaluate sub-expression
@@ -179,7 +179,7 @@ const struct val_t eval_not(const struct constr_t *constr) {
 }
 
 // evaluate logical and expression
-const struct val_t eval_and(const struct constr_t *constr) {
+struct val_t eval_and(const struct constr_t *constr) {
 
   // evaluate left side and short-circuit if it is false
   const struct constr_t *l = constr->constr.expr.l;
@@ -204,7 +204,7 @@ const struct val_t eval_and(const struct constr_t *constr) {
 }
 
 // evaluate logical or expression
-const struct val_t eval_or(const struct constr_t *constr) {
+struct val_t eval_or(const struct constr_t *constr) {
 
   // evaluate left side and short-circuit if it is true
   const struct constr_t *l = constr->constr.expr.l;
@@ -229,7 +229,7 @@ const struct val_t eval_or(const struct constr_t *constr) {
 }
 
 // evaluate wide-and expression
-const struct val_t eval_wand(const struct constr_t *constr) {
+struct val_t eval_wand(const struct constr_t *constr) {
   bool all_true = true;
 
   for (size_t i = 0, l = constr->constr.wand.length; i < l; i++) {
@@ -254,7 +254,7 @@ const struct val_t eval_wand(const struct constr_t *constr) {
 }
 
 // evaluate conflict expression
-const struct val_t eval_confl(const struct constr_t *constr) {
+struct val_t eval_confl(const struct constr_t *constr) {
   for (size_t i = 0, l = constr->constr.confl.length; i < l; i++) {
     struct confl_elem_t *c = &constr->constr.confl.elems[i];
 

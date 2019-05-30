@@ -162,7 +162,7 @@ enum operator_t {
 
 /** Constraint type */
 struct constr_type_t {
-  const struct val_t (*eval)(const struct constr_t *constr); ///< Evaluation function
+  struct val_t (*eval)(const struct constr_t *constr); ///< Evaluation function
   prop_result_t (*prop)(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause); ///< Propagation function
   struct constr_t * (*norm)(struct constr_t *constr); ///< Normalization function
   const enum operator_t op; ///< Operator
@@ -272,15 +272,15 @@ struct shared_t {
 #endif
 
 /** Negate a value */
-const domain_t neg(const domain_t a);
+domain_t neg(domain_t a);
 /** Add two values */
-const domain_t add(const domain_t a, const domain_t b);
+domain_t add(domain_t a, domain_t b);
 /** Multiply two values */
-const domain_t mul(const domain_t a, const domain_t b);
+domain_t mul(domain_t a, domain_t b);
 /** Return minimum of two values */
-const domain_t min(const domain_t a, const domain_t b);
+domain_t min(domain_t a, domain_t b);
 /** Return maximum of two values */
-const domain_t max(const domain_t a, const domain_t b);
+domain_t max(domain_t a, domain_t b);
 
 /** Default size of allocation stack */
 #define ALLOC_STACK_SIZE_DEFAULT (128*1024*1024)
@@ -308,7 +308,7 @@ void bind_level_set(size_t level);
 /** Set the current bind level */
 size_t bind_level_get(void);
 /** Bind a variable to a specific value */
-void bind(struct env_t *var, const struct val_t val, const struct wand_expr_t *clause);
+void bind(struct env_t *var, struct val_t val, const struct wand_expr_t *clause);
 /** Undo variable binds down to a given depth */
 void unbind(size_t depth);
 
@@ -339,12 +339,12 @@ void clause_list_append(struct clause_list_t *list, struct wand_expr_t *elem);
 
 /** Evaluation functions for different constraint types */
 #define CONSTR_TYPE_EVAL_FUNCS(UPNAME, NAME, OP)                    \
-  const struct val_t eval_ ## NAME(const struct constr_t *constr);
+  struct val_t eval_ ## NAME(const struct constr_t *constr);
 CONSTR_TYPE_LIST(CONSTR_TYPE_EVAL_FUNCS)
 
 /** Propagation functions for different constraint types */
 #define CONSTR_TYPE_PROP_FUNCS(UPNAME, NAME, OP)                    \
-  prop_result_t propagate_ ## NAME(struct constr_t *constr, const struct val_t val, const struct wand_expr_t *clause);
+  prop_result_t propagate_ ## NAME(struct constr_t *constr, struct val_t val, const struct wand_expr_t *clause);
 CONSTR_TYPE_LIST(CONSTR_TYPE_PROP_FUNCS)
 
 /** Normalization functions for different constraint types */
@@ -449,7 +449,7 @@ struct shared_t *shared(void);
 void timeout_init(uint32_t time_max);
 
 /** Print value */
-void print_val(FILE *file, const struct val_t val);
+void print_val(FILE *file, struct val_t val);
 /** Print constraint */
 void print_constr(FILE *file, const struct constr_t *constr);
 /** Print variable environment/bindings */
