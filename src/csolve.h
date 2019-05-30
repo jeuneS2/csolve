@@ -264,6 +264,13 @@ struct shared_t {
   volatile bool     timeout; ///< Whether timeout has occurred
 };
 
+/* Mark noreturn functions as such, except when unit testing */
+#ifndef UNIT_TEST
+#define noreturn __attribute__((noreturn))
+#else
+#define noreturn
+#endif
+
 /** Negate a value */
 const domain_t neg(const domain_t a);
 /** Add two values */
@@ -452,7 +459,7 @@ void print_solution(FILE *file, size_t size, struct env_t *env);
 /** Print an error message */
 void print_error(const char *fmt, ...);
 /** Print an error message and die */
-void print_fatal(const char *fmt, ...);
+void print_fatal(const char *fmt, ...) noreturn;
 
 /** Get the name of the program */
 const char *main_name(void);

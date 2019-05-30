@@ -9,7 +9,7 @@ YFLAGS=-y -W
 
 GTEST_HOME=/usr/src/googletest
 TEST_CXX=g++
-TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -D_DEFAULT_SOURCE -DGTEST_HAS_PTHREAD=1 -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
+TEST_CXXFLAGS=-std=c++11 -Wall -O1 --coverage -g -D_GNU_SOURCE -D_DEFAULT_SOURCE -DGTEST_HAS_PTHREAD=1 -DUNIT_TEST -I${GTEST_HOME}/googletest/include -I${GTEST_HOME}/googlemock/include
 
 FUZZ_CC=afl-gcc
 FUZZ_CFLAGS=${CFLAGS_STD} -O2
