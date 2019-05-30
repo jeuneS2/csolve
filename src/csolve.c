@@ -193,7 +193,7 @@ void timeout_init(uint32_t time_max) {
 }
 
 // signal timeout through shared data structure
-static void timeout(int signal) {
+static void timeout(int signal __attribute__((unused))) {
   shared()->timeout = true;
 }
 
