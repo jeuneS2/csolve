@@ -154,13 +154,14 @@ void vars_add(const char *key, struct constr_t *val) {
   _vars = (struct env_t *)realloc(_vars, sizeof(struct env_t) * _var_count);
 
   // allocate memory for key/identifier
-  char *k = (char *)malloc(strlen(key)+1);
+  size_t key_len = strlen(key) + 1;
+  char *k = (char *)malloc(key_len);
   // die if allocation failed
   if (k == NULL) {
     print_fatal("%s", strerror(errno));
   }
   // copy key/identifier
-  strcpy(k, key);
+  snprintf(k, key_len, "%s", key);
 
   // initialize variable
   _vars[_var_count-1] =
