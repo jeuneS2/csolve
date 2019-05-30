@@ -156,7 +156,7 @@ struct constr_t {
 
 /** Supported operators */
 #define CONSTR_TYPE_OPS(UPNAME, NAME, OP)       \
-  OP_ ## UPNAME = OP,
+  OP_ ## UPNAME = (OP),
 enum operator_t {
   CONSTR_TYPE_LIST(CONSTR_TYPE_OPS)
 };
@@ -186,22 +186,22 @@ static inline bool is_const(struct constr_t *c) {
 /** Create a terminal constraint */
 #define CONSTRAINT_TERM(V)                                              \
   ((struct constr_t) {                                                  \
-    .type = &CONSTR_TERM, .constr = { .term = { .val = V, .env = NULL } } } )
+    .type = &CONSTR_TERM, .constr = { .term = { .val = (V), .env = NULL } } } )
 
 /** Create an expression constraint */
 #define CONSTRAINT_EXPR(T, L, R)                                        \
   ((struct constr_t){                                                   \
-    .type = &(CONSTR_ ## T), .constr = { .expr = { .l = L, .r = R } } } )
+    .type = &(CONSTR_ ## T), .constr = { .expr = { .l = (L), .r = (R) } } } )
 
 /** Create a wide-and constraint */
 #define CONSTRAINT_WAND(L, E)                                           \
   ((struct constr_t) {                                                  \
-    .type = &CONSTR_WAND, .constr = { .wand = { .length = L, .elems = E } } } )
+    .type = &CONSTR_WAND, .constr = { .wand = { .length = (L), .elems = (E) } } } )
 
 /** Create a wide-and constraint */
 #define CONSTRAINT_CONFL(L, E)                                          \
   ((struct constr_t) {                                                  \
-    .type = &CONSTR_CONFL, .constr = { .confl = { .length = L, .elems = E } } } )
+    .type = &CONSTR_CONFL, .constr = { .confl = { .length = (L), .elems = (E) } } } )
 
 /** Patching entry */
 struct patching_t {

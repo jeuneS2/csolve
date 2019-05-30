@@ -40,7 +40,7 @@ typedef bool confl_result_t;
 
 // return if conflict creation resulted in an error
 #define CHECK(VAR)          \
-  if (VAR == CONFL_ERROR) { \
+  if ((VAR) == CONFL_ERROR) {                   \
     return CONFL_ERROR;     \
   }
 

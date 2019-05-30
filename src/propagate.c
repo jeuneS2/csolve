@@ -25,7 +25,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 
 // return if propagation resulted in an error
 #define CHECK(VAR)                              \
-  if (VAR == PROP_ERROR) {                      \
+  if ((VAR) == PROP_ERROR) {                    \
     return PROP_ERROR;                          \
   }
 
