@@ -66,10 +66,10 @@ void *alloc(size_t size) {
     _alloc_stack_pointer += sz;
     stat_max_alloc_max(_alloc_stack_pointer);
     return retval;
-  } else {
-    // die if running out of space on the allocation stack
-    print_fatal(ERROR_MSG_OUT_OF_MEMORY);
   }
+
+  // die if running out of space on the allocation stack
+  print_fatal(ERROR_MSG_OUT_OF_MEMORY);
   return NULL;
 }
 
@@ -211,10 +211,9 @@ size_t patch(struct wand_expr_t *loc, struct constr_t *constr) {
       _patch_stack[_patch_depth].constr = loc->constr;
       loc->constr = constr;
       return _patch_depth++;
-    } else {
-    // die if running out of space on the patching stack
-      print_fatal(ERROR_MSG_TOO_MANY_PATCHES);
     }
+    // die if running out of space on the patching stack
+    print_fatal(ERROR_MSG_TOO_MANY_PATCHES);
   } else {
     return _patch_depth;
   }

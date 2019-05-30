@@ -181,30 +181,29 @@ void vars_add(const char *key, struct constr_t *val) {
 int32_t vars_count(struct constr_t *constr) {
   if (IS_TYPE(TERM, constr)) {
     // count terminal if it is a variable
-    if (is_value(constr->constr.term.val)) {
-      return 0;
-    } else {
+    if (!is_value(constr->constr.term.val)) {
       return 1;
     }
-  } else {
-    // recurse
-    switch (constr->type->op) {
-    case OP_EQ:
-    case OP_LT:
-    case OP_ADD:
-    case OP_MUL:
-    case OP_AND:
-    case OP_OR:
-      // count variables on right side
-      return vars_count(constr->constr.expr.l) + vars_count(constr->constr.expr.r);
-    case OP_NEG:
-    case OP_NOT:
-      // count variables on left side
-      return vars_count(constr->constr.expr.l);
-    default:
-      // die if encountering an unknown operation
-      print_fatal(ERROR_MSG_INVALID_OPERATION, constr->type->op);
-    }
+    return 0;
+  }
+
+  // recurse
+  switch (constr->type->op) {
+  case OP_EQ:
+  case OP_LT:
+  case OP_ADD:
+  case OP_MUL:
+  case OP_AND:
+  case OP_OR:
+    // count variables on right side
+    return vars_count(constr->constr.expr.l) + vars_count(constr->constr.expr.r);
+  case OP_NEG:
+  case OP_NOT:
+    // count variables on left side
+    return vars_count(constr->constr.expr.l);
+  default:
+    // die if encountering an unknown operation
+    print_fatal(ERROR_MSG_INVALID_OPERATION, constr->type->op);
   }
   return 0;
 }
@@ -327,7 +326,7 @@ static void expr_free_constr(struct constr_t *constr) {
 // free the memory allocated for wide-and nodes in an expression
 void expr_free(struct constr_t *constr) {
   if (IS_TYPE(TERM, constr)) {
-    return;
+    /* nothing to do */
   } else if (IS_TYPE(WAND, constr)) {
     expr_free_wand(constr);
   } else {

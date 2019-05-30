@@ -96,10 +96,10 @@ static void *conflict_alloc(void *ptr, size_t size) {
     _alloc_stack_pointer = &p[sz] - &_alloc_stack[0];
     stat_max_calloc_max(_alloc_stack_pointer);
     return (void *)p;
-  } else {
-    // die if running out of space on the conflict allocation stack
-    print_fatal(ERROR_MSG_OUT_OF_MEMORY);
   }
+
+  // die if running out of space on the conflict allocation stack
+  print_fatal(ERROR_MSG_OUT_OF_MEMORY);
   return NULL;
 }
 
@@ -206,10 +206,9 @@ static confl_result_t conflict_add_constr_term(struct env_t *var, struct constr_
             && constr->constr.term.env->binds->clause == NULL)) {
       // add terminal if bound at lower level or bound without being inferred
       return conflict_add_term(confl, constr);
-    } else {
-      // otherwise, add the variable to the conflict
-      return conflict_add_var(constr->constr.term.env, confl);
     }
+    // otherwise, add the variable to the conflict
+    return conflict_add_var(constr->constr.term.env, confl);
   }
   return CONFL_OK;
 }
@@ -273,13 +272,14 @@ static confl_result_t conflict_add_constr(struct env_t *var, struct constr_t *co
 
   if (IS_TYPE(TERM, constr)) {
     return conflict_add_constr_term(var, confl, constr);
-  } else if (IS_TYPE(WAND, constr)) {
-    return conflict_add_constr_wand(var, confl, constr);
-  } else if (IS_TYPE(CONFL, constr)) {
-    return conflict_add_constr_confl(var, confl, constr);
-  } else {
-    return conflict_add_constr_expr(var, confl, constr);
   }
+  if (IS_TYPE(WAND, constr)) {
+    return conflict_add_constr_wand(var, confl, constr);
+  }
+  if (IS_TYPE(CONFL, constr)) {
+    return conflict_add_constr_confl(var, confl, constr);
+  }
+  return conflict_add_constr_expr(var, confl, constr);
 }
 
 // add a variable to the conflict

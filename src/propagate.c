@@ -64,24 +64,23 @@ prop_result_t propagate_term(struct constr_t *constr, const struct val_t val, co
       propagate_term_confl(var, clause);
     }
     return PROP_ERROR;
-  } else {
-    // possible propagation
-    domain_t lo = max(get_lo(term), get_lo(val));
-    domain_t hi = min(get_hi(term), get_hi(val));
-    // propagate only if actually restricting value
-    if (lo != get_lo(term) || hi != get_hi(term)) {
-      struct val_t v = INTERVAL(lo, hi);
-      if (var != NULL) {
-        // recurse if variable is defined
-        bind(var, v, clause);
-        stat_inc_props();
-        return propagate_term_recurse(var);
-      } else {
-        // just assign value if there is no variable
-        constr->constr.term.val = v;
-        return 1;
-      }
+  }
+
+  // possible propagation
+  domain_t lo = max(get_lo(term), get_lo(val));
+  domain_t hi = min(get_hi(term), get_hi(val));
+  // propagate only if actually restricting value
+  if (lo != get_lo(term) || hi != get_hi(term)) {
+    struct val_t v = INTERVAL(lo, hi);
+    if (var != NULL) {
+      // recurse if variable is defined
+      bind(var, v, clause);
+      stat_inc_props();
+      return propagate_term_recurse(var);
     }
+    // just assign value if there is no variable
+    constr->constr.term.val = v;
+    return 1;
   }
 
   return PROP_NONE;
@@ -111,7 +110,8 @@ static prop_result_t propagate_eq_false_lr(struct constr_t *p, struct val_t pval
     if (get_lo(val) == get_lo(pval)) {
       // restrict lower bound
       return p->type->prop(p, INTERVAL(get_lo(val) + 1, DOMAIN_MAX), clause);
-    } else if (get_lo(val) == get_hi(pval)) {
+    }
+    if (get_lo(val) == get_hi(pval)) {
       // restrict upper bound
       return p->type->prop(p, INTERVAL(DOMAIN_MIN, get_lo(val) - 1), clause);
     }
@@ -143,7 +143,8 @@ prop_result_t propagate_eq(struct constr_t *constr, const struct val_t val, cons
   // split propagation depending on whether propagating "true" or "false"
   if (is_true(val)) {
     return propagate_eq_true(l, r, clause);
-  } else if (is_false(val)) {
+  }
+  if (is_false(val)) {
     return propagate_eq_false(l, r, clause);
   }
 
@@ -198,7 +199,8 @@ prop_result_t propagate_lt(struct constr_t *constr, const struct val_t val, cons
   // split propagation depending on whether propagating "true" or "false"
   if (is_true(val)) {
     return propagate_lt_true(l, r, clause);
-  } else if (is_false(val)) {
+  }
+  if (is_false(val)) {
     return propagate_lt_false(l, r, clause);
   }
 
@@ -255,7 +257,8 @@ static prop_result_t propagate_mul_lr(struct constr_t *p, struct constr_t *c, st
           (is_value(val) && get_lo(cval) != 0 && (get_lo(val) % get_lo(cval)) != 0)) {
         // return an error if the propagation is not possible
         return PROP_ERROR;
-      } else if (get_lo(cval) != 0) {
+      }
+      if (get_lo(cval) != 0) {
         // propagate value
         domain_t lo = get_lo(val) / get_lo(cval);
         domain_t hi = get_hi(val) / get_lo(cval);
@@ -289,7 +292,8 @@ prop_result_t propagate_not(struct constr_t *constr, const struct val_t val, con
   // flip true/false for propagation
   if (is_true(val)) {
     return l->type->prop(l, VALUE(0), clause);
-  } else if (is_false(val)) {
+  }
+  if (is_false(val)) {
     return l->type->prop(l, VALUE(1), clause);
   }
 
@@ -344,7 +348,8 @@ prop_result_t propagate_and(struct constr_t *constr, const struct val_t val, con
   if (is_true(val)) {
     // both sides must be true for a logical and to be true
     return propagate_logic_both(l, r, val, clause);
-  } else if (is_false(val)) {
+  }
+  if (is_false(val)) {
     // either side may be false for a logical and to be false
     return propagate_logic_either(l, r, val, is_true, clause);
   }
@@ -361,7 +366,8 @@ prop_result_t propagate_or(struct constr_t *constr, const struct val_t val, cons
   if (is_false(val)) {
     // both sides must be false for a logical or to be false
     return propagate_logic_both(l, r, val, clause);
-  } else if (is_true(val)) {
+  }
+  if (is_true(val)) {
     // either side may be true for a logical or to be true
     return propagate_logic_either(l, r, val, is_false, clause);
   }
