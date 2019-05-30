@@ -28,7 +28,7 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/mman.h>
 
 // memory allocation alignment
-#define ALLOC_ALIGNMENT 8
+#define ALLOC_ALIGNMENT 8U
 
 // the allocation stack
 static char *_alloc_stack;

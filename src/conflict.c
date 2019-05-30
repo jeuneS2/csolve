@@ -58,7 +58,7 @@ struct seen_array_t {
 static struct seen_array_t _seen[SEEN_ARRAY_WIDTH];
 
 // conflict memory allocation alignment
-#define ALLOC_ALIGNMENT 8
+#define ALLOC_ALIGNMENT 8U
 // the conflict allocation stack
 static char *_alloc_stack;
 // the total size of the conflict allocation stack

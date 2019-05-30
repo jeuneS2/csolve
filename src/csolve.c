@@ -334,7 +334,7 @@ static domain_t step_val(struct step_t *step) {
   udomain_t s = step->seed;
   domain_t lo = get_lo(step->bounds);
   domain_t hi = get_hi(step->bounds);
-  return ((i ^ s) & 1) ? hi - (i >> 1) : lo + (i >> 1);
+  return ((i ^ s) & 1U) ? hi - (i >> 1U) : lo + (i >> 1U);
 }
 
 // unwind the search stack down to a certain level

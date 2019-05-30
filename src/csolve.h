@@ -33,7 +33,7 @@ typedef int32_t domain_t;
 #define DOMAIN_MAX INT32_MAX
 
 /** Number of bits of values in domain */
-#define DOMAIN_BITS 32
+#define DOMAIN_BITS 32U
 /** Unsigned type corresponding to domain type, used for arithmetic */
 typedef uint32_t udomain_t;
 /** Double-width type corresponding to domain type, used for arithmetic */
