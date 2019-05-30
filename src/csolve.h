@@ -411,7 +411,7 @@ bool strategy_prefer_failing(void);
 /** Whether to compute weights for initial ordering as default */
 #define STRATEGY_COMPUTE_WEIGHTS_DEFAULT true
 /** Set whether to compute weights for initial ordering */
-void strategy_compute_weights_init(bool assign_weights);
+void strategy_compute_weights_init(bool compute_weights);
 /** Get whether to compute weights for initial ordering */
 bool strategy_compute_weights(void);
 
