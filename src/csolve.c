@@ -365,10 +365,11 @@ static size_t conflict_backtrack(struct step_t *steps, size_t level) {
 
 // backtrack by one level
 #define BACKTRACK()                             \
-  if (level != 0) {                             \
-    level--;                                    \
-    continue;                                   \
-  } else {                                      \
+  {                                             \
+    if (level != 0) {                           \
+      level--;                                  \
+      continue;                                 \
+    }                                           \
     break;                                      \
   }
 
