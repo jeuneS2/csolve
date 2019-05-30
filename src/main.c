@@ -16,18 +16,19 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <getopt.h>
-#include <errno.h>
-#include <semaphore.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include "csolve.h"
 #include "parser.h"
 #include "version.h"
+
+#include <ctype.h>
+#include <errno.h>
+#include <getopt.h>
+#include <semaphore.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 // macros to convert defines to strings
 #define STR(X) #X

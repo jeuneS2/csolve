@@ -16,15 +16,16 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdlib.h>
+#include "csolve.h"
+
+#include <errno.h>
+#include <limits.h>
+#include <semaphore.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include <errno.h>
-#include <semaphore.h>
 #include <sys/mman.h>
-#include "csolve.h"
 
 // memory allocation alignment
 #define ALLOC_ALIGNMENT 8

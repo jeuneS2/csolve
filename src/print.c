@@ -16,13 +16,14 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "csolve.h"
+
+#include <limits.h>
 #include <stdarg.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include "csolve.h"
 
 // print value
 void print_val(FILE *file, const struct val_t val) {

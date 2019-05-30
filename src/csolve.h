@@ -19,9 +19,10 @@ along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef CSOLVE_H
 #define CSOLVE_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include <semaphore.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 
 /** The type representing the value domain */
 typedef int32_t domain_t;

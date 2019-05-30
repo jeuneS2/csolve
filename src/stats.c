@@ -16,10 +16,11 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "csolve.h"
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 static uint64_t _stats_frequency;
 

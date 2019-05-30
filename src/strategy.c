@@ -16,12 +16,13 @@ You should have received a copy of the GNU General Public License
 along with CSolve.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdlib.h>
+#include "csolve.h"
+
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-#include "csolve.h"
 
 static bool _create_conflicts;
 static bool _prefer_failing;
