@@ -75,7 +75,8 @@ csolve: ${SRC} ${HEADERS}
 csolve-prof: ${SRC} ${HEADERS}
 	${CC} ${PROF_CFLAGS} -o $@ ${SRC} -lpthread
 
-googletest/googlemock/libgmock.a googletest/googlemock/gtest/libgtest.a: ${GTEST_HOME}
+googletest/googlemock/libgmock.a: googletest/googlemock/gtest/libgtest.a
+googletest/googlemock/gtest/libgtest.a: ${GTEST_HOME}
 	mkdir -p googletest; cd googletest; cmake ${GTEST_HOME}; ${MAKE}
 
 test/%.o: test/%.c ${SRC} ${HEADERS} googletest/googlemock/libgmock.a googletest/googlemock/gtest/libgtest.a
