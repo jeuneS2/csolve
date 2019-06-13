@@ -494,10 +494,14 @@ prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
   // reset conflicts
   conflict_reset();
 
+  // keep track of clauses that may profit from normalizing
+  bool norm[clauses->length];
+
   for (size_t i = 0, l = clauses->length; i < l; i++) {
     struct wand_expr_t *clause = clauses->elems[i];
     // skip if a later call already propagated this clause
     if (clause->prop_tag > tag) {
+      norm[i] = false;
       continue;
     }
     // update propagation tag
@@ -509,11 +513,22 @@ prop_result_t propagate_clauses(const struct clause_list_t *clauses) {
     CHECK(p);
     r += p;
 
-    // if propagation happened, normalize and patch if applicable
-    if (p != PROP_NONE) {
-      struct constr_t *norm = c->type->norm(c);
-      if (norm != c) {
-        patch(clause, norm);
+    // this clause may profit from normalizing
+    norm[i] = p != PROP_NONE;
+  }
+
+  for (size_t i = 0, l = clauses->length; r != PROP_NONE && i < l; i++) {
+    // normalize clause that caused a (successful) propagation
+    if (norm[i]) {
+      struct wand_expr_t *clause = clauses->elems[i];
+      struct constr_t *c = clause->constr;
+
+      // normalize clause
+      struct constr_t *n = c->type->norm(c);
+
+      // patch clause if normalizing changed anything
+      if (n != c) {
+        patch(clause, n);
       }
     }
   }
