@@ -89,6 +89,13 @@ struct constr_t *normal_eq(struct constr_t *constr) {
   struct constr_t *r = constr->constr.expr.r;
   r = r->type->norm(r);
 
+  // shortcut if both sides are the same
+  if (l == r) {
+    struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
+    *retval = CONSTRAINT_TERM(VALUE(1));
+    return retval;
+  }
+
   return update_expr(constr, l, r);
 }
 
@@ -101,6 +108,13 @@ struct constr_t *normal_lt(struct constr_t *constr) {
   l = l->type->norm(l);
   struct constr_t *r = constr->constr.expr.r;
   r = r->type->norm(r);
+
+  // shortcut if both sides are the same
+  if (l == r) {
+    struct constr_t *retval = (struct constr_t *)alloc(sizeof(struct constr_t));
+    *retval = CONSTRAINT_TERM(VALUE(0));
+    return retval;
+  }
 
   // swap left and right if both sides are negations
   if (IS_TYPE(NEG, l) && IS_TYPE(NEG, r)) {
@@ -224,6 +238,11 @@ static struct constr_t *normal_logic(struct constr_t *constr, bool (*is_neutral)
   l = l->type->norm(l);
   struct constr_t *r = constr->constr.expr.r;
   r = r->type->norm(r);
+
+  // shortcut if both sides are the same
+  if (l == r) {
+    return l;
+  }
 
   // reduce to right side if left side is the neutral element
   if (IS_TYPE(TERM, l) && is_neutral(l->constr.term.val)) {
