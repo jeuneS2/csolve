@@ -357,7 +357,7 @@ CONSTR_TYPE_LIST(CONSTR_TYPE_NORM_FUNCS)
 struct constr_t *normalize(struct constr_t *constr);
 
 /** Propagate "true" to the terminal nodes of the constraint */
-prop_result_t propagate(struct constr_t *constr);
+prop_result_t propagate(struct constr_t *constr, size_t limit);
 /** Propagate updates to a list of clauses */
 prop_result_t propagate_clauses(const struct clause_list_t *clauses);
 

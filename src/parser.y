@@ -54,7 +54,9 @@ void yyerror(const char *);
 
 Input : Constraints
       {
-        prop_result_t prop = propagate($1);
+        size_t size = var_count();
+
+        prop_result_t prop = propagate($1, size);
         struct constr_t *norm = $1;
 
         if (prop != PROP_ERROR) {
@@ -62,8 +64,12 @@ Input : Constraints
           do {
             prev = norm;
             norm = normalize(norm);
-            prop = propagate(norm);
+            prop = propagate(norm, size);
           } while (norm != prev && prop != PROP_ERROR);
+        }
+
+        if (prop == PROP_ERROR) {
+          fprintf(stdout, "INFEASIBLE PROBLEM\n");
         }
 
         bind_commit();
@@ -72,7 +78,6 @@ Input : Constraints
         stats_init();
 
         if (prop != PROP_ERROR) {
-          size_t size = var_count();
           struct env_t *env = env_generate();
 
           clauses_init(norm, NULL);

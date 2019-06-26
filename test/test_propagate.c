@@ -1161,7 +1161,7 @@ TEST(Propagate, Loop) {
 
   MockProxy = new Mock();
   X = CONSTRAINT_EXPR(EQ, &A, &B);
-  EXPECT_EQ(PROP_ERROR, propagate(&X));
+  EXPECT_EQ(PROP_ERROR, propagate(&X, 100));
   delete(MockProxy);
 }
 

@@ -471,15 +471,16 @@ prop_result_t propagate_confl(struct constr_t *constr, const struct val_t val, c
 }
 
 // propagate value "true" to expression
-prop_result_t propagate(struct constr_t *constr) {
+prop_result_t propagate(struct constr_t *constr, size_t limit) {
   prop_result_t r = PROP_NONE;
   prop_result_t p = PROP_NONE;
   // loop until there are no new propagations
+  size_t i = 0;
   do {
     p = constr->type->prop(constr, VALUE(1), NULL);
     CHECK(p);
     r += p;
-  } while (p != PROP_NONE);
+  } while (p != PROP_NONE && i++ < limit);
   return r;
 }
 
